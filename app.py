@@ -5,6 +5,15 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap
 from flask import Flask, render_template
 from threading import Thread
+import os
+import PyQt5
+
+os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
+    os.path.dirname(PyQt5.__file__),
+    "Qt",
+    "plugins",
+    "platforms"
+)
 
 # 1. Flask 서버 설정 (웹 화면 담당)
 app = Flask(__name__)
@@ -20,27 +29,36 @@ def run_flask():
 class CharacterLauncher(QWidget):
     def __init__(self):
         super().__init__()
-        # 배경 투명하게 만들기
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
         self.label = QLabel(self)
-        # 중요: images 폴더에 icon.png 파일이 존재
         pixmap = QPixmap('ui-icon/icon.png')
+        #아이콘 크기 조절
+        pixmap = pixmap.scaled(130, 130, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.label.setPixmap(pixmap)
         self.resize(pixmap.width(), pixmap.height())
+
         self.oldPos = self.pos()
+        self.isDragging = False  # 이거 꼭 추가
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.RightButton:
+            QApplication.quit()
+        elif event.button() == Qt.LeftButton:
             self.oldPos = event.globalPos()
-            # 아이콘 클릭 시 브라우저 열기
-            webbrowser.open('http://127.0.0.1:5000')
+            self.isDragging = False
 
     def mouseMoveEvent(self, event):
         delta = QPoint(event.globalPos() - self.oldPos)
+        if delta.manhattanLength() > 5:
+            self.isDragging = True
         self.move(self.x() + delta.x(), self.y() + delta.y())
         self.oldPos = event.globalPos()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton and not self.isDragging:
+            webbrowser.open('http://127.0.0.1:5000')
 
 if __name__ == '__main__':
     # Flask 서버를 배경에서 실행
