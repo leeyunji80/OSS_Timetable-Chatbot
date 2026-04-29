@@ -19,11 +19,13 @@ class LecturePDFReader:
         except Exception as e:
             print(f"파일 읽기 오류 ({file_path}): {e}")
             return []
-        class LectureParser:
+        
+class LectureParser:
     """2. 처리: 날것의 행 데이터에서 강의 정보 파싱"""
     def parse_rows(self, all_rows):
         data = {
-            "개설 연도": "", "개설 학과": "", "교과목 번호": "", "분반 번호": "",
+            "개설 연도": "", "개설 학과": "", "수강 대상": "",  # 필드 유지
+            "교과목 번호": "", "분반 번호": "",
             "교과목명": "", "이수구분": "", "학점": "0", "이론": "0", "실습": "0",
             "수업방식": "", "강의시간/강의실": "", "담당교수": "", "강의 정원": "",
             "방법_강의(%)": "0", "방법_토의토론(%)": "0", "방법_실험실습(%)": "0", 
@@ -33,16 +35,32 @@ class LecturePDFReader:
         }
 
         for i, row in enumerate(all_rows):
+            # 공백 제거 버전 (키워드 매칭용)
             row_str = "".join(row).replace(" ", "").replace("\n", "")
 
-            # 기본 정보 매칭
+            # 1. 개설연도 및 학과
             if "개설연도" in row_str:
                 data["개설 연도"] = row[1] if len(row) > 1 else ""
                 data["개설 학과"] = row[4] if len(row) > 4 else ""
+            
+            # 2. 수강 대상 (보완된 로직)
+            if "수강대상" in row_str:
+                # '수강대상' 텍스트가 있는 행에서 빈 값이 아닌 항목들을 필터링
+                content = [c.strip() for c in row if c and "수강대상" not in c.replace(" ", "")]
+                if content:
+                    data["수강 대상"] = content[0] # 가장 먼저 나오는 텍스트(예: 3학년) 저장
+                elif i + 1 < len(all_rows): # 현재 행에 없다면 바로 아래 행 탐색
+                    next_row_content = [c.strip() for c in all_rows[i+1] if c]
+                    if next_row_content:
+                        data["수강 대상"] = next_row_content[0]
+
+            # 3. 교과목 정보
             if "교과목번호" in row_str:
                 data["교과목 번호"] = row[1]
                 data["분반 번호"] = row[2]
                 data["교과목명"] = row[4]
+
+            # 4. 이수구분 및 학점/시수
             if "이수구분" in row_str:
                 data["이수구분"] = row[1]
                 time_val = row[4] if len(row) > 4 else ""
@@ -53,7 +71,10 @@ class LecturePDFReader:
             
             if "수업방식" in row_str: data["수업방식"] = row[1]
             if "강의시간" in row_str:
-                data["강의시간/강의실"] = " ".join([c for c in row[1:] if "개설" not in c and "담당" not in c and c]).strip()
+                # '강의시간' 키워드와 '담당교수' 사이의 텍스트 추출
+                content = [c for c in row[1:] if c and "개설" not in c and "담당" not in c]
+                data["강의시간/강의실"] = " ".join(content).strip()
+            
             if "담당교수" in row_str: data["담당교수"] = row[4]
             if "강의정원" in row_str: data["강의 정원"] = row[1]
 
@@ -62,7 +83,6 @@ class LecturePDFReader:
                 nums = self._extract_numbers(all_rows, i)
                 keys = ["방법_강의(%)", "방법_토의토론(%)", "방법_실험실습(%)", "방법_현장학습(%)", "방법_발표(%)", "방법_기타(%)"]
                 for k, v in zip(keys, nums): data[k] = v
-
             if "평가방법" in row_str:
                 nums = self._extract_numbers(all_rows, i)
                 keys = ["평가_중간(%)", "평가_기말(%)", "평가_출석(%)", "평가_퀴즈(%)", "평가_과제(%)", "평가_기타(%)"]
