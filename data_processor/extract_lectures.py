@@ -83,3 +83,27 @@ class LectureExporter:
         df = pd.DataFrame(data_list)
         df.to_csv(output_path, index=False, encoding='utf-8-sig')
         print(f"\n✨ {len(data_list)}개의 강의 데이터가 {output_path}에 저장되었습니다.")
+# --- 메인 실행부 ---
+def main():
+    # 객체 생성
+    reader = LecturePDFReader()
+    parser = LectureParser()
+    exporter = LectureExporter()
+
+    final_results = []
+    pdf_files = [f for f in os.listdir('.') if f.lower().endswith('.pdf')]
+
+    if not pdf_files:
+        print("현재 폴더에 PDF 파일이 없습니다.")
+        return
+
+    for pdf in pdf_files:
+        print(f"🚀 처리 중: {pdf}")
+        raw_rows = reader.get_raw_data(pdf)
+        parsed_data = parser.parse_rows(raw_rows)
+        final_results.append(parsed_data)
+
+    exporter.save(final_results, "lectures_database.csv")
+
+if __name__ == "__main__":
+    main()
