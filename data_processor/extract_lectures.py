@@ -77,3 +77,9 @@ class LecturePDFReader:
             if current_idx + next_idx < len(all_rows):
                 combined_row.extend(all_rows[current_idx + next_idx])
         return [re.sub(r'[^0-9]', '', n) for n in combined_row if re.sub(r'[^0-9]', '', n)][:6]
+class LectureExporter:
+    """3. 출력: 결과를 CSV로 저장"""
+    def save(self, data_list, output_path):
+        df = pd.DataFrame(data_list)
+        df.to_csv(output_path, index=False, encoding='utf-8-sig')
+        print(f"\n✨ {len(data_list)}개의 강의 데이터가 {output_path}에 저장되었습니다.")
