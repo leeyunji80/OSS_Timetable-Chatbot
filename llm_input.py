@@ -1,4 +1,4 @@
 def parse_user_input(text):
     text = text.lower()
     processed_text = text.strip()
-    return text
+    return processed_text
