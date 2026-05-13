@@ -83,7 +83,7 @@ class LectureParser:
                 raw_time_loc = " ".join([c for c in row[1:] if "개설" not in c and "담당" not in c and c]).strip()
                 data["강의시간(원본)"] = raw_time_loc # 원본도 만약을 위해 남겨둡니다
 
-                matches = re.findall(r'([월화수목금토일])\s*([\d,\s]+)[\[\(](.*)[\]\)]', raw_time_loc)
+                matches = re.findall(r'([월화수목금토일])\s*([\d,\s]+)\[(.*?)\]', raw_time_loc)
                 
                 if matches:
                     days = []
@@ -93,8 +93,7 @@ class LectureParser:
                     for m in matches:
                         days.append(m[0].strip())
                         periods.append(m[1].replace(" ", ""))
-                        clean_room = m[2].strip().replace("[", "").replace("]", "")
-                        rooms.append(clean_room)
+                        rooms.append(m[2].strip())
                         
                 # 구분자 '|'를 사용하여 하나의 셀에 합쳐서 저장 (알고리즘에서 split('|')로 분리 가능)
                     data["요일"] = "|".join(days)
@@ -102,11 +101,12 @@ class LectureParser:
                     data["강의실"] = "|".join(rooms)
                 else:
                     # 괄호가 없는 특수 케이스 처리
-                    match_simple = re.findall(r'([월화수목금토일])\s*([\d,\s]+)', raw_time_loc)
-                    if match_simple:
+                   match_simple = re.findall(r'([월화수목금토일])\s*([\d,\s]+)', raw_time_loc)
+                   if match_simple:
                         data["요일"] = "|".join([m[0].strip() for m in match_simple])
                         data["교시"] = "|".join([m[1].replace(" ", "") for m in match_simple])
-
+                
+                        
             if "담당교수" in row_str: data["담당교수"] = row[4]
             if "강의정원" in row_str: data["강의 정원"] = row[1]
 
