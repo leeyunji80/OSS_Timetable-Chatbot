@@ -103,10 +103,12 @@ class LectureParser:
                     data["요일"], data["교시"], data["강의실"] = "|".join(days), "|".join(periods), "|".join(rooms)
                 
                         
-            if "담당교수" in row_str:
-                for idx, cell in enumerate(clean_row):
-                    if "담당교수" in cell and idx + 1 < len(row):
-                        data["담당교수"] = row[idx+1]
+            if "담당교수" in row_str and not data["담당교수"]:
+               for idx, cell in enumerate(clean_row):
+                   if "담당교수" in cell and idx + 1 < len(row):
+                      data["담당교수"] = row[idx+1].strip()
+                      break
+                   
             if "강의정원" in row_str:
                 data["강의 정원"] = row[1]
 
