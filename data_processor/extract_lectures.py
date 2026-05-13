@@ -24,10 +24,10 @@ class LectureParser:
     """2. 처리: 날것의 행 데이터에서 강의 정보 파싱"""
     def parse_rows(self, all_rows):
         data = {
-            "개설 연도": "", "개설 학과": "", "수강 대상": "",  # 필드 유지
+            "개설 연도": "", "개설 학과": "", "수강 대상": "",
             "교과목 번호": "", "분반 번호": "",
             "교과목명": "", "이수구분": "", "학점": "0", "이론": "0", "실습": "0",
-            "수업방식": "", "강의시간/강의실": "", "담당교수": "", "강의 정원": "",
+            "수업방식": "", "강의시간(원본)": "", "요일": "", "교시": "", "강의실": "", "담당교수": "", "강의 정원": "",
             "방법_강의(%)": "0", "방법_토의토론(%)": "0", "방법_실험실습(%)": "0", 
             "방법_현장학습(%)": "0", "방법_발표(%)": "0", "방법_기타(%)": "0",
             "평가_중간(%)": "0", "평가_기말(%)": "0", "평가_출석(%)": "0", 
@@ -35,32 +35,39 @@ class LectureParser:
         }
 
         for i, row in enumerate(all_rows):
-            # 공백 제거 버전 (키워드 매칭용)
             row_str = "".join(row).replace(" ", "").replace("\n", "")
 
-            # 1. 개설연도 및 학과
+            # 기본 정보 매칭
             if "개설연도" in row_str:
                 data["개설 연도"] = row[1] if len(row) > 1 else ""
                 data["개설 학과"] = row[4] if len(row) > 4 else ""
             
-            # 2. 수강 대상 (보완된 로직)
             if "수강대상" in row_str:
-                # '수강대상' 텍스트가 있는 행에서 빈 값이 아닌 항목들을 필터링
-                content = [c.strip() for c in row if c and "수강대상" not in c.replace(" ", "")]
-                if content:
-                    data["수강 대상"] = content[0] # 가장 먼저 나오는 텍스트(예: 3학년) 저장
-                elif i + 1 < len(all_rows): # 현재 행에 없다면 바로 아래 행 탐색
-                    next_row_content = [c.strip() for c in all_rows[i+1] if c]
-                    if next_row_content:
-                        data["수강 대상"] = next_row_content[0]
+                combined_cells = row + (all_rows[i+1] if i + 1 < len(all_rows) else [])
+                
+                target_grade = ""
+                for cell in combined_cells:
+                    cell_clean = str(cell).strip()
+                    # '학년'이라는 단어가 포함되어 있고, '선수과목'이나 '수강대상'이라는 단어는 제외
+                    if "학년" in cell_clean and "수강대상" not in cell_clean:
+                        target_grade = cell_clean
+                        break
+                
+                # 만약 '학년'이라는 단어를 못 찾았다면, 차선책으로 숫자가 포함된 칸을 찾음
+                if not target_grade:
+                    for cell in combined_cells:
+                        cell_clean = str(cell).strip()
+                        if any(char.isdigit() for char in cell_clean) and "학년" in cell_clean:
+                             target_grade = cell_clean
+                             break
+                
+                data["수강 대상"] = target_grade
 
-            # 3. 교과목 정보
             if "교과목번호" in row_str:
                 data["교과목 번호"] = row[1]
                 data["분반 번호"] = row[2]
                 data["교과목명"] = row[4]
 
-            # 4. 이수구분 및 학점/시수
             if "이수구분" in row_str:
                 data["이수구분"] = row[1]
                 time_val = row[4] if len(row) > 4 else ""
@@ -70,11 +77,26 @@ class LectureParser:
                         data["학점"], data["이론"], data["실습"] = parts[0], parts[1], parts[2]
             
             if "수업방식" in row_str: data["수업방식"] = row[1]
+
+           # 요일, 교시, 건물 정밀 분리 로직 적용
             if "강의시간" in row_str:
-                # '강의시간' 키워드와 '담당교수' 사이의 텍스트 추출
-                content = [c for c in row[1:] if c and "개설" not in c and "담당" not in c]
-                data["강의시간/강의실"] = " ".join(content).strip()
-            
+                raw_time_loc = " ".join([c for c in row[1:] if "개설" not in c and "담당" not in c and c]).strip()
+                data["강의시간(원본)"] = raw_time_loc # 원본도 만약을 위해 남겨둡니다
+
+                # 정규표현식: (월~일) + (숫자와 쉼표) + ([건물] 또는 (건물))
+                match = re.search(r'([월화수목금토일])\s*([\d,\s]+)[\[\(](.*)[\]\)]', raw_time_loc)
+                
+                if match:
+                    data["요일"] = match.group(1).strip()
+                    data["교시"] = match.group(2).replace(" ", "")  # 띄어쓰기 제거 (예: "1, 2, 3" -> "1,2,3")
+                    data["강의실"] = match.group(3).strip()
+                else:
+                    # 만약 괄호가 누락된 예외 케이스를 위한 2차 파싱
+                    match_simple = re.search(r'([월화수목금토일])\s*([\d,\s]+)', raw_time_loc)
+                    if match_simple:
+                        data["요일"] = match_simple.group(1).strip()
+                        data["교시"] = match_simple.group(2).replace(" ", "")
+
             if "담당교수" in row_str: data["담당교수"] = row[4]
             if "강의정원" in row_str: data["강의 정원"] = row[1]
 
@@ -83,6 +105,7 @@ class LectureParser:
                 nums = self._extract_numbers(all_rows, i)
                 keys = ["방법_강의(%)", "방법_토의토론(%)", "방법_실험실습(%)", "방법_현장학습(%)", "방법_발표(%)", "방법_기타(%)"]
                 for k, v in zip(keys, nums): data[k] = v
+
             if "평가방법" in row_str:
                 nums = self._extract_numbers(all_rows, i)
                 keys = ["평가_중간(%)", "평가_기말(%)", "평가_출석(%)", "평가_퀴즈(%)", "평가_과제(%)", "평가_기타(%)"]
