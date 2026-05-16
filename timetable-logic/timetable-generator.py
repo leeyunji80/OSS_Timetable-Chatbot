@@ -2,6 +2,37 @@ import pandas as pd
 import io
 from itertools import combinations
 
+def parse_day_and_period_to_indices(day_raw, period_raw):
+    """
+    요일('월~금')과 교시("06,07") 문자열을 표(Table)에 매핑할 수 있는 인덱스로 변환하는 함수
+    """
+    if pd.isna(day_raw) or pd.isna(period_raw):
+        return []
+        
+    day_mapping = {'월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5}
+    time_indices = []
+    
+    # 파이프(|)를 기준으로 다중 요일/교시 분할
+    day_splits = str(day_raw).split('|')
+    period_splits = str(period_raw).replace('"', '').split('|')
+    
+    for day_chunk, period_chunk in zip(day_splits, period_splits):
+        day_str = day_chunk.strip()
+        day_idx = day_mapping.get(day_str)
+        if day_idx is None:
+            continue
+            
+        # 교시를 숫자로 변환 후 표 인덱스(0부터 시작)에 맞추기 위해 -1
+        periods = [int(p.strip()) - 1 for p in period_chunk.split(',') if p.strip().isdigit()]
+        
+        for period_idx in periods:
+            time_indices.append({
+                "day_idx": day_idx,       # 표의 '열(Column)' 위치 (0=월, 1=화...)
+                "period_idx": period_idx  # 표의 '행(Row)' 위치 (0=1교시, 1=2교시...)
+            })
+            
+    return time_indices
+
 def generate_timetable_combinations(csv_data, target_grade, num_to_pick=5, exclude_days=None):
     # 1. 데이터 로드
     df = pd.read_csv(io.StringIO(csv_data))
