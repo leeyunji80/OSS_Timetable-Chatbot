@@ -46,10 +46,23 @@ def generate_timetable_combinations(csv_data, target_grade, num_to_pick=5, exclu
     # 예: "금요일 공강 만들어줘" -> 금요일 수업이 포함된 행 삭제
     if exclude_days:
         for day in exclude_days:
-            filtered_df = filtered_df[~filtered_df['강의시간/강의실'].str.contains(day)]
+            filtered_df = filtered_df[~filtered_df['요일'].str.contains(day, na=False)]
     
     # 4. 과목명 리스트 추출
-    course_pool = filtered_df['교과목명'].unique().tolist()
+    course_pool = []
+    for _, row in filtered_df.iterrows():
+        # 요일과 교시 컬럼 데이터를 바탕으로 표 인덱스 리스트 추출
+        time_slots = parse_day_and_period_to_indices(row['요일'], row['교시'])
+        
+        course_pool.append({
+            "code": row['교과목 번호'],
+            "name": row['교과목명'],
+            "professor": row['담당교수'],
+            "room": row['강의실'],
+            "day_raw": row['요일'],
+            "period_raw": row['교시'],
+            "time_slots": time_slots  # [{'day_idx': 0, 'period_idx': 5}, ...] 구조
+        })
     
     # 5. 시간표 조합 생성
     # pool에 있는 과목들 중 사용자가 원하는 개수(num_to_pick)만큼 뽑는 모든 경우의 수
