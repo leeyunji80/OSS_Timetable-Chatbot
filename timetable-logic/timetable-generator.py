@@ -150,9 +150,7 @@ results = generate_timetable_combinations(
     exclude_days=['금']
 )
 
-print(f"생성된 조합 개수: {len(results)}")
+print(f"생성된 조합 개수: {len(results)}\n")
 if results:
-    print("\n--- 첫 번째 시간표 조합 내 과목별 표 매핑 인덱스 예시 ---")
-    for course in results[0]:
-        print(f"과목명: {course['name']} ({course['day_raw']}요일 {course['period_raw']})")
-        print(f" -> 표 매핑 인덱스 구조: {course['time_slots']}")
+    print("======== [첫 번째 시간표 조합 표 출력] ========")
+    print_timetable_as_table(results[0])
