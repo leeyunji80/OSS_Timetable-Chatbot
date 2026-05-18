@@ -127,11 +127,35 @@ class LectureParser:
 
     def _extract_numbers(self, all_rows, current_idx):
         """제목 행 아래 2행까지 탐색하여 숫자만 추출"""
-        combined_row = []
-        for next_idx in range(1, 3):
-            if current_idx + next_idx < len(all_rows):
-                combined_row.extend(all_rows[current_idx + next_idx])
-        return [re.sub(r'[^0-9]', '', n) for n in combined_row if re.sub(r'[^0-9]', '', n)][:6]
+        result = []
+
+        # 바로 아래 1행만 읽기
+        target_idx = current_idx + 1
+
+        if target_idx >= len(all_rows):
+            return ["0"] * 6
+
+        row = all_rows[target_idx]
+  
+        for cell in row:
+
+            cell_str = str(cell).strip()
+
+            # 50%, -% 패턴만 추출
+            matches = re.findall(r'(\d+|-)\s*%', cell_str)
+
+            for m in matches:
+
+                if m == "-":
+                    result.append("0")
+                else:
+                  result.append(m)
+
+        # 부족하면 0 채우기
+        while len(result) < 6:
+              result.append("0")
+
+        return result[:6]
     
 class LectureExporter:
     """3. 출력: 결과를 CSV로 저장"""
