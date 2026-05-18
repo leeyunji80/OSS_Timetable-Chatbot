@@ -148,13 +148,19 @@ class LectureExporter:
 
         mapping_path = "liberal_arts.csv"
 
-        if not os.path.exists(mapping_path):
+        if os.path.exists(mapping_path):
+            return
 
-            mapping_df.to_csv(
-                mapping_path,
-                index=False,
-                encoding='utf-8-sig'
-            )
+        mapping_df = lecture_df.copy()
+
+        mapping_df["교양대분류"] = ""
+        mapping_df["교양소분류"] = ""
+
+        mapping_df.to_csv(
+        mapping_path,
+        index=False,
+        encoding='utf-8-sig'
+    )
 
     def merge_data(self):
 
