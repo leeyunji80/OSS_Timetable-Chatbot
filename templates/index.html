@@ -1,13 +1,207 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <title>해물탕 시간표 추천</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시간표 생성 AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #1e1e1e; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        body, html {
+            height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 1. 상단 헤더 영역 */
+        header {
+            width: 100%;
+            padding: 15px 25px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title h1 {
+            font-size: 16px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-title p {
+            font-size: 11px;
+            color: #e46c6c;
+            margin-top: 2px;
+        }
+
+        .close-btn {
+            font-size: 18px;
+            color: #aaa;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        /* 2. 중앙 메인 컨텐츠 영역 (가로 폭을 좁게 제한) */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            /* 핵심: 전체 가로 영역을 좁혀서 중앙으로 모이게 합니다 */
+            max-width: 650px; 
+            width: 100%;
+            margin: 0 auto; 
+            text-align: center;
+        }
+
+        /* 내 사진을 넣을 원형 아이콘 구역 */
+        .welcome-icon-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #fff0f0; /* 이미지가 없을 때 보일 임시 배경색 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            overflow: hidden; /* 원형 밖으로 이미지가 나가지 않도록 설정 */
+        }
+
+        .welcome-icon-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 이미지가 비율에 맞게 원 안에 꽉 차도록 함 */
+        }
+
+        .welcome-text h2 {
+            font-size: 20px;
+            color: #222;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .welcome-text p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .welcome-text span {
+            display: block;
+            margin-top: 8px;
+            color: #999;
+            font-size: 12px;
+        }
+
+        /* 3. 하단 입력창 영역 (더 크고 웅장하게 변경) */
+        footer {
+            width: 100%;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+
+        .input-container {
+            max-width: 650px; /* 메인 영역과 가로폭을 맞춰 정렬 */
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 요청하신 크고 널찍한 입력창 스타일 */
+        .chat-input {
+            width: 100%;
+            padding: 18px 60px 18px 20px; /* 오른쪽에 전송버튼 공간 확보 */
+            font-size: 15px;
+            border: 1px solid #ffe3e3;
+            border-radius: 30px; /* 둥근 테두리 */
+            background-color: #fff5f5; /* 연한 핑크빛 배경 */
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        /* 입력창 클릭 시 테두리 강조 */
+        .chat-input:focus {
+            border-color: #ff6b6b;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.1);
+        }
+
+        /* 우측 하단 전송 버튼 */
+        .send-btn {
+            position: absolute;
+            right: 8px;
+            width: 44px;
+            height: 44px;
+            background-color: #ff6b6b;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .send-btn:hover {
+            background-color: #fa5252;
+        }
+
+        /* 전송 아이콘 화살표 */
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            transform: rotate(-45deg);
+        }
     </style>
 </head>
 <body>
-    <h1>팀 해물탕: 시간표 추천 챗봇</h1>
-    <p>여기에 나중에 채팅창과 시간표를 만들 거예요!</p>
+
+    <header>
+        <div class="header-title">
+            <h1>📅 시간표 생성 AI</h1>
+            <p>원하는 시간표가 있으신가요? 입력하세요!</p>
+        </div>
+    </header>
+
+    <main>
+        <div class="welcome-icon-box">
+            <img src="/templates/static/icon.png" alt="로봇 아이콘" onerror="this.style.display='none';">
+        </div>
+        
+        <div class="welcome-text">
+            <h2>시간표 생성 AI에 오신 것을 환영합니다</h2>
+            <p>원하시는 시간표 조건을 자연어로 입력해주세요.</p>
+            <span>예: "다음 학기 전공 필수 위주로 시간표 짜주세요"</span>
+        </div>
+    </main>
+
+    <footer>
+        <div class="input-container">
+            <input type="text" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요">
+            <button class="send-btn">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
+    </footer>
+
 </body>
 </html>
