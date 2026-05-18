@@ -138,7 +138,53 @@ class LectureExporter:
     def save(self, data_list, output_path):
         df = pd.DataFrame(data_list)
         df.to_csv(output_path, index=False, encoding='utf-8-sig')
-        print(f"\n✨ {len(data_list)}개의 강의 데이터가 {output_path}에 저장되었습니다.")
+    
+    def create_mapping_csv(self, lecture_df):
+
+        mapping_df = lecture_df.copy()
+
+        mapping_df["교양대분류"] = ""
+        mapping_df["교양소분류"] = ""
+
+        mapping_path = "liberal_arts.csv"
+
+        if not os.path.exists(mapping_path):
+
+            mapping_df.to_csv(
+                mapping_path,
+                index=False,
+                encoding='utf-8-sig'
+            )
+
+    def merge_data(self):
+
+        lecture_df = pd.read_csv(
+            "lecture_data.csv",
+            dtype=str
+        )
+
+        mapping_df = pd.read_csv(
+            "liberal_arts.csv",
+            dtype=str
+        )
+
+        final_df = pd.merge(
+            lecture_df,
+            mapping_df[[
+                "교과목 번호",
+                "교양대분류",
+                "교양소분류"
+            ]],
+            on="교과목 번호",
+            how="left"
+        )
+
+        final_df.to_csv(
+            "final_lecture_database.csv",
+            index=False,
+            encoding='utf-8-sig'
+        )
+
 # --- 메인 실행부 ---
 def main():
     # 객체 생성
@@ -159,7 +205,13 @@ def main():
         parsed_data = parser.parse_rows(raw_rows)
         final_results.append(parsed_data)
 
-    exporter.save(final_results, "lectures_database.csv")
+    exporter.save(final_results, "lecture_data.csv")
+
+    lecture_df = pd.DataFrame(final_results)
+
+    exporter.create_mapping_csv(lecture_df)
+
+    print("완료")
 
 if __name__ == "__main__":
     main()
