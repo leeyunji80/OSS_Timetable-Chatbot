@@ -39,8 +39,21 @@ class CharacterLauncher(QWidget):
         self.label.setPixmap(pixmap)
         self.resize(pixmap.width(), pixmap.height())
 
+        # 화면 우측 하단 배치 로직
+        # 현재 주 모니터의 전체 화면 크기(해상도) 감지
+        screen = QApplication.primaryScreen().geometry()
+        screen_width = screen.width()
+        screen_height = screen.height()
+
+       # 모니터 가로의 95%, 세로의 90% 지점을 기준으로 정렬 (예시)
+        x = int(screen_width * 93/100) - pixmap.width()
+        y = int(screen_height * 90/100) - pixmap.height()
+
+        # 계산된 좌표로 초기 위치 설정
+        self.move(x, y)
+
         self.oldPos = self.pos()
-        self.isDragging = False  # 이거 꼭 추가
+        self.isDragging = False  
 
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
