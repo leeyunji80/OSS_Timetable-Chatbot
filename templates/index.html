@@ -200,6 +200,23 @@
             fill: currentColor;
             transform: rotate(-45deg);
         }
+
+        .message {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .user-message {
+            background-color: #ff6b6b;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
     </style>
 </head>
 <body>
@@ -239,6 +256,7 @@
    <script>
         const textarea = document.getElementById('user-input');
         const welcomeScreen = document.getElementById('welcome-screen');
+        const chatArea = document.getElementById('chat-area');
         const sendBtn = document.querySelector('.send-btn');
 
         textarea.addEventListener('input', function() {
@@ -267,8 +285,24 @@
             if (!message) return;
 
             welcomeScreen.style.display = 'none';
+            addMessage(message, 'user');
 
         });
+
+        function addMessage(message, type) {
+
+            const div = document.createElement('div');
+
+            div.classList.add('message');
+
+            if (type === 'user') {
+                div.classList.add('user-message');
+            }
+
+            div.innerText = message;
+
+            chatArea.appendChild(div);
+        }
     </script>
 
 </body>
