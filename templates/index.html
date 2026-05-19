@@ -126,7 +126,7 @@
         /* 요청하신 크고 널찍한 입력창 스타일 */
         .chat-input {
             width: 100%;
-            padding: 15px 60px 15px 20px; 
+            padding: 15px 75px 15px 25px; 
             font-size: 17px;
             border: 1px solid #ffe3e3;
             border-radius: 20px; 
@@ -139,6 +139,22 @@
             min-height: 75px;
             max-height: 150px;  /* 최대 높이 제한 */
             overflow-y: hidden; /* 일단 스크롤바 숨김 */
+
+            /* 📌 파이어폭스용 얇은 스크롤바 설정 */
+            scrollbar-width: thin;
+            scrollbar-color: #ff6b6b transparent;
+        }
+
+        /* 📌 [새로 추가] 크롬, 사파리, 엣지용 스크롤바 다이어트 스타일 코드 */
+        .chat-input::-webkit-scrollbar {
+            width: 6px; /* 스크롤바를 아주 실 가닥처럼 얇게 */
+        }
+        .chat-input::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 107, 107, 0.3); /* 연한 핑크빛 둥근 막대 */
+            border-radius: 10px;
+        }
+        .chat-input::-webkit-scrollbar-track {
+            background: transparent; /* 스크롤바 바탕은 투명하게 처리해서 버튼 안 가리게 */
         }
 
         /* 입력창 클릭 시 테두리 강조 */
@@ -152,7 +168,7 @@
         .send-btn {
             position: absolute;
             right: 15px;
-            top: 10px; 
+            bottom: 15px; 
             width: 44px;
             height: 44px;
             background-color: #ff6b6b;
