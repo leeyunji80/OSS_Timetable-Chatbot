@@ -29,43 +29,41 @@ def parse_day_and_period(day_raw, period_raw):
             
     return time_slots
 
-def generate_timetable_combinations(csv_data, target_grade, num_to_pick=5, exclude_days=None):
-    # 1. 데이터 로드
-    df = pd.read_csv(io.StringIO(csv_data))
+def generate_timetable_combinations(file_path, slots):
+    """
+    슬롯 데이터를 바탕으로 필터링 후, 시각화 팀원에게 줄 핵심 3가지 정보(과목명, 강의실, 시간)만 추출
+    """
+    # 1. 파일에서 데이터 로드
+    df = pd.read_csv(file_path)
     
-    # 2. 기본 필터링 (학년 및 야간 강좌 제외)
-    # LLM이 "2학년꺼 짜줘"라고 하면 해당 학년만 남깁니다.
+    # 2. 자연어 슬롯 데이터 반영하여 필터링
+    target_grade = slots.get("target_grade", "2학년")
+    exclude_days = slots.get("exclude_days", [])
+    num_to_pick = slots.get("num_to_pick", 5)
+    
+    # 기본 학년 필터링 (야간 강좌 제외)
     mask = df['수강 대상'].str.contains(target_grade) & ~df['수강 대상'].str.contains("야간")
     filtered_df = df[mask].copy()
     
-    # 3. 사용자 요구사항 반영 (특정 요일 제외)
-    # 예: "금요일 공강 만들어줘" -> 금요일 수업이 포함된 행 삭제
+    # 제외 요일 반영
     if exclude_days:
         for day in exclude_days:
             filtered_df = filtered_df[~filtered_df['요일'].str.contains(day, na=False)]
-    
-    # 4. 과목명 리스트 추출
+            
+    # 3. 과목명, 강의실, 요일/교시 정보만 추출하여 풀(Pool) 구성
     course_pool = []
     for _, row in filtered_df.iterrows():
-        # 요일과 교시 컬럼 데이터를 바탕으로 표 인덱스 리스트 추출
-        time_slots = parse_day_and_period_to_indices(row['요일'], row['교시'])
+        time_slots = parse_day_and_period(row['요일'], row['교시'])
         
         course_pool.append({
-            "code": row['교과목 번호'],
-            "name": row['교과목명'],
-            "professor": row['담당교수'],
-            "room": row['강의실'],
-            "day_raw": row['요일'],
-            "period_raw": row['교시'],
-            "time_slots": time_slots  # [{'day_idx': 0, 'period_idx': 5}, ...] 구조
+            "name": row['교과목명'],                                         # 1. 과목명
+            "room": row['강의실'].split('(')[0] if pd.notna(row['강의실']) else "", # 2. 강의실명
+            "time_slots": time_slots                                        # 3. 요일 및 교시 (격자 제외)
         })
-    
-    # 5. 시간표 조합 생성
-    # pool에 있는 과목들 중 사용자가 원하는 개수(num_to_pick)만큼 뽑는 모든 경우의 수
+        
+    # 4. 모든 과목 조합 생성 (충돌 검증 없이 리스트화)
     all_combinations = list(combinations(course_pool, num_to_pick))
     
-    # 6. 결과 반환 (리스트의 리스트 형태)
-    # 이 결과값을 '충돌 방지 로직' 브랜치에 있는 함수에 넣어서 검증하면 됩니다.
     return [list(combo) for combo in all_combinations]
 
 def print_timetable_as_table(timetable_combo):
