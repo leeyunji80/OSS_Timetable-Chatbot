@@ -30,39 +30,34 @@ def parse_day_and_period(day_raw, period_raw):
             
     return time_slots
 
-def generate_timetable_combinations(file_path, slots):
+def generate_timetable_combinations(csv_data, slots):
     """
     슬롯 데이터를 바탕으로 필터링 후, 시각화 팀원에게 줄 핵심 3가지 정보(과목명, 강의실, 시간)만 추출
     """
-    # 1. 파일에서 데이터 로드
-    df = pd.read_csv(file_path)
+    # 변경포인트 2: pd.read_csv 안에 io.StringIO로 감싸서 문자열을 데이터로 로드
+    df = pd.read_csv(io.StringIO(csv_data))
     
-    # 2. 자연어 슬롯 데이터 반영하여 필터링
-    target_grade = slots.get("target_grade", "2학년")
+    target_grade = slots.get("target_grade")
     exclude_days = slots.get("exclude_days", [])
-    num_to_pick = slots.get("num_to_pick", 5)
+    num_to_pick = slots.get("num_to_pick")
     
-    # 기본 학년 필터링 (야간 강좌 제외)
     mask = df['수강 대상'].str.contains(target_grade) & ~df['수강 대상'].str.contains("야간")
     filtered_df = df[mask].copy()
     
-    # 제외 요일 반영
     if exclude_days:
         for day in exclude_days:
             filtered_df = filtered_df[~filtered_df['요일'].str.contains(day, na=False)]
             
-    # 3. 과목명, 강의실, 요일/교시 정보만 추출하여 풀(Pool) 구성
     course_pool = []
     for _, row in filtered_df.iterrows():
         time_slots = parse_day_and_period(row['요일'], row['교시'])
         
         course_pool.append({
-            "name": row['교과목명'],                                         # 1. 과목명
-            "room": row['강의실'].split('(')[0] if pd.notna(row['강의실']) else "", # 2. 강의실명
-            "time_slots": time_slots                                        # 3. 요일 및 교시 (격자 제외)
+            "name": row['교과목명'],
+            "room": row['강의실'].split('(')[0] if pd.notna(row['강의실']) else "",
+            "time_slots": time_slots
         })
         
-    # 4. 모든 과목 조합 생성 (충돌 검증 없이 리스트화)
     all_combinations = list(combinations(course_pool, num_to_pick))[:10]
     
     return [list(combo) for combo in all_combinations]
