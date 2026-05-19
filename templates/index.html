@@ -199,7 +199,7 @@
 
     <footer>
         <div class="input-container">
-            <textarea name="message" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요" autocomplete="off" required style="resize: none; height: 120px;"></textarea>
+            <textarea name="message" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요" autocomplete="off" required style="resize: none; height: 120px;" id="user-input"></textarea>
             <button class="send-btn">
                 <svg viewBox="0 0 24 24">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -207,6 +207,15 @@
             </button>
         </div>
     </footer>
+
+    <script>
+        const textarea = document.getElementById('user-input');
+
+        textarea.addEventListener('input', function() {
+            this.style.height = '55px'; // 높이 초기화
+            this.style.height = this.scrollHeight + 'px'; // 글자 높이만큼 확장
+        });
+    </script>
 
 </body>
 </html>
