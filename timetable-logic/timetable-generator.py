@@ -1,6 +1,7 @@
 import pandas as pd
 import io
 from itertools import combinations
+import random
 
 def parse_day_and_period(day_raw, period_raw):
     """
@@ -62,17 +63,39 @@ def generate_timetable_combinations(file_path, slots):
         })
         
     # 4. 모든 과목 조합 생성 (충돌 검증 없이 리스트화)
-    all_combinations = list(combinations(course_pool, num_to_pick))
+    all_combinations = list(combinations(course_pool, num_to_pick))[:10]
     
     return [list(combo) for combo in all_combinations]
 
-# --- 실행 및 데이터 구조 확인 예시 ---
+def generate_random_slots():
 
-slots_input = {
-    "target_grade": "2학년",
-    "exclude_days": ["금"],
-    "num_to_pick": 5
-}
+    grades = ["1학년", "2학년", "3학년", "4학년"]
+    days = ["월", "화", "수", "목", "금"]
+    counts = [3, 4, 5, 6]
+
+    target_grade = random.choice(grades)
+
+    exclude_days = random.sample(days, random.randint(1, 2))
+
+    num_to_pick = random.choice(counts)
+
+    # 실제 LLM이 추출했다고 가정하는 슬롯 데이터
+    slots_input = {
+        "target_grade": target_grade,
+        "exclude_days": exclude_days,
+        "num_to_pick": num_to_pick
+    }
+
+    return slots_input
+
+# -----------------------------
+# 랜덤 슬롯 생성
+# -----------------------------
+
+slots_input = generate_random_slots()
+
+print("생성된 슬롯:")
+print(slots_input)
 
 # 함수 호출 결과
 timetable_results = generate_timetable_combinations("lectures.csv", slots_input)
@@ -81,4 +104,6 @@ timetable_results = generate_timetable_combinations("lectures.csv", slots_input)
 if timetable_results:
     import json
     print("--- 격자 인덱스가 제외된 최종 데이터 구조 샘플 ---")
-    print(json.dumps(timetable_results[0][0], ensure_ascii=False, indent=2))
+    for course in timetable_results[0]:
+
+        print(json.dumps(course, ensure_ascii=False, indent=2))
