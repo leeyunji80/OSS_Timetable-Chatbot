@@ -129,27 +129,32 @@ class LectureParser:
         """제목 행 아래 2행까지 탐색하여 숫자만 추출"""
         result = []
 
-        # 바로 아래 1행만 읽기
-        target_idx = current_idx + 1
+        for next_idx in range(1, 6):
 
-        if target_idx >= len(all_rows):
-            return ["0"] * 6
+            if current_idx + next_idx >= len(all_rows):
+                break
+   
+            row = all_rows[current_idx + next_idx]
 
-        row = all_rows[target_idx]
-  
-        for cell in row:
+            row_text = " ".join([str(cell) for cell in row])
 
-            cell_str = str(cell).strip()
+            # 상세정보 나오면 중단
+            if "상세정보" in row_text:
+                break
 
-            # 50%, -% 패턴만 추출
-            matches = re.findall(r'(\d+|-)\s*%', cell_str)
+            for cell in row:
 
-            for m in matches:
+               cell_str = str(cell).strip()
 
-                if m == "-":
-                    result.append("0")
-                else:
-                  result.append(m)
+               # 50%, -% 패턴만 추출
+               matches = re.findall(r'(\d+|-)\s*%', cell_str)
+
+               for m in matches:
+
+                   if m == "-":
+                      result.append("0")
+                   else:
+                      result.append(m)
 
         # 부족하면 0 채우기
         while len(result) < 6:
