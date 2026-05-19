@@ -486,7 +486,16 @@ def generate_timetable_combinations(csv_data, slots):
     exclude_days = slots.get("exclude_days", [])
     num_to_pick = slots.get("num_to_pick")
     
-    mask = df['수강 대상'].str.contains(target_grade) & ~df['수강 대상'].str.contains("야간")
+    df['수강 대상'] = df['수강 대상'].fillna('')
+    df['이수구분'] = df['이수구분'].fillna('')
+
+    # 2. 조건 설정
+    is_target_grade = df['수강 대상'].str.contains(target_grade)
+    is_general_edu = df['이수구분'].str.contains('교양')
+    is_not_night = ~df['수강 대상'].str.contains("야간")
+
+    # 3. 필터링 (전공은 해당학년만, 교양은 무조건 합격 / 둘 다 야간은 제외)
+    mask = (is_target_grade | is_general_edu) & is_not_night
     filtered_df = df[mask].copy()
     
     if exclude_days:
