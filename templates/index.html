@@ -136,6 +136,8 @@
             line-height: 1.5;
             resize: none;
             height: 55px; /* 기본 한 줄 높이로 시작 */
+            max-height: 150px;  /* 최대 높이 제한 */
+            overflow-y: hidden; /* 일단 스크롤바 숨김 */
         }
 
         /* 입력창 클릭 시 테두리 강조 */
@@ -208,12 +210,20 @@
         </div>
     </footer>
 
-    <script>
+   <script>
         const textarea = document.getElementById('user-input');
 
         textarea.addEventListener('input', function() {
-            this.style.height = '55px'; // 높이 초기화
-            this.style.height = this.scrollHeight + 'px'; // 글자 높이만큼 확장
+            this.style.height = '55px';
+            const currentHeight = this.scrollHeight;
+            this.style.height = currentHeight + 'px';
+
+            // 150px 제한 조건 검사
+            if (currentHeight >= 150) {
+                this.style.overflowY = 'auto'; // 넘치면 스크롤바 등장
+            } else {
+                this.style.overflowY = 'hidden'; // 안 넘으면 스크롤바 숨김
+            }
         });
     </script>
 
