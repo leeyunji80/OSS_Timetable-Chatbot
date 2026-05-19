@@ -73,3 +73,12 @@ slots_input = {
     "exclude_days": ["금"],
     "num_to_pick": 5
 }
+
+# 함수 호출 결과
+timetable_results = generate_timetable_combinations("lectures.csv", slots_input)
+
+# 구조 확인용 프린트 (첫 번째 조합의 첫 번째 과목 데이터 형태)
+if timetable_results:
+    import json
+    print("--- 격자 인덱스가 제외된 최종 데이터 구조 샘플 ---")
+    print(json.dumps(timetable_results[0][0], ensure_ascii=False, indent=2))
