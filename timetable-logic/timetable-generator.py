@@ -66,3 +66,10 @@ def generate_timetable_combinations(file_path, slots):
     
     return [list(combo) for combo in all_combinations]
 
+# --- 실행 및 데이터 구조 확인 예시 ---
+
+slots_input = {
+    "target_grade": "2학년",
+    "exclude_days": ["금"],
+    "num_to_pick": 5
+}
