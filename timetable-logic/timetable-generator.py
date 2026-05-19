@@ -2,15 +2,14 @@ import pandas as pd
 import io
 from itertools import combinations
 
-def parse_day_and_period_to_indices(day_raw, period_raw):
+def parse_day_and_period(day_raw, period_raw):
     """
-    요일('월~금')과 교시("06,07") 문자열을 표(Table)에 매핑할 수 있는 인덱스로 변환하는 함수
+    요일과 교시 문자열을 시각화 팀원이 가공 없이 바로 쓸 수 있게 텍스트와 숫자 형태로만 정제
     """
     if pd.isna(day_raw) or pd.isna(period_raw):
         return []
         
-    day_mapping = {'월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5}
-    time_indices = []
+    time_slots = []
     
     # 파이프(|)를 기준으로 다중 요일/교시 분할
     day_splits = str(day_raw).split('|')
@@ -18,20 +17,17 @@ def parse_day_and_period_to_indices(day_raw, period_raw):
     
     for day_chunk, period_chunk in zip(day_splits, period_splits):
         day_str = day_chunk.strip()
-        day_idx = day_mapping.get(day_str)
-        if day_idx is None:
-            continue
-            
-        # 교시를 숫자로 변환 후 표 인덱스(0부터 시작)에 맞추기 위해 -1
-        periods = [int(p.strip()) - 1 for p in period_chunk.split(',') if p.strip().isdigit()]
         
-        for period_idx in periods:
-            time_indices.append({
-                "day_idx": day_idx,       # 표의 '열(Column)' 위치 (0=월, 1=화...)
-                "period_idx": period_idx  # 표의 '행(Row)' 위치 (0=1교시, 1=2교시...)
+        # 교시 문자열을 숫자로 변환 (예: "06" -> 6)
+        periods = [int(p.strip()) for p in period_chunk.split(',') if p.strip().isdigit()]
+        
+        for p_num in periods:
+            time_slots.append({
+                "day": day_str,      # '월', '화', '수' 등 요일 텍스트
+                "period": p_num      # 실제 교시 숫자 (예: 6)
             })
             
-    return time_indices
+    return time_slots
 
 def generate_timetable_combinations(csv_data, target_grade, num_to_pick=5, exclude_days=None):
     # 1. 데이터 로드
