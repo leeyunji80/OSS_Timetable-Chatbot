@@ -66,36 +66,6 @@ def generate_timetable_combinations(file_path, slots):
     
     return [list(combo) for combo in all_combinations]
 
-def print_timetable_as_table(timetable_combo):
-    days = ['월', '화', '수', '목', '금', '토']
-    max_periods = 13  # 1교시부터 13교시까지 존재
-    
-    # 13행 x 6열 크기의 빈 표 생성 (기본값은 공백 문자열)
-    table_grid = [["" for _ in range(6)] for _ in range(max_periods)]
-    
-    # 시간표 조합에 포함된 과목들을 표의 인덱스 좌표에 채워 넣기
-    for course in timetable_combo:
-        for slot in course['time_slots']:
-            r = slot['period_idx']  # 행 (교시 인덱스)
-            c = slot['day_idx']     # 열 (요일 인덱스)
-            
-            # 표 가독성을 위해 과목 이름 뒤에 강의실 정보를 함께 바인딩
-            table_grid[r][c] = f"{course['name']}({course['room'].split('(')[0]})"
-
-    # 판다스 데이터프레임으로 변환하여 표 서식 인프라 구축
-    # 인덱스는 '1교시', '2교시'... 컬럼은 '월', '화', '수'...
-    df_display = pd.DataFrame(
-        table_grid, 
-        columns=days, 
-        index=[f"{i+1}교시" for i in range(max_periods)]
-    )
-    
-    # 콘솔에서 문자열이 잘리지 않고 정렬되도록 판다스 출력 옵션 설정
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.width', 1000)
-    pd.set_option('display.unicode.east_asian_width', True) # 한글 정렬 깨짐 방지
-    
-    print(df_display)
 
 # --- 사용 예시 ---
 raw_data = """개설 연도,개설 학과,수강 대상,교과목 번호,분반 번호,교과목명,이수구분,학점,이론,실습,수업방식,요일,교시,강의실,담당교수,강의 정원,방법_강의(%),방법_토의토론(%),방법_실험실습(%),방법_현장학습(%),방법_발표(%),방법_기타(%),평가_중간(%),평가_기말(%),평가_출석(%),평가_퀴즈(%),평가_과제(%),평가_기타(%)
