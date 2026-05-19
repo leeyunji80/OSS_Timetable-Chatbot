@@ -135,7 +135,8 @@
             transition: border-color 0.2s, background-color 0.2s;
             line-height: 1.5;
             resize: none;
-            height: 55px; /* 기본 한 줄 높이로 시작 */
+            height: 75px; /* 기본 한 줄 높이로 시작 */
+            min-height: 75px;
             max-height: 150px;  /* 최대 높이 제한 */
             overflow-y: hidden; /* 일단 스크롤바 숨김 */
         }
@@ -201,7 +202,7 @@
 
     <footer>
         <div class="input-container">
-            <textarea name="message" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요" autocomplete="off" required style="resize: none; height: 120px;" id="user-input"></textarea>
+            <textarea name="message" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요" autocomplete="off"  id="user-input" required></textarea>
             <button class="send-btn">
                 <svg viewBox="0 0 24 24">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -214,15 +215,21 @@
         const textarea = document.getElementById('user-input');
 
         textarea.addEventListener('input', function() {
-            this.style.height = '55px';
-            const currentHeight = this.scrollHeight;
-            this.style.height = currentHeight + 'px';
+            // 1. 높이 계산을 위해 임시로 'auto' 초기화
+            this.style.height = '75px'; 
+            
+           const calculatedHeight = this.scrollHeight + 5;
+        
+            // 계산된 값이 55px보다 클 때만 높이를 늘려줍니다.
+            if (calculatedHeight > 75) {
+                this.style.height = calculatedHeight + 'px';
+            }
 
-            // 150px 제한 조건 검사
-            if (currentHeight >= 150) {
-                this.style.overflowY = 'auto'; // 넘치면 스크롤바 등장
+            // 3. 150px 제한 조건 검사
+            if (calculatedHeight >= 150) {
+                this.style.overflowY = 'auto';
             } else {
-                this.style.overflowY = 'hidden'; // 안 넘으면 스크롤바 숨김
+                this.style.overflowY = 'hidden';
             }
         });
     </script>
