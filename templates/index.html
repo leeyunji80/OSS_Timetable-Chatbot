@@ -217,6 +217,13 @@
             border-bottom-right-radius: 5px;
         }
 
+        .ai-message {
+            background-color: #f5f5f5;
+            color: #333;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+        }
+
     </style>
 </head>
 <body>
@@ -285,7 +292,42 @@
             if (!message) return;
 
             welcomeScreen.style.display = 'none';
+
+            // 사용자 메시지 출력
             addMessage(message, 'user');
+
+            // 입력창 초기화
+            textarea.value = '';
+            textarea.style.height = '75px';
+
+            try {
+
+                const response = await fetch('/chat', {
+
+                    method: 'POST',
+
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+
+                    body: JSON.stringify({
+                        message: message
+                    })
+
+                });
+
+                const data = await response.json();
+
+                // AI 응답 출력
+                addMessage(data.reply, 'ai');
+
+            } catch (error) {
+
+                console.error(error);
+
+                addMessage('서버 오류가 발생했습니다.', 'ai');
+
+            }
 
         });
 
@@ -297,6 +339,8 @@
 
             if (type === 'user') {
                 div.classList.add('user-message');
+            } else {
+                div.classList.add('ai-message');
             }
 
             div.innerText = message;

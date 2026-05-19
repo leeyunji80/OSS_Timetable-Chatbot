@@ -3,7 +3,7 @@ import webbrowser
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
 from threading import Thread
 import os
 import PyQt5
@@ -21,6 +21,19 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/chat', methods=['POST'])
+def chat():
+
+    data = request.get_json()
+
+    user_message = data['message']
+
+    print(user_message)
+
+    return jsonify({
+        'reply': f'"{user_message}" 조건의 시간표를 생성했습니다.'
+    })
 
 def run_flask():
     app.run(port=5000)
