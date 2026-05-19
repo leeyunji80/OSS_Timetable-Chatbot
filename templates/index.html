@@ -78,6 +78,9 @@
             align-items: center;
             margin-bottom: 20px;
             overflow: hidden; /* 원형 밖으로 이미지가 나가지 않도록 설정 */
+            
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .welcome-icon-box img {
@@ -104,6 +107,10 @@
             margin-top: 8px;
             color: #999;
             font-size: 12px;
+        }
+
+        .welcome-screen {
+            text-align: center;
         }
 
         /* 3. 하단 입력창 영역 (더 크고 웅장하게 변경) */
@@ -204,22 +211,24 @@
         </div>
     </header>
 
-    <main>
-        <div class="welcome-icon-box">
-            <img src="/templates/static/icon.png" alt="로봇 아이콘" onerror="this.style.display='none';">
-        </div>
+    <main id="chat-area">
+        <div id="welcome-screen">
+            <div class="welcome-icon-box">
+                <img src="/static/icon.png" alt="로봇 아이콘" onerror="this.style.display='none';">
+            </div>
         
-        <div class="welcome-text">
-            <h2>시간표 생성 AI에 오신 것을 환영합니다</h2>
-            <p>원하시는 시간표 조건을 자연어로 입력해주세요.</p>
-            <span>예: "다음 학기 전공 필수 위주로 시간표 짜주세요"</span>
+            <div class="welcome-text">
+                <h2>시간표 생성 AI에 오신 것을 환영합니다</h2>
+                <p>원하시는 시간표 조건을 자연어로 입력해주세요.</p>
+                <span>예: "다음 학기 전공 필수 위주로 시간표 짜주세요"</span>
+            </div>
         </div>
     </main>
 
     <footer>
         <div class="input-container">
             <textarea name="message" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요" autocomplete="off"  id="user-input" required></textarea>
-            <button class="send-btn">
+            <button type="button" class="send-btn">
                 <svg viewBox="0 0 24 24">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                 </svg>
@@ -229,6 +238,8 @@
 
    <script>
         const textarea = document.getElementById('user-input');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const sendBtn = document.querySelector('.send-btn');
 
         textarea.addEventListener('input', function() {
             // 1. 높이 계산을 위해 임시로 'auto' 초기화
@@ -247,6 +258,16 @@
             } else {
                 this.style.overflowY = 'hidden';
             }
+        });
+
+        sendBtn.addEventListener('click', async function () {
+
+            const message = textarea.value.trim();
+
+            if (!message) return;
+
+            welcomeScreen.style.display = 'none';
+
         });
     </script>
 
