@@ -93,6 +93,19 @@ def parse_day_and_period(day_raw, period_raw):
     if pd.isna(day_raw) or pd.isna(period_raw):
         return []
         
+    PERIOD_TO_TIME = {
+        1: "09:00 ~ 09:50",
+        2: "10:00 ~ 10:50",
+        3: "11:00 ~ 11:50",
+        4: "12:00 ~ 12:50",
+        5: "13:00 ~ 13:50",
+        6: "14:00 ~ 14:50",
+        7: "15:00 ~ 15:50",
+        8: "16:00 ~ 16:50",
+        9: "17:00 ~ 17:50",
+        10: "18:00 ~ 18:50"
+    }
+
     time_slots = []
     
     # 파이프(|)를 기준으로 다중 요일/교시 분할
@@ -108,7 +121,8 @@ def parse_day_and_period(day_raw, period_raw):
         for p_num in periods:
             time_slots.append({
                 "day": day_str,      # '월', '화', '수' 등 요일 텍스트
-                "period": p_num      # 실제 교시 숫자 (예: 6)
+                "period": p_num,      # 실제 교시 숫자 (예: 6)
+                "time_range": PERIOD_TO_TIME.get(p_num, "")   # 테이블에서 교시를 찾아 변환
             })
             
     return time_slots
@@ -558,6 +572,10 @@ def generate_timetable_combinations(csv_data, slots):
             "time_slots": time_slots
         })
         
+
+    # combinations를 돌리기 전에 과목 순서를 완전히 무작위로 섞어버립니다.
+    random.shuffle(course_pool)
+
     all_combinations = []
 
     for combo in combinations(course_pool, num_to_pick):
@@ -610,7 +628,7 @@ timetable_results = generate_timetable_combinations(raw_data, slots_input)
 # 구조 확인용 프린트 (첫 번째 조합의 첫 번째 과목 데이터 형태)
 if timetable_results:
     import json
-    print("--- 격자 인덱스가 제외된 최종 데이터 구조 샘플 ---")
+    print("-------- 예시 출력 --------")
     for course in timetable_results[0]:
 
         print(json.dumps(course, ensure_ascii=False, indent=2))
