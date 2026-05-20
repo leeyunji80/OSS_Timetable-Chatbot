@@ -39,3 +39,23 @@ def collect_fragments(page):
 
     page.extract_text(visitor_text=visitor)
     return fragments
+
+def guess_year(page_text: str, page_index: int, pdf_path: str) -> str:
+    """
+    페이지의 년도 추출
+
+    2021~2025 페이지는 PDF 텍스트에서 년도가 잡히고,
+    2026 페이지처럼 년도가 누락되는 경우 파일명 2021-2026을 기준으로 보정
+    """
+    years = re.findall(r"20\d{2}", page_text)
+
+    if years:
+        return years[0]
+
+    file_years = re.findall(r"20\d{2}", Path(pdf_path).stem)
+
+    if len(file_years) >= 2:
+        start_year = int(file_years[0])
+        return str(start_year + page_index)
+
+    return ""
