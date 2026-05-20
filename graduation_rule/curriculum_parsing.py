@@ -6,6 +6,11 @@ import pandas as pd
 from pypdf import PdfReader
 
 
+KEEP_SUBJECTS = {
+    "일반교양인간과문화분야택1",
+}
+
+
 def normalize_text(text: str) -> str:
     """PDF에서 추출된 텍스트의 공백과 특수 문자를 정리"""
     text = text.strip()
@@ -241,6 +246,11 @@ def clean_subject_name(text: str) -> str:
     text = re.sub(r"\([^)]*\)", " ", text)
     text = re.sub(r"[①②③④⑤⑥⑦⑧⑨⑩]", " ", text)
 
+    # "일반교양인간과문화분야 택1"은 교양 분류 문구가 아니라 실제 이수모형에
+    # 들어가는 과목/영역명이므로, 아래의 일반 교양 분류 제거 규칙보다 먼저 보존합니다.
+    if re.search(r"일\s*반\s*교\s*양\s*인\s*간\s*과\s*문\s*화\s*분\s*야\s*택\s*1", text):
+        return "일반교양인간과문화분야택1"
+
     text = re.sub(
         r"(개\s*신\s*기(\s*초)?|일\s*반\s*교(\s*양)?|자\s*연\s*이\s*공\s*계\s*기\s*초\s*과\s*학).*",
         " ",
@@ -272,6 +282,9 @@ def is_valid_subject(subject: str) -> bool:
     """과목명이 아닌 잡음 제거"""
     if not subject:
         return False
+
+    if subject in KEEP_SUBJECTS:
+        return True
 
     if len(subject) < 2:
         return False
