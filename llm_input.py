@@ -1,75 +1,27 @@
-def parse_single_input(text):
+# llm_api.py에서 우리가 만든 함수를 가져옵니다.
+from llm_api import parse_schedule_text
 
-    result = {
-        "요일": None,
-        "시간": None,
-        "조건": None,
-        "공강": False
-    }
+#  [필수 변경] 본인의 실제 OpenAI API 키를 따옴표 안에 넣어주세요!
+# 예: MY_API_KEY = "sk-proj-xxxx..."
+MY_API_KEY = "your-api-key-here"
 
-    days = [
-        "월요일",
-        "화요일",
-        "수요일",
-        "목요일",
-        "금요일"
-    ]
+def main():
+    # 1. 분석할 예시 문장
+    user_sentence = "컴공 기준 월요일 오전수업 피하고 금공강 만들어줘"
+    
+    print(f"입력 문장: {user_sentence}")
+    print(" LLM이 문장을 분석하는 중입니다. 잠시만 기다려주세요...\n")
+    
+    try:
+        # 2. llm_api.py에 있는 함수를 호출해서 결과 받기
+        json_result = parse_schedule_text(user_sentence, MY_API_KEY)
+        
+        print(" 분석 완료! 결과 JSON 데이터:")
+        print(json_result)
+        
+    except Exception as e:
+        print(f" 에러가 발생했습니다: {e}")
+        print("API 키가 올바른지, 터미널에 pip install openai pydantic를 실행했는지 확인해 주세요.")
 
-    times = [
-        "오전",
-        "오후",
-        "아침"
-    ]
-
-    conditions = {
-        "피하고": "회피",
-        "싫어": "회피",
-        "듣고": "선호",
-        "원해": "선호"
-    }
-
-    for day in days:
-        if day in text:
-            result["요일"] = day
-
-    for time in times:
-        if time in text:
-            result["시간"] = time
-
-    for keyword, value in conditions.items():
-        if keyword in text:
-            result["조건"] = value
-
-    if "공강" in text:
-        result["공강"] = True
-
-
-    return result
-
-
-def parse_user_input(text):
-
-    split_text = text.split("고")
-
-    results = []
-
-    current_day = None
-
-    for sentence in split_text:
-
-        parsed_result = parse_single_input(sentence)
-
-        if parsed_result["요일"] is not None:
-            current_day = parsed_result["요일"]
-
-        else:
-            parsed_result["요일"] = current_day
-
-        results.append(parsed_result)
-
-    return results
-
-
-user_input = "금요일 공강 만들고 싶어"
-
-print(parse_user_input(user_input))
+if __name__ == "__main__":
+    main()
