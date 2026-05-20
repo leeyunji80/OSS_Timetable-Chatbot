@@ -106,3 +106,44 @@ def get_grade_by_y(y: float, grade_centers: dict[int, float]):
         return None
 
     return min([1, 2, 3, 4], key=lambda grade: abs(y - grade_centers[grade]))
+
+def find_min_x(fragments, pattern: str, default=None):
+    """특정 텍스트 패턴이 등장하는 최소 x좌표를 찾음"""
+    xs = [
+        frag["x"]
+        for frag in fragments
+        if re.search(pattern, frag["text"])
+    ]
+
+    if xs:
+        return min(xs)
+
+    return default
+
+
+def detect_column_ranges(fragments):
+    """
+    PDF 페이지별 1학기/2학기 열의 x좌표 범위를 추정
+
+    페이지마다 PDF 내부 좌표가 조금씩 달라서 고정 좌표 대신
+    '대학글쓰기', '역사와비판적사고', '전공선택' 같은 기준 텍스트 위치를 이용
+    """
+    semester_1_start = find_min_x(fragments, r"대학글쓰기", 126) - 15
+    semester_2_start = find_min_x(fragments, r"역사와비판적사고", 292) - 3
+
+    note_candidates = [
+        frag["x"]
+        for frag in fragments
+        if frag["x"] > semester_2_start + 80
+        and re.search(r"개신기초교양|전공선택|전공필수|합계|일반교양", frag["text"])
+    ]
+
+    note_start = min(note_candidates) if note_candidates else semester_2_start + 180
+
+    return {
+        1: (semester_1_start, semester_2_start),
+        2: (semester_2_start, note_start - 2),
+    }
+
+
+
