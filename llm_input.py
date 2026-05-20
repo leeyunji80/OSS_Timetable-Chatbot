@@ -4,7 +4,7 @@ from llm_api import parse_schedule_text
 
 # 사용할 오픈AI API 키를 변수로 지정
 
-MY_API_KEY = "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"
+MY_API_KEY = "OPENAI_API_KEY"
 
 def main():
 # 사용자가 입력할 예시 문장 정의 단계 
@@ -20,7 +20,7 @@ def main():
 
         print(json_result)
     except Exception as e:
-        print(f" 에러 발생: {e}")
+        print(f"에러 발생: {e}")
 
 if __name__ == "__main__":
     main()
