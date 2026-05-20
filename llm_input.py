@@ -7,7 +7,7 @@ def parse_user_input(text):
         "시간": None
     }
 
-    days = ["월요일","화요일","수요일","목요일","금요일"]
+    days = ["월요일","화요일","수요일","목요일","금요일","월","화","수","목","금"]
 
     for day in days:
         if day in processed_text:
