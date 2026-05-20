@@ -71,3 +71,38 @@ def group_rows_by_y(fragments, tolerance: float = 3.2):
         rows[-1]["items"].append(frag)
 
     return rows
+
+def find_grade_centers(fragments):
+    """
+    표의 학년 숫자 1, 2, 3, 4 위치를 찾음
+
+    학년 숫자는 보통 왼쪽 열에 있으므로 x좌표 70~110 사이에서 탐색
+    """
+    centers = {}
+
+    for frag in fragments:
+        text = frag["text"]
+
+        if 70 <= frag["x"] <= 110 and text in {"1", "2", "3", "4"}:
+            centers[int(text)] = frag["y"]
+
+    return centers
+
+
+def get_grade_by_y(y: float, grade_centers: dict[int, float]):
+    """현재 줄의 y좌표가 어느 학년 영역에 속하는지 판단"""
+    if len(grade_centers) < 4:
+        return None
+
+    y_values = [grade_centers[i] for i in [1, 2, 3, 4]]
+
+    gap_1_2 = y_values[1] - y_values[0]
+    gap_3_4 = y_values[3] - y_values[2]
+
+    top_limit = y_values[0] - gap_1_2 * 0.58
+    bottom_limit = y_values[3] + gap_3_4 * 0.45
+
+    if y < top_limit or y > bottom_limit:
+        return None
+
+    return min([1, 2, 3, 4], key=lambda grade: abs(y - grade_centers[grade]))
