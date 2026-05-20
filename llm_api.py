@@ -19,3 +19,9 @@ class TimeSlot(BaseModel):
         description="사용자의 최종 요구 조건 상태"
     )
 
+class ExtractedSchedule(BaseModel):
+    slots: List[TimeSlot] = Field(description="추출된 시간표 조건 목록")
+    major: Optional[Literal["컴퓨터공학", "일반"]] = Field(
+        "일반", 
+        description="전공 언급 분류"
+    )
