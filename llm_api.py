@@ -3,3 +3,14 @@
 # pydantic: 데이터 구조 검증용
 import os
 from pydantic import BaseModel, Field
+
+from typing import List, Optional, Literal
+from openai import OpenAI
+
+# 시간표의 단일 슬롯을 정의하는 클래스
+class TimeSlot(BaseModel):
+    day: Literal["월요일", "화요일", "수요일", "목요일", "금요일"] = Field(
+        description="요청사항에 언급된 요일 (주말은 제외)"
+    )
+    # 시간대 키워드 제한 (오전/오후/공강 분기)
+    time_range: Optional[Literal["오전", "오후", "우주공강", "연강"]] = Field(None)
