@@ -7,11 +7,13 @@ def parse_user_input(text):
         "시간": None
     }
 
-    if "월요일" in processed_text:
-        result["요일"] = "월요일"
+    days = ["월요일","화요일","수요일","목요일","금요일"]
 
-    if "오전" in processed_text:
-        result["시간"] = "오전"
+    for day in days:
+        if day in processed_text:
+            result["요일"] = day
+
+    
 
     
     return result
