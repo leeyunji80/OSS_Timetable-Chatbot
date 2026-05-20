@@ -403,3 +403,36 @@ def find_default_pdf() -> str:
         "PDF 파일이 여러 개라 자동 선택할 수 없습니다.\n"
         + "\n".join(str(pdf) for pdf in pdf_files)
     )
+
+def main():
+    parser = argparse.ArgumentParser(description="컴퓨터공학과 표준이수모형 PDF를 CSV로 변환")
+
+    # F5 실행을 위해 pdf 인자를 선택 사항으로 변경
+    parser.add_argument(
+        "pdf",
+        nargs="?",
+        default=None,
+        help="입력 PDF 파일 경로. 생략하면 현재 프로젝트에서 자동 탐색합니다.",
+    )
+
+    parser.add_argument(
+        "--output",
+        default="standard_curriculum.csv",
+        help="출력 CSV 파일 경로",
+    )
+
+    args = parser.parse_args()
+
+    pdf_path = args.pdf if args.pdf else find_default_pdf()
+
+    print(f"사용 PDF: {pdf_path}")
+
+    df = parse_curriculum_pdf(pdf_path)
+    df.to_csv(args.output, index=False, encoding="utf-8-sig")
+
+    print(f"CSV 저장 완료: {args.output}")
+    print(f"추출 과목 수: {len(df)}")
+
+
+if __name__ == "__main__":
+    main()
