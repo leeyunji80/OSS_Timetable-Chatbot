@@ -291,3 +291,56 @@ def is_valid_subject(subject: str) -> bool:
     ]
 
     return not any(keyword in subject for keyword in noise_keywords)
+
+def parse_pdf_page(page, page_index: int, pdf_path: str):
+    """PDF 한 페이지에서 년도, 학년, 학기, 과목명 추출"""
+    page_text = page.extract_text() or ""
+    year = guess_year(page_text, page_index, pdf_path)
+
+    fragments = collect_fragments(page)
+    grade_centers = find_grade_centers(fragments)
+    column_ranges = detect_column_ranges(fragments)
+
+    cells = {
+        (grade, semester): []
+        for grade in [1, 2, 3, 4]
+        for semester in [1, 2]
+    }
+
+    for row in group_rows_by_y(fragments):
+        grade = get_grade_by_y(row["y"], grade_centers)
+
+        if grade is None:
+            continue
+
+        for semester, (x_min, x_max) in column_ranges.items():
+            items = [
+                item
+                for item in row["items"]
+                if x_min <= item["x"] < x_max
+            ]
+
+            if items:
+                cells[(grade, semester)].append(assemble_line(items))
+
+    rows = []
+
+    for (grade, semester), lines in cells.items():
+        subject_lines = split_subject_lines(lines)
+
+        for raw_subject in subject_lines:
+            subject = clean_subject_name(raw_subject)
+
+            if not is_valid_subject(subject):
+                continue
+
+            rows.append(
+                {
+                    "년도": year,
+                    "학년": grade,
+                    "학기": semester,
+                    "과목명": subject,
+                }
+            )
+
+    return rows
