@@ -15,7 +15,7 @@
           "required": true,
           "subareas": {
             "personality_critical_thinking": {
-              "name": "인성과 비판적 사고",
+              "name": "인성과비판적사고",
               "min_credits": 3,
               "required": true
             },
@@ -30,7 +30,7 @@
               "required": true
             },
             "information_literacy": {
-              "name": "정보 문해",
+              "name": "정보문해",
               "min_credits": 6,
               "required": true
             }
@@ -42,17 +42,23 @@
           "required": true,
           "subareas": {
             "human_culture": {
-              "name": "인간과 문화",
+              "name": "인간과문화",
               "min_credits": null,
               "required": false
             },
             "society_history": {
-              "name": "사회와 역사",
+              "name": "사회와역사",
               "min_credits": null,
-              "required": false
+              "required": false,
+               "required_courses": [
+        {
+          "name": "공업법규와창업",
+          "credits": 3
+        }
+      ]
             },
             "nature_science": {
-              "name": "자연과 과학",
+              "name": "자연과과학",
               "min_credits": null,
               "required": false
             }
@@ -64,7 +70,7 @@
           "required": true,
           "subareas": {
             "future_convergence": {
-              "name": "미래 융복합",
+              "name": "미래융복합",
               "min_credits": null,
               "required": false
             },
