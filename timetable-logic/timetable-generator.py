@@ -13,6 +13,42 @@ spec = importlib.util.spec_from_file_location(
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
+# -----------------------------
+# 시간 충돌 검사
+# -----------------------------
+
+def is_conflict(course1, course2):
+
+    for slot1 in course1["time_slots"]:
+        for slot2 in course2["time_slots"]:
+
+            # 요일 + 교시가 같으면 충돌
+            if (
+                slot1["day"] == slot2["day"]
+                and slot1["period"] == slot2["period"]
+            ):
+                return True
+
+    return False
+
+
+# -----------------------------
+# 시간표 전체 충돌 검사
+# -----------------------------
+
+def is_valid_combination(schedule):
+
+    for i in range(len(schedule)):
+        for j in range(i + 1, len(schedule)):
+            
+            if schedule[i]["name"] == schedule[j]["name"]:
+                return False
+
+            if is_conflict(schedule[i], schedule[j]):
+                return False
+
+    return True
+
 raw_data = """개설 연도,개설 학과,수강 대상,교과목 번호,분반 번호,교과목명,이수구분,학점,이론,실습,수업방식,요일,교시,강의실,담당교수,강의 정원,방법_강의(%),방법_토의토론(%),방법_실험실습(%),방법_현장학습(%),방법_발표(%),방법_기타(%),평가_중간(%),평가_기말(%),평가_출석(%),평가_퀴즈(%),평가_과제(%),평가_기타(%)
 2026년,컴퓨터공학과,학부(1학년),5110001,01,창의공학설계,전공필수,2,0,4,대면,수,"05,06,07,08",S2-102(32-102),정영섭,50,30,10,30,0,20,10,30,60,10,0,0,0
 2026년,컴퓨터공학과,학부(1학년),5110122,01,미래설계탐색,전공필수,1,0,2,대면,월,"04,05",E8-1-316(44-316),장준환,50,0,0,0,0,0,0,0,0,0,0,0,0
@@ -524,17 +560,17 @@ def generate_timetable_combinations(csv_data, slots):
         
     all_combinations = []
 
-for combo in combinations(course_pool, num_to_pick):
+    for combo in combinations(course_pool, num_to_pick):
 
-    combo_list = list(combo)
+       combo_list = list(combo)
 
     # 시간 충돌 없을 때만 추가
-    if is_valid_combination(combo_list):
-        all_combinations.append(combo_list)
+       if is_valid_combination(combo_list):
+          all_combinations.append(combo_list)
 
     # 최대 10개만 저장
-    if len(all_combinations) >= 10:
-        break
+          if len(all_combinations) >= 10:
+               break
     
     return [list(combo) for combo in all_combinations]
 
