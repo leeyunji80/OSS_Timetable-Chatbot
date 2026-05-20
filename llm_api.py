@@ -14,3 +14,8 @@ class TimeSlot(BaseModel):
     )
     # 시간대 키워드 제한 (오전/오후/공강 분기)
     time_range: Optional[Literal["오전", "오후", "우주공강", "연강"]] = Field(None)
+
+    condition: Literal["선호", "피함", "공강"] = Field(
+        description="사용자의 최종 요구 조건 상태"
+    )
+
