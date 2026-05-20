@@ -4,7 +4,8 @@ def parse_user_input(text):
 
     result = {
         "요일": None,
-        "시간": None
+        "시간": None,
+        "조건": None
     }
 
     days = [
@@ -29,6 +30,16 @@ def parse_user_input(text):
             result["시간"] = time
 
     
+    conditions = {
+        "피하고 싶어": "회피",
+        "싫어": "회피",
+        "듣고 싶어": "선호",
+        "원해": "선호"
+    }
+    
+    for keyword, value in conditions.items():
+        if keyword in processed_text:
+            result["조건"] = value
     
     return result
 
