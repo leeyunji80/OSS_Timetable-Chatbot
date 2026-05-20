@@ -220,3 +220,51 @@ def split_subject_lines(lines):
         subjects.append(buffer)
 
     return subjects
+
+def clean_subject_name(text: str) -> str:
+    """
+    최종 CSV에 저장할 과목명만 남김
+
+    제거:
+    - #
+    - 괄호 내부
+    - 3-3-0 같은 시수
+    - 개신기초, 일반교양, 자연이공계기초과학 등 교양 구분
+    """
+    text = normalize_text(text)
+
+    text = text.replace("#", "")
+    text = text.replace("（", "(").replace("）", ")")
+
+    text = re.sub(r"\d+\s*-\s*\d+\s*-\s*\d+.*$", " ", text)
+    text = re.sub(r":.*$", " ", text)
+    text = re.sub(r"\([^)]*\)", " ", text)
+    text = re.sub(r"[①②③④⑤⑥⑦⑧⑨⑩]", " ", text)
+
+    text = re.sub(
+        r"(개\s*신\s*기(\s*초)?|일\s*반\s*교(\s*양)?|자\s*연\s*이\s*공\s*계\s*기\s*초\s*과\s*학).*",
+        " ",
+        text,
+    )
+
+    text = re.sub(r"학년도|전공과정|표준이수모형|학기|학년|비\s*고", " ", text)
+    text = re.sub(r"^[\s:;,\-]+|[\s:;,\-]+$", "", text)
+    text = re.sub(r"^\d+(?=[가-힣A-Za-z])", "", text)
+
+    # 과목명 내부의 불필요한 공백 제거
+    text = re.sub(r"\s+", "", text)
+
+    # PDF 추출 순서/누락 보정
+    corrections = {
+        "프로그래밍C/C++": "C/C++프로그래밍",
+        "기초컴퓨터프로그래밍개신기": "기초컴퓨터프로그래밍",
+        "응용컴퓨터프로그래밍개신기": "응용컴퓨터프로그래밍",
+        "빅데이터의이해와활용일반교": "빅데이터의이해와활용",
+        "오픈소스이해및실습SW": "오픈소스SW이해및실습",
+        "SW": "오픈소스SW이해및실습",
+        "컴퓨터전": "컴퓨터비전",
+        "AI": "AI증강프로그래밍",
+    }
+
+    return corrections.get(text, text)
+
