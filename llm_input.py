@@ -33,4 +33,10 @@ def parse_user_input(text):
             result["시간"] = time
 
     
+    
     return result
+
+
+user_input = "월요일 오전 수업 피하고 싶어"
+    
+print(parse_user_input(user_input))
