@@ -267,6 +267,139 @@
       }
     }
   }
+},
+  "2024":{
+      "name": "2024년 컴퓨터공학과 졸업요건",
+    "applies_to": {
+        "admission_year_from": 2024,
+        "admission_year_to": 2024
+      },
+  "graduation": {
+    "min_total_credits": 140
+  },
+  "requirements": {
+    "general_education": {
+      "name": "교양",
+      "min_total_credits": 33,
+      "areas": {
+        "gaesin_basic": {
+          "name": "개신기초교양",
+          "min_credits": 15,
+          "required": true,
+          "subareas": {
+            "personality_critical_thinking": {
+              "name": "인성과비판적사고",
+              "min_credits": 3,
+              "required": true
+            },
+            "communication": {
+              "name": "의사소통",
+              "min_credits": 3,
+              "required": true
+            },
+            "english": {
+              "name": "영어",
+              "min_credits": 3,
+              "required": true
+            },
+            "information_literacy": {
+              "name": "정보문해",
+              "min_credits": 6,
+              "required": true
+            }
+          }
+        },
+        "general": {
+          "name": "일반교양",
+          "min_credits": 9,
+          "required": true,
+          "subareas": {
+            "human_culture": {
+              "name": "인간과문화",
+              "min_credits": null,
+              "required": false
+            },
+            "society_history": {
+              "name": "사회와역사",
+              "min_credits": null,
+              "required": false,
+               "required_courses": [
+        {
+          "name": "공업법규와창업",
+          "credits": 3
+        }
+      ]
+            },
+            "nature_science": {
+              "name": "자연과과학",
+              "min_credits": null,
+              "required": false
+            }
+          }
+        },
+        "expanded": {
+          "name": "확대교양",
+          "min_credits": 3,
+          "required": true,
+          "subareas": {
+            "future_convergence": {
+              "name": "미래융복합",
+              "min_credits": null,
+              "required": false
+            },
+            "globalization": {
+              "name": "국제화",
+              "min_credits": null,
+              "required": false
+            },
+            "career_employment": {
+              "name": "진로와 취업",
+              "min_credits": null,
+              "required": false
+            },
+            "arts_physical": {
+              "name": "예술과 체육",
+              "min_credits": null,
+              "required": false
+            }
+          }
+        },
+        "basic_science_engineering": {
+          "name": "자연이공계기초과학",
+          "min_credits": 6,
+          "required": true,
+          "subareas": {
+            "mathematics": {
+              "name": "수학",
+              "min_credits": null,
+              "required": false
+            },
+            "basic_science": {
+              "name": "기초과학",
+              "min_credits": null,
+              "required": false
+            }
+          }
+        }
+      }
+    },
+    "major": {
+      "name": "전공",
+      "min_total_credits": 66,
+      "types": {
+        "major_required": {
+          "name": "전공필수",
+          "min_credits": 28,
+          "required": true
+        },
+        "major_elective": {
+          "name": "전공선택",
+          "min_credits": 38,
+          "required": true
+        }
+      }
+    }
+  }
 }
   }
 }
