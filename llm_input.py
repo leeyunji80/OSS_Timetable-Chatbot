@@ -23,7 +23,11 @@ def parse_user_input(text):
         if day in processed_text:
             result["요일"] = day
 
-    
+    times = ["오전","오후"]
+
+    for time in times:
+        if time in processed_text:
+            result["시간"] = time
 
     
     return result
