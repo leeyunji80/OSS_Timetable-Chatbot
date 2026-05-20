@@ -93,6 +93,25 @@ def parse_day_and_period(day_raw, period_raw):
             
     return time_slots
 
+
+def evaluate_load(row):
+    """
+    강의계획서의 '평가_과제(%)' 비율만 확인합니다.
+    - 많다 : 40% 이상
+    - 보통이다 : 20% 이상 ~ 40% 미만
+    - 적다 : 20% 미만
+    """
+    # 결측치(NaN)나 예외 상황을 방지하기 위해 숫자로 안전하게 변환
+    assignment_ratio = pd.to_numeric(row.get('평가_과제(%)'), errors='coerce') or 0
+    
+    # 오직 과제 비율 기준으로만 판단
+    if assignment_ratio >= 40:
+        return "많다"
+    elif assignment_ratio >= 20:
+        return "보통이다"
+    else:
+        return "적다"
+
 def generate_timetable_combinations(major_path, ge_path, slots):
     """
     슬롯 데이터를 바탕으로 필터링 후, 시각화 팀원에게 줄 핵심 3가지 정보(과목명, 강의실, 시간)만 추출
@@ -128,11 +147,14 @@ def generate_timetable_combinations(major_path, ge_path, slots):
     course_pool = []
     for _, row in filtered_df.iterrows():
         time_slots = parse_day_and_period(row['요일'], row['교시'])
+
+        assignment_status = evaluate_load(row)
         
         course_pool.append({
             "name": row['교과목명'],
             "room": row['강의실'].split('(')[0] if pd.notna(row['강의실']) else "",
-            "time_slots": time_slots
+            "time_slots": time_slots,
+            "assignment": assignment_status  # "많다", "보통이다", "적다" 출력
         })
         
 
