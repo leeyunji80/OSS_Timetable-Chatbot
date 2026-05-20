@@ -284,6 +284,57 @@
             background-color: #ffe3e3;
         }
 
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+
+            margin-bottom: 15px;
+        }
+
+        .timetable-history {
+            flex: 1;
+
+            overflow-y: auto;
+        }
+
+        .history-card {
+            background-color: white;
+
+            border-radius: 18px;
+
+            padding: 12px;
+
+            margin-bottom: 15px;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+        .history-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .history-card img {
+            width: 100%;
+
+            border-radius: 12px;
+
+            margin-bottom: 10px;
+        }
+
+        .history-info p {
+            font-size: 14px;
+            font-weight: 600;
+
+            margin-bottom: 4px;
+        }
+
+        .history-info span {
+            font-size: 12px;
+            color: #999;
+        }
+
     </style>
 </head>
 <body>
@@ -293,6 +344,25 @@
         <button class="new-chat-btn">
             + 새 시간표 생성
         </button>
+
+        <div class="sidebar-title">
+            이전 시간표
+        </div>
+
+        <div class="timetable-history">
+
+            <div class="history-card">
+
+                <img src="/static/timetable.png">
+
+                <div class="history-info">
+                    <p>다음 학기 전공 필수 위주</p>
+                    <span>2026. 4. 15.</span>
+                </div>
+
+            </div>
+
+        </div>
 
     </div>
 
