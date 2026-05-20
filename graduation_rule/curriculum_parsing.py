@@ -45,6 +45,62 @@ def collect_fragments(page):
     page.extract_text(visitor_text=visitor)
     return fragments
 
+
+def merge_close_values(values, tolerance: float = 1.5):
+    """PDF 선 좌표 중 거의 같은 위치에 반복 검출된 값을 하나로 병합"""
+    values = sorted(values)
+
+    if not values:
+        return []
+
+    groups = [[values[0]]]
+
+    for value in values[1:]:
+        if abs(value - groups[-1][-1]) <= tolerance:
+            groups[-1].append(value)
+        else:
+            groups.append([value])
+
+    return [sum(group) / len(group) for group in groups]
+
+
+def extract_table_lines(page):
+    """
+    PDF 내부의 표 선 좌표를 추출
+
+    이 PDF에는 표의 가로/세로선이 벡터 라인으로 들어있다.
+    텍스트 중심점으로 학년을 추정하면 경계선 근처 과목이 옆 학년으로 밀릴 수 있으므로,
+    실제 표 선을 기준으로 1~4학년 행과 1/2학기 열을 나눈다.
+    """
+    vertical_lines = []
+    horizontal_lines = []
+    last_move = None
+
+    def visitor_operand_before(operator, operands, cm, tm):
+        nonlocal last_move
+
+        if operator == b"m":
+            last_move = (float(operands[0]), float(operands[1]))
+            return
+
+        if operator != b"l" or last_move is None:
+            return
+
+        x1, y1 = last_move
+        x2, y2 = float(operands[0]), float(operands[1])
+        last_move = None
+
+        if abs(x1 - x2) < 1 and abs(y2 - y1) > 100:
+            vertical_lines.append(x1)
+
+        if abs(y1 - y2) < 1 and abs(x2 - x1) > 100:
+            horizontal_lines.append(y1)
+
+    page.extract_text(visitor_operand_before=visitor_operand_before)
+
+    return merge_close_values(vertical_lines), merge_close_values(horizontal_lines)
+
+
 def guess_year(page_text: str, page_index: int, pdf_path: str) -> str:
     """
     페이지의 년도 추출
@@ -112,6 +168,24 @@ def get_grade_by_y(y: float, grade_centers: dict[int, float]):
 
     return min([1, 2, 3, 4], key=lambda grade: abs(y - grade_centers[grade]))
 
+
+def get_grade_by_table_y(y: float, horizontal_lines):
+    """표의 실제 가로선 좌표를 기준으로 현재 줄이 어느 학년 행인지 판단"""
+    if len(horizontal_lines) < 6:
+        return None
+
+    lines = sorted(horizontal_lines)[:6]
+
+    for grade in [1, 2, 3, 4]:
+        row_top = lines[grade]
+        row_bottom = lines[grade + 1]
+
+        if row_top <= y < row_bottom:
+            return grade
+
+    return None
+
+
 def find_min_x(fragments, pattern: str, default=None):
     """특정 텍스트 패턴이 등장하는 최소 x좌표를 찾음"""
     xs = [
@@ -126,13 +200,21 @@ def find_min_x(fragments, pattern: str, default=None):
     return default
 
 
-def detect_column_ranges(fragments):
+def detect_column_ranges(fragments, vertical_lines=None):
     """
     PDF 페이지별 1학기/2학기 열의 x좌표 범위를 추정
 
     페이지마다 PDF 내부 좌표가 조금씩 달라서 고정 좌표 대신
     '대학글쓰기', '역사와비판적사고', '전공선택' 같은 기준 텍스트 위치를 이용
     """
+    if vertical_lines and len(vertical_lines) >= 5:
+        lines = sorted(vertical_lines)[:5]
+
+        return {
+            1: (lines[1] - 2, lines[2] - 2),
+            2: (lines[2] - 2, lines[3] - 2),
+        }
+
     semester_1_start = find_min_x(fragments, r"대학글쓰기", 126) - 15
     semester_2_start = find_min_x(fragments, r"역사와비판적사고", 292) - 3
 
@@ -247,7 +329,7 @@ def clean_subject_name(text: str) -> str:
     text = re.sub(r"[①②③④⑤⑥⑦⑧⑨⑩]", " ", text)
 
     # "일반교양인간과문화분야 택1"은 교양 분류 문구가 아니라 실제 이수모형에
-    # 들어가는 과목/영역명이므로, 아래의 일반 교양 분류 제거 규칙보다 먼저 보존합니다.
+    # 들어가는 과목/영역명이므로, 아래의 일반 교양 분류 제거 규칙보다 먼저 보존
     if re.search(r"일\s*반\s*교\s*양\s*인\s*간\s*과\s*문\s*화\s*분\s*야\s*택\s*1", text):
         return "일반교양인간과문화분야택1"
 
@@ -274,6 +356,7 @@ def clean_subject_name(text: str) -> str:
         "SW": "오픈소스SW이해및실습",
         "컴퓨터전": "컴퓨터비전",
         "AI": "AI증강프로그래밍",
+        "증강프로그래밍AI": "AI증강프로그래밍",
     }
 
     return corrections.get(text, text)
@@ -311,8 +394,9 @@ def parse_pdf_page(page, page_index: int, pdf_path: str):
     year = guess_year(page_text, page_index, pdf_path)
 
     fragments = collect_fragments(page)
+    vertical_lines, horizontal_lines = extract_table_lines(page)
     grade_centers = find_grade_centers(fragments)
-    column_ranges = detect_column_ranges(fragments)
+    column_ranges = detect_column_ranges(fragments, vertical_lines)
 
     cells = {
         (grade, semester): []
@@ -321,7 +405,10 @@ def parse_pdf_page(page, page_index: int, pdf_path: str):
     }
 
     for row in group_rows_by_y(fragments):
-        grade = get_grade_by_y(row["y"], grade_centers)
+        grade = get_grade_by_table_y(row["y"], horizontal_lines)
+
+        if grade is None:
+            grade = get_grade_by_y(row["y"], grade_centers)
 
         if grade is None:
             continue
