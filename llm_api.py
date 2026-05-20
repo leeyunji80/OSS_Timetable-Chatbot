@@ -25,3 +25,19 @@ class ExtractedSchedule(BaseModel):
         "일반", 
         description="전공 언급 분류"
     )
+
+def parse_schedule_text(user_text: str, api_key: str) -> str:
+    # OpenAI 클라이언트 객체를 생성하는 구간
+    # 전달받은 api_key를 활용함
+    client = OpenAI(api_key=api_key)
+
+    response = client.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "너는 대학생들의 시간표 요구사항 문장에서 핵심 슬롯을 추출하는 AI야."},
+            {"role": "user", "content": user_text}
+        ],
+
+        response_format=ExtractedSchedule,
+    )
+    return response.choices[0].message.content
