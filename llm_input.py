@@ -1,10 +1,17 @@
+# .env 파일에 저장된 환경 변수를 로드하기 위한 라이브러리 추가
+# 이를 통해 코드가 실제 API 키 값을 올바르게 인식하게 됨
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+
 # llm_api.py에서 작성한 함수를 가져옴
 # 사용자의 문장을 넘겨주기 위한 메인 실행 파일
 from llm_api import parse_schedule_text
 
 # 사용할 오픈AI API 키를 변수로 지정
 
-MY_API_KEY = "OPENAI_API_KEY"
+MY_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 def main():
 # 사용자가 입력할 예시 문장 정의 단계 
