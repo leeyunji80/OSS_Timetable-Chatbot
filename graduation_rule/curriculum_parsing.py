@@ -268,3 +268,26 @@ def clean_subject_name(text: str) -> str:
 
     return corrections.get(text, text)
 
+def is_valid_subject(subject: str) -> bool:
+    """과목명이 아닌 잡음 제거"""
+    if not subject:
+        return False
+
+    if len(subject) < 2:
+        return False
+
+    if re.fullmatch(r"[\d\s:,\-]+", subject):
+        return False
+
+    noise_keywords = [
+        "전공선택",
+        "전공필수",
+        "합계",
+        "학점",
+        "총",
+        "미이수",
+        "졸업불가",
+        "컴퓨터공학과",
+    ]
+
+    return not any(keyword in subject for keyword in noise_keywords)
