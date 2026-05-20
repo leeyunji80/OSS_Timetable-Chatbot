@@ -32,7 +32,8 @@ def chat():
     print(user_message)
 
     return jsonify({
-        'reply': f'"{user_message}" 조건의 시간표를 생성했습니다.'
+        'reply': f'"{user_message}" 조건의 시간표를 생성했습니다.',
+        'image': '/static/timetable.png'
     })
 
 def run_flask():

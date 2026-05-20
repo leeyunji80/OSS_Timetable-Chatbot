@@ -211,6 +211,7 @@
             border-radius: 18px;
             margin-bottom: 15px;
             line-height: 1.5;
+            font-size: 15px;
             word-break: break-word;
         }
 
@@ -226,6 +227,18 @@
             color: #333;
             margin-right: auto;
             border-bottom-left-radius: 5px;
+        }
+
+        .timetable-image {
+            width: 100%;
+            max-width: 500px;
+
+            border-radius: 15px;
+
+            margin-top: 10px;
+            margin-bottom: 20px;
+
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
     </style>
@@ -324,6 +337,7 @@
 
                 // AI 응답 출력
                 addMessage(data.reply, 'ai');
+                addImageMessage(data.image);
 
             } catch (error) {
 
@@ -353,6 +367,19 @@
 
             chatArea.scrollTop = chatArea.scrollHeight;
         }
+
+        function addImageMessage(imageUrl) {
+
+            const img = document.createElement('img');
+
+            img.src = imageUrl;
+
+            img.classList.add('timetable-image');
+
+            chatArea.appendChild(img);
+
+        }
+
     </script>
 
 </body>
