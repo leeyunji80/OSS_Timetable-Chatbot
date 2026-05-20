@@ -398,6 +398,12 @@
             color: #d67f7f;
         }
 
+        .main-container.shift {
+            margin-left: 260px;
+
+            transition: margin-left 0.3s ease;
+        }
+
     </style>
 </head>
 <body>
@@ -486,6 +492,9 @@
             const welcomeScreen = document.getElementById('welcome-screen');
             const chatArea = document.getElementById('chat-area');
             const sendBtn = document.querySelector('.send-btn');
+            const sidebar = document.querySelector('.sidebar');
+            const menuBtn = document.getElementById('menu-btn');
+            const mainContainer = document.querySelector('.main-container');
 
             textarea.addEventListener('input', function() {
                 // 1. 높이 계산을 위해 임시로 'auto' 초기화
@@ -581,8 +590,14 @@
                 img.classList.add('timetable-image');
 
                 chatArea.appendChild(img);
-
             }
+
+            menuBtn.addEventListener('click', function () {
+
+                sidebar.classList.toggle('active');
+                mainContainer.classList.toggle('shift');
+
+            });
 
         </script>
     </div>
