@@ -181,3 +181,42 @@ def is_credit_only(line: str) -> bool:
     return bool(re.fullmatch(r"[:#\s]*\d+\s*-\s*\d+\s*-\s*\d+\s*", line))
 
 
+def split_subject_lines(lines):
+    """
+    셀 안의 줄들을 과목 단위로 묶음
+
+    예:
+    기초컴퓨터프로그래밍 개신기초④:
+    3-2-2
+
+    위처럼 시수 정보가 다음 줄에 있으면 이전 과목명과 합침
+    """
+    subjects = []
+    buffer = ""
+
+    for line in lines:
+        line = normalize_text(line)
+
+        if not line:
+            continue
+
+        if is_credit_only(line):
+            if buffer:
+                subjects.append(f"{buffer} {line}".strip())
+                buffer = ""
+            continue
+
+        if has_credit_info(line):
+            if buffer:
+                subjects.append(f"{buffer} {line}".strip())
+                buffer = ""
+            else:
+                subjects.append(line)
+            continue
+
+        buffer = f"{buffer} {line}".strip() if buffer else line
+
+    if buffer:
+        subjects.append(buffer)
+
+    return subjects
