@@ -3,7 +3,8 @@ def parse_single_input(text):
     result = {
         "요일": None,
         "시간": None,
-        "조건": None
+        "조건": None,
+        "공강": False
     }
 
     days = [
@@ -39,6 +40,10 @@ def parse_single_input(text):
         if keyword in text:
             result["조건"] = value
 
+    if "공강" in text:
+        result["공강"] = True
+
+
     return result
 
 
@@ -65,6 +70,6 @@ def parse_user_input(text):
     return results
 
 
-user_input = "월요일 오전은 피하고 오후는 듣고 싶어"
+user_input = "금요일 공강 만들고 싶어"
 
 print(parse_user_input(user_input))
