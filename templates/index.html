@@ -13,11 +13,30 @@
             font-family: 'Noto Sans KR', sans-serif;
         }
 
-        body, html {
-            height: 100%;
-            background-color: #ffffff;
+        body {
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+
+            background-color: #fff5f5;
+            border-right: 1px solid #f0dede;
+
             display: flex;
             flex-direction: column;
+
+            padding: 20px;
+        }
+
+        .main-container {
+            flex: 1;
+
+            display: flex;
+            flex-direction: column;
+
             overflow: hidden;
         }
 
@@ -245,142 +264,149 @@
 </head>
 <body>
 
-    <header>
-        <div class="header-title">
-            <h1>📅 시간표 생성 AI</h1>
-            <p>원하는 시간표가 있으신가요? 입력하세요!</p>
-        </div>
-    </header>
+    <div class="sidebar">
 
-    <main id="chat-area">
-        <div id="welcome-screen">
-            <div class="welcome-icon-box">
-                <img src="/static/icon.png" alt="로봇 아이콘" onerror="this.style.display='none';">
+    </div>
+
+    <div class="main-container">
+
+        <header>
+            <div class="header-title">
+                <h1>📅 시간표 생성 AI</h1>
+                <p>원하는 시간표가 있으신가요? 입력하세요!</p>
             </div>
-        
-            <div class="welcome-text">
-                <h2>시간표 생성 AI에 오신 것을 환영합니다</h2>
-                <p>원하시는 시간표 조건을 자연어로 입력해주세요.</p>
-                <span>예: "다음 학기 전공 필수 위주로 시간표 짜주세요"</span>
-            </div>
-        </div>
-    </main>
+        </header>
 
-    <footer>
-        <div class="input-container">
-            <textarea name="message" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요" autocomplete="off"  id="user-input" required></textarea>
-            <button type="button" class="send-btn">
-                <svg viewBox="0 0 24 24">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                </svg>
-            </button>
-        </div>
-    </footer>
-
-   <script>
-        const textarea = document.getElementById('user-input');
-        const welcomeScreen = document.getElementById('welcome-screen');
-        const chatArea = document.getElementById('chat-area');
-        const sendBtn = document.querySelector('.send-btn');
-
-        textarea.addEventListener('input', function() {
-            // 1. 높이 계산을 위해 임시로 'auto' 초기화
-            this.style.height = '75px'; 
+        <main id="chat-area">
+            <div id="welcome-screen">
+                <div class="welcome-icon-box">
+                    <img src="/static/icon.png" alt="로봇 아이콘" onerror="this.style.display='none';">
+                </div>
             
-           const calculatedHeight = this.scrollHeight + 5;
-        
-            // 계산된 값이 55px보다 클 때만 높이를 늘려줍니다.
-            if (calculatedHeight > 75) {
-                this.style.height = calculatedHeight + 'px';
+                <div class="welcome-text">
+                    <h2>시간표 생성 AI에 오신 것을 환영합니다</h2>
+                    <p>원하시는 시간표 조건을 자연어로 입력해주세요.</p>
+                    <span>예: "다음 학기 전공 필수 위주로 시간표 짜주세요"</span>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="input-container">
+                <textarea name="message" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요" autocomplete="off"  id="user-input" required></textarea>
+                <button type="button" class="send-btn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </footer>
+
+    <script>
+            const textarea = document.getElementById('user-input');
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const chatArea = document.getElementById('chat-area');
+            const sendBtn = document.querySelector('.send-btn');
+
+            textarea.addEventListener('input', function() {
+                // 1. 높이 계산을 위해 임시로 'auto' 초기화
+                this.style.height = '75px'; 
+                
+            const calculatedHeight = this.scrollHeight + 5;
+            
+                // 계산된 값이 55px보다 클 때만 높이를 늘려줍니다.
+                if (calculatedHeight > 75) {
+                    this.style.height = calculatedHeight + 'px';
+                }
+
+                // 3. 150px 제한 조건 검사
+                if (calculatedHeight >= 150) {
+                    this.style.overflowY = 'auto';
+                } else {
+                    this.style.overflowY = 'hidden';
+                }
+            });
+
+            sendBtn.addEventListener('click', async function () {
+
+                const message = textarea.value.trim();
+
+                if (!message) return;
+
+                welcomeScreen.style.display = 'none';
+
+                // 사용자 메시지 출력
+                addMessage(message, 'user');
+
+                // 입력창 초기화
+                textarea.value = '';
+                textarea.style.height = '75px';
+
+                try {
+
+                    const response = await fetch('/chat', {
+
+                        method: 'POST',
+
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+
+                        body: JSON.stringify({
+                            message: message
+                        })
+
+                    });
+
+                    const data = await response.json();
+
+                    // AI 응답 출력
+                    addMessage(data.reply, 'ai');
+                    addImageMessage(data.image);
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    addMessage('서버 오류가 발생했습니다.', 'ai');
+
+                }
+
+            });
+
+            function addMessage(message, type) {
+
+                const div = document.createElement('div');
+
+                div.classList.add('message');
+
+                if (type === 'user') {
+                    div.classList.add('user-message');
+                } else {
+                    div.classList.add('ai-message');
+                }
+
+                div.innerText = message;
+
+                chatArea.appendChild(div);
+
+                chatArea.scrollTop = chatArea.scrollHeight;
             }
 
-            // 3. 150px 제한 조건 검사
-            if (calculatedHeight >= 150) {
-                this.style.overflowY = 'auto';
-            } else {
-                this.style.overflowY = 'hidden';
-            }
-        });
+            function addImageMessage(imageUrl) {
 
-        sendBtn.addEventListener('click', async function () {
+                const img = document.createElement('img');
 
-            const message = textarea.value.trim();
+                img.src = imageUrl;
 
-            if (!message) return;
+                img.classList.add('timetable-image');
 
-            welcomeScreen.style.display = 'none';
-
-            // 사용자 메시지 출력
-            addMessage(message, 'user');
-
-            // 입력창 초기화
-            textarea.value = '';
-            textarea.style.height = '75px';
-
-            try {
-
-                const response = await fetch('/chat', {
-
-                    method: 'POST',
-
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-
-                    body: JSON.stringify({
-                        message: message
-                    })
-
-                });
-
-                const data = await response.json();
-
-                // AI 응답 출력
-                addMessage(data.reply, 'ai');
-                addImageMessage(data.image);
-
-            } catch (error) {
-
-                console.error(error);
-
-                addMessage('서버 오류가 발생했습니다.', 'ai');
+                chatArea.appendChild(img);
 
             }
 
-        });
-
-        function addMessage(message, type) {
-
-            const div = document.createElement('div');
-
-            div.classList.add('message');
-
-            if (type === 'user') {
-                div.classList.add('user-message');
-            } else {
-                div.classList.add('ai-message');
-            }
-
-            div.innerText = message;
-
-            chatArea.appendChild(div);
-
-            chatArea.scrollTop = chatArea.scrollHeight;
-        }
-
-        function addImageMessage(imageUrl) {
-
-            const img = document.createElement('img');
-
-            img.src = imageUrl;
-
-            img.classList.add('timetable-image');
-
-            chatArea.appendChild(img);
-
-        }
-
-    </script>
+        </script>
+    </div>
 
 </body>
 </html>
