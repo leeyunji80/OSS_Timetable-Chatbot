@@ -360,3 +360,46 @@ def parse_curriculum_pdf(pdf_path: str) -> pd.DataFrame:
     df = df.drop_duplicates(ignore_index=True)
 
     return df
+
+def find_default_pdf() -> str:
+    """
+    F5로 실행할 때 PDF 경로를 직접 입력하지 않아도 되도록 조치
+    """
+    search_roots = [
+        Path.cwd(),                    # VS Code에서 열린 프로젝트 폴더
+        Path(__file__).resolve().parent,  # 현재 파이썬 파일이 있는 폴더
+        Path(__file__).resolve().parent.parent,
+    ]
+
+    pdf_files = []
+
+    for root in search_roots:
+        if root.exists():
+            pdf_files.extend(root.glob("*.pdf"))
+            pdf_files.extend(root.rglob("*.pdf"))
+
+    # 중복 제거
+    pdf_files = list(dict.fromkeys(pdf_files))
+
+    if not pdf_files:
+        raise FileNotFoundError(
+            "PDF 파일을 찾지 못했습니다. "
+            "VS Code 프로젝트 폴더 또는 graduation_rule 폴더에 PDF를 넣어주세요."
+        )
+
+    # 교육과정 PDF를 우선 선택
+    preferred_keywords = ["교육과정", "컴퓨터공학과", "2021-2026", "curriculum"]
+
+    for keyword in preferred_keywords:
+        for pdf in pdf_files:
+            if keyword.lower() in pdf.name.lower():
+                return str(pdf)
+
+    # PDF가 하나뿐이면 그 파일 사용
+    if len(pdf_files) == 1:
+        return str(pdf_files[0])
+
+    raise FileExistsError(
+        "PDF 파일이 여러 개라 자동 선택할 수 없습니다.\n"
+        + "\n".join(str(pdf) for pdf in pdf_files)
+    )
