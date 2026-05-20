@@ -145,5 +145,39 @@ def detect_column_ranges(fragments):
         2: (semester_2_start, note_start - 2),
     }
 
+def is_credit_fragment(text: str) -> bool:
+    """3-3-0 같은 시수 정보 조각인지 확인"""
+    return bool(re.search(r"\d+\s*-\s*\d+\s*-\s*\d+", text)) or text.startswith(("#", ":"))
+
+
+def assemble_line(items):
+    """
+    같은 줄의 텍스트 조각들을 하나의 문자열로 조립
+
+    PDF에서 '# : 3-3-0'이 과목명보다 앞에 추출되는 경우가 있어
+    과목명 조각을 먼저, 시수 정보 조각을 뒤로 보냄
+    """
+    normal_parts = []
+    credit_parts = []
+
+    for frag in sorted(items, key=lambda item: item["x"]):
+        text = normalize_text(frag["text"])
+
+        if is_credit_fragment(text):
+            credit_parts.append(text)
+        else:
+            normal_parts.append(text)
+
+    return normalize_text(" ".join(normal_parts + credit_parts))
+
+
+def has_credit_info(line: str) -> bool:
+    """줄 안에 3-3-0 형태의 시수 정보가 있는지 확인"""
+    return bool(re.search(r"\d+\s*-\s*\d+\s*-\s*\d+", line))
+
+
+def is_credit_only(line: str) -> bool:
+    """줄 전체가 시수 정보뿐인지 확인"""
+    return bool(re.fullmatch(r"[:#\s]*\d+\s*-\s*\d+\s*-\s*\d+\s*", line))
 
 
