@@ -59,3 +59,15 @@ def guess_year(page_text: str, page_index: int, pdf_path: str) -> str:
         return str(start_year + page_index)
 
     return ""
+
+def group_rows_by_y(fragments, tolerance: float = 3.2):
+    """비슷한 y좌표를 가진 텍스트 조각들을 같은 줄로 묶음"""
+    rows = []
+
+    for frag in sorted(fragments, key=lambda item: item["y"]):
+        if not rows or abs(rows[-1]["y"] - frag["y"]) > tolerance:
+            rows.append({"y": frag["y"], "items": []})
+
+        rows[-1]["items"].append(frag)
+
+    return rows
