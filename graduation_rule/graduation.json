@@ -1,6 +1,13 @@
 {
   "department": "computer_science",
   "version": "example-1.0",
+  "rule_sets":{
+    "2026":{
+      "name": "2026년 컴퓨터공학과 졸업요건",
+    "applies_to": {
+        "admission_year_from": 2026,
+        "admission_year_to": 2026
+      },
   "graduation": {
     "min_total_credits": 140
   },
@@ -126,5 +133,7 @@
         }
       }
     }
+  }
+}
   }
 }
