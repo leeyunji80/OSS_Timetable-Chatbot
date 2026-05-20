@@ -344,3 +344,19 @@ def parse_pdf_page(page, page_index: int, pdf_path: str):
             )
 
     return rows
+
+
+def parse_curriculum_pdf(pdf_path: str) -> pd.DataFrame:
+    """전체 PDF를 파싱하여 DataFrame 생성"""
+    reader = PdfReader(pdf_path)
+
+    all_rows = []
+
+    for page_index, page in enumerate(reader.pages):
+        page_rows = parse_pdf_page(page, page_index, pdf_path)
+        all_rows.extend(page_rows)
+
+    df = pd.DataFrame(all_rows, columns=["년도", "학년", "학기", "과목명"])
+    df = df.drop_duplicates(ignore_index=True)
+
+    return df
