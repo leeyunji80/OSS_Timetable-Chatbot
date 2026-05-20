@@ -13,11 +13,7 @@ def parse_user_input(text):
         "수요일",
         "목요일",
         "금요일",
-        "월",
-        "화",
-        "수",
-        "목",
-        "금"]
+        ]
 
     for day in days:
         if day in processed_text:
