@@ -12,3 +12,15 @@ def main():
     
     print(f"입력된 문장: {user_sentence}")
     print(" LLM 엔진 분석을 시작합니다...")
+
+    try:
+        # llm_api 파일의 함수를 호출하여 결과 JSON을 받아옴
+        json_result = parse_schedule_text(user_sentence, MY_API_KEY)
+        print("\n 분석 성공! 결과 데이터:")
+
+        print(json_result)
+    except Exception as e:
+        print(f" 에러 발생: {e}")
+
+if __name__ == "__main__":
+    main()
