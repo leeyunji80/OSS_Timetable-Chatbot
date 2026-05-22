@@ -61,3 +61,13 @@ def prepare_major_catalog(lectures):
     catalog["권장학년"] = catalog["수강 대상"].map(parse_target_grade)
     catalog["정규화과목명"] = catalog["교과목명"].map(normalize_course_name)
     return catalog
+
+def prepare_liberal_catalog(liberal_arts):
+    """교양 강의 CSV를 중복 분반 제거된 선택용 카탈로그로 변환한다."""
+    catalog = liberal_arts.drop_duplicates("교과목 번호").copy()
+    catalog["교과목번호"] = catalog["교과목 번호"]
+    catalog["영역"] = catalog["교양대분류"].map(liberal_area_name)
+    catalog["세부영역"] = catalog["교양소분류"]
+    catalog["권장학년"] = catalog["수강 대상"].map(parse_target_grade)
+    catalog["정규화과목명"] = catalog["교과목명"].map(normalize_course_name)
+    return catalog
