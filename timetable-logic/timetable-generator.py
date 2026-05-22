@@ -4,6 +4,15 @@ import random
 
 import importlib.util
 
+from llm_api import parse_schedule_text
+import os
+from dotenv import load_dotenv
+import json
+
+load_dotenv()
+
+MY_API_KEY = os.environ.get("OPENAI_API_KEY")
+
 spec = importlib.util.spec_from_file_location(
     "check_overlap",
     "timetable-logic/check-overlap.py"
@@ -97,6 +106,8 @@ def parse_day_and_period(day_raw, period_raw):
                 period_chunk.split('~')
             )
 
+            periods = list(range(start_period, end_period + 1))
+
         else:
             # 1,2,3 형태 처리
             periods = sorted([
@@ -116,6 +127,8 @@ def parse_day_and_period(day_raw, period_raw):
 
         time_slots.append({
             "day": day_str,
+            "start_period": start_period,
+            "end_period": end_period,
             "time_range": f"{start_time} ~ {end_time}"
         })
 
@@ -204,43 +217,56 @@ def generate_timetable_combinations(major_path, ge_path, slots):
     
     return [list(combo) for combo in all_combinations]
 
-def generate_random_slots():
 
-    grades = ["1학년", "2학년", "3학년", "4학년"]
-    days = ["월", "화", "수", "목", "금"]
-    counts = [3, 4, 5, 6]
+user_sentence = "목요일 공강이고 오전 수업은 피하고 싶어"
 
-    target_grade = random.choice(grades)
+json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
-    exclude_days = random.sample(days, random.randint(1, 2))
+parsed_data = json.loads(json_result)
 
-    num_to_pick = random.choice(counts)
+print("LLM 분석 결과:")
+print(json.dumps(parsed_data, ensure_ascii=False, indent=2))
 
-    # 실제 LLM이 추출했다고 가정하는 슬롯 데이터
-    slots_input = {
-        "target_grade": target_grade,
-        "exclude_days": exclude_days,
-        "num_to_pick": num_to_pick
-    }
+exclude_days = []
 
-    return slots_input
+for slot in parsed_data["slots"]:
+    if slot["condition"] == "공강":
+        day = slot["day"].replace("요일", "")
+        exclude_days.append(day)
 
-# -----------------------------
-# 랜덤 슬롯 생성
-# -----------------------------
+slots_input = {
+    "target_grade": "2학년",
+    "exclude_days": exclude_days,
+    "num_to_pick": 5
+}
 
-slots_input = generate_random_slots()
+timetable_results = generate_timetable_combinations(
+    MAJOR_DATA_PATH,
+    GE_DATA_PATH,
+    slots_input
+)
 
-print("생성된 슬롯:")
-print(slots_input)
-
-# 함수 호출 결과
-timetable_results = generate_timetable_combinations(MAJOR_DATA_PATH, GE_DATA_PATH, slots_input)
-
-# 구조 확인용 프린트 (첫 번째 조합의 첫 번째 과목 데이터 형태)
 if timetable_results:
-    import json
     print("-------- 예시 출력 --------")
+
+    clean_result = []
+
     for course in timetable_results[0]:
 
-        print(json.dumps(course, ensure_ascii=False, indent=2))
+        cleaned_slots = []
+
+        for slot in course["time_slots"]:
+            cleaned_slots.append({
+                "day": slot["day"],
+                "time_range": slot["time_range"]
+            })
+
+        clean_course = {
+            "name": course["name"],
+            "room": course["room"],
+            "time_slots": cleaned_slots
+        }
+
+        clean_result.append(clean_course)
+
+    print(json.dumps(clean_result, ensure_ascii=False, indent=2))
