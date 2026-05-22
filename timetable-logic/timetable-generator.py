@@ -116,8 +116,6 @@ def parse_day_and_period(day_raw, period_raw):
 
         time_slots.append({
             "day": day_str,
-            "start_period": start_period,
-            "end_period": end_period,
             "time_range": f"{start_time} ~ {end_time}"
         })
 
@@ -184,7 +182,6 @@ def generate_timetable_combinations(major_path, ge_path, slots):
             "name": row['교과목명'],
             "room": row['강의실'].split('(')[0] if pd.notna(row['강의실']) else "",
             "time_slots": time_slots,
-            "assignment": assignment_status  # "많다", "보통이다", "적다" 출력
         })
         
 
