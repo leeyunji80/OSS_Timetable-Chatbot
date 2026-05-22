@@ -27,3 +27,11 @@ def read_source_files():
     standard_curriculum = pd.read_csv(STANDARD_CURRICULUM_PATH, encoding="utf-8-sig")
     graduation = json.loads(GRADUATION_PATH.read_text(encoding="utf-8"))
     return lectures, liberal_arts, standard_curriculum, graduation
+
+def normalize_course_name(name):
+    """표준이수모형과 실제 CSV의 가벼운 표기 차이를 비교하기 위한 정규화."""
+    normalized = str(name).upper()
+    normalized = normalized.replace("Ⅰ", "I").replace("Ⅱ", "II").replace("Ⅲ", "III")
+    normalized = re.sub(r"\s+", "", normalized)
+    normalized = normalized.replace("·", "").replace("-", "").replace("_", "")
+    return normalized
