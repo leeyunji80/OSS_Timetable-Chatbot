@@ -561,3 +561,42 @@ def calculate_completed_credits(history):
         elif row["영역"] == "일반선택":
             completed["일반선택"] += credits
     return completed
+
+def generate_student(scenario, history, graduation):
+    """한 학생의 students.json 엔트리를 생성한다."""
+    required = graduation_requirements(graduation, scenario["curriculum_year"])
+    completed = calculate_completed_credits(history)
+
+    return {
+        "student_id": scenario["student_id"],
+        "name": scenario["name"],
+        "grade": scenario["grade"],
+        "college": scenario.get("college", "전자정보대학"),
+        "department": scenario.get("department", "컴퓨터공학과"),
+        "completed_semesters": scenario["completed_semesters"],
+        "curriculum_year": scenario["curriculum_year"],
+        "credits": {
+            "교양": {
+                area: {
+                    "required": required["교양"][area],
+                    "completed": completed["교양"][area],
+                }
+                for area in ["개신기초", "자연이공계기초", "일반", "확대", "OCU_기타"]
+            },
+            "일반선택": {
+                "required": required["일반선택"],
+                "completed": completed["일반선택"],
+            },
+            "전공": {
+                major_type: {
+                    "required": required["전공"][major_type],
+                    "completed": completed["전공"][major_type],
+                }
+                for major_type in ["필수", "선택"]
+            },
+            "졸업학점": {
+                "required": required["졸업학점"],
+                "completed": completed["졸업학점"],
+            },
+        },
+    }
