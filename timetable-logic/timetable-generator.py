@@ -232,12 +232,16 @@ def generate_timetable_combinations(major_path, ge_path, slots):
     target_grade = slots.get("target_grade")
     exclude_days = slots.get("exclude_days", [])
     target_credit = slots.get("target_credit")
+    avoid_time_slots = slots.get("avoid_time_slots", [])
     
     df['수강 대상'] = df['수강 대상'].fillna('')
     df['이수구분'] = df['이수구분'].fillna('')
 
     # 2. 조건 설정
-    is_target_grade = df['수강 대상'].str.contains(target_grade)
+    if target_grade:
+        is_target_grade = df['수강 대상'].str.contains(target_grade)
+    else:
+        is_target_grade = pd.Series([True] * len(df))
     is_general_edu = df['이수구분'].str.contains('교양')
     is_not_night = ~df['수강 대상'].str.contains("야간")
 
@@ -248,6 +252,51 @@ def generate_timetable_combinations(major_path, ge_path, slots):
     if exclude_days:
         for day in exclude_days:
             filtered_df = filtered_df[~filtered_df['요일'].str.contains(day, na=False)]
+   
+   # 시간대 필터링
+    filtered_rows = []
+
+    for _, row in filtered_df.iterrows():
+
+        remove_course = False
+
+        parsed_slots = parse_day_and_period(
+            row['요일'],
+            row['교시']
+        )
+
+        for avoid_slot in avoid_time_slots:
+
+            avoid_day = avoid_slot["day"]
+            avoid_time = avoid_slot["time_range"]
+
+            for slot in parsed_slots:
+
+                # 같은 요일 검사
+                if slot["day"] != avoid_day:
+                    continue
+
+                # 오전 검사
+                if avoid_time == "오전":
+
+                    if slot["start_period"] <= 3:
+                        remove_course = True
+                        break
+
+                # 오후 검사
+                elif avoid_time == "오후":
+
+                    if slot["start_period"] >= 4:
+                        remove_course = True
+                        break
+
+            if remove_course:
+                break
+
+        if not remove_course:
+            filtered_rows.append(row)
+
+    filtered_df = pd.DataFrame(filtered_rows)
             
     course_pool = []
     for _, row in filtered_df.iterrows():
@@ -258,6 +307,7 @@ def generate_timetable_combinations(major_path, ge_path, slots):
         course_pool.append({
             "name": row['교과목명'],
             "room": row['강의실'].split('(')[0] if pd.notna(row['강의실']) else "",
+            "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots,
         })
         
@@ -267,35 +317,37 @@ def generate_timetable_combinations(major_path, ge_path, slots):
 
     all_combinations = []
 
-    for r in range(1, len(course_pool) + 1):
+    for r in range(5, len(course_pool) + 1):
 
      for combo in combinations(course_pool, r):
 
-        combo_list = list(combo)
+         combo_list = list(combo)
 
-        total_credit = sum(
+         total_credit = sum(
             course["credit"]
             for course in combo_list
-        )
+         )
 
-        # 목표 학점 범위 검사
-        if total_credit < target_credit - 1:
-            continue
+         # 목표 학점 범위 검사
+         if target_credit is not None:
 
-        if total_credit > target_credit + 1:
-            continue
+            if total_credit < target_credit - 1:
+                continue
 
+            if total_credit > target_credit + 1:
+                continue
+           
         # 시간 충돌 검사
-        if is_valid_combination(combo_list):
+         if is_valid_combination(combo_list):
             all_combinations.append(combo_list)
 
         # 최대 10개 저장
-        if len(all_combinations) >= 10:
+         if len(all_combinations) >= 10:
             break
 
-        if len(all_combinations) >= 10:
-             break
-     return [list(combo) for combo in all_combinations]
+     if len(all_combinations) >= 10:
+        break
+    return [list(combo) for combo in all_combinations]
 
 user_sentence = "목요일 공강이고 오전 수업은 피하고 싶어"
 
@@ -307,16 +359,35 @@ print("LLM 분석 결과:")
 print(json.dumps(parsed_data, ensure_ascii=False, indent=2))
 
 exclude_days = []
+avoid_time_slots = []
 
 for slot in parsed_data["slots"]:
+
+    day = slot["day"].replace("요일", "")
+
+    # 공강 처리
     if slot["condition"] == "공강":
-        day = slot["day"].replace("요일", "")
-        exclude_days.append(day)
+
+       day = slot["day"].replace("요일", "")
+
+       if day not in exclude_days:
+           exclude_days.append(day)
+
+       continue
+
+    # 특정 시간대 피하기 처리
+    if slot["condition"] == "피함":
+
+        avoid_time_slots.append({
+            "day": day,
+            "time_range": slot["time_range"]
+        })
 
 slots_input = {
     "target_grade": parsed_data.get("target_grade"),
     "exclude_days": exclude_days,
-    "target_credit": parsed_data.get("target_credit")
+    "target_credit": parsed_data.get("target_credit"),
+    "avoid_time_slots": avoid_time_slots
 }
 
 timetable_results = generate_timetable_combinations(
@@ -362,3 +433,6 @@ if timetable_results:
         clean_result.append(clean_course)
 
     print(json.dumps(clean_result, ensure_ascii=False, indent=2))
+
+    print("exclude_days =", exclude_days)
+print("avoid_time_slots =", avoid_time_slots)
