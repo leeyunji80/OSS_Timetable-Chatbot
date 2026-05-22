@@ -35,3 +35,19 @@ def normalize_course_name(name):
     normalized = re.sub(r"\s+", "", normalized)
     normalized = normalized.replace("·", "").replace("-", "").replace("_", "")
     return normalized
+
+def parse_target_grade(value):
+    """수강 대상 문자열에서 권장 학년을 추출한다. 없으면 전학년 과목처럼 1학년으로 둔다."""
+    match = re.search(r"(\d)학년", str(value))
+    return int(match.group(1)) if match else 1
+
+
+def liberal_area_name(raw_area):
+    """교양대분류를 students.json과 course_history.csv에서 사용할 영역명으로 맞춘다."""
+    mapping = {
+        "개신기초교양": "개신기초",
+        "자연·이공계기초과학": "자연이공계기초",
+        "일반교양": "일반",
+        "확대교양": "확대",
+    }
+    return mapping.get(raw_area, raw_area)
