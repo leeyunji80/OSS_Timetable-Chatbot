@@ -7,6 +7,32 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 from openai import OpenAI
 
+
+# 사용자의 학적 정보 및 전체 시간표 메타 요구사항을 정의하는 클래스
+class ExtractedSchedule(BaseModel):
+    # 1. 개인정보 및 학적 정보 
+    major: Literal["컴퓨터공학", "일반전공", "비전공"] = Field(
+        "일반전공", 
+        description="사용자의 주전공 분류 (학과별 표준이수모형 매핑용)"
+    )
+    grade: Optional[Literal["1학년", "2학년", "3학년", "4학년"]] = Field(
+        None, 
+        description="사용자의 현재 학년 (해당 학년 전공 필수/선택 추천용)"
+    )
+    
+    # 2. 이수 조건 및 졸업 조건 관련 키워드 추출
+    course_priority: Optional[List[Literal["전공필수", "전공선택", "교양필수", "일반교양"]]] = Field(
+        default=[],
+        description="표준이수모형 충족을 위해 우선적으로 배치해야 하는 과목 유형 목록"
+    )
+    
+    # 3. 글로벌 시간표 제어 조건 (공강 일수 등)
+    target_free_days: Optional[Literal["0일", "1일", "2일"]] = Field(
+        None,
+        description="사용자가 희망하는 주중 총 공강 일수 지점"
+    )
+
+    slots: List[TimeSlot] = Field(description="추출된 요일별 상세 시간대 조건 목록")
 # 시간표의 단일 슬롯을 정의하는 클래스
 class TimeSlot(BaseModel):
     day: Literal["월요일", "화요일", "수요일", "목요일", "금요일"] = Field(
@@ -36,6 +62,8 @@ class TimeSlot(BaseModel):
         description="사용자의 최종 요구 조건 상태"
     )
 
+
+
 class ExtractedSchedule(BaseModel):
     slots: List[TimeSlot] = Field(description="추출된 시간표 조건 목록")
     major: Optional[Literal["컴퓨터공학", "일반"]] = Field(
@@ -49,14 +77,13 @@ def parse_schedule_text(user_text: str, api_key: str) -> str:
     client = OpenAI(api_key=api_key)
 
     system_instruction = (
-        "너는 대학생들의 시간표 요구사항 문장에서 핵심 슬롯을 추출하는 완벽한 AI 파서야.\n"
-        "반드시 JSON 스키마에 정의된 Literal 선택지 안의 단어로만 매핑해야 하며, 임의의 텍스트를 생성해서는 절대 안 돼.\n\n"
-        "주요 매핑 규칙:\n"
-        "- '9시 수업 극혐', '아침 9시 절대 피해' -> specific_time_slot='09시', time_range='아침', condition='피함'\n"
-        "- '3교시 끝나고 바로', '3교시 연강' -> specific_time_slot='3교시', condition='선호'\n"
-        "- '6시 이후 야간 수업', '저녁 수업' -> specific_time_slot='18시이후', time_range='야간'\n"
-        "- '수업 사이에 시간 뜨는 거 극혐' -> special_condition='우주공강', condition='피함'\n"
-        "- '금요일 자체 휴강', '금요일 비워줘' -> day='금요일', condition='공강'"
+        "너는 대학생들의 복합적인 수강신청 요구사항 문장에서 학적 메타데이터와 시간표 슬롯을 추출하는 상위 레벨 파서야.\n"
+        "문맥을 분석하여 학년, 과목 우선순위, 목표 공강 일수를 정해진 규칙에 따라 완벽하게 JSON으로 변환해줘.\n\n"
+        "규칙 설명:\n"
+        "1. [학년/전공]: '컴공 2학년' -> major='컴퓨터공학', grade='2학년'\n"
+        "2. [이수 과목 우선순위]: '전필이랑 전선', '표준이수모형' -> course_priority=['전공필수', '전공선택']\n"
+        "3. [전체 공강 일수]: '공강은 하루만', '주 4일 시간표' -> target_free_days='1일'\n"
+        "4. [요일별 상세 슬롯]: '월요일 1교시는 피해줘' -> day='월요일', specific_time_slot='1교시', condition='피함'"
     )
     
     response = client.beta.chat.completions.parse(
