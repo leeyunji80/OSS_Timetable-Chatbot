@@ -608,3 +608,37 @@ def build_students_json(scenarios, all_history, graduation):
         student_history = all_history[all_history["student_id"] == scenario["student_id"]]
         students.append(generate_student(scenario, student_history, graduation))
     return students
+
+def main():
+    random.seed(RANDOM_SEED)
+
+    lectures, liberal_arts, standard_curriculum, graduation = read_source_files()
+
+    histories = []
+    for scenario in student_scenarios:
+        history = build_course_history(
+            lectures,
+            liberal_arts,
+            standard_curriculum,
+            graduation,
+            scenario,
+        )
+        histories.append(history)
+
+    all_history = pd.concat(histories, ignore_index=True)
+    students = build_students_json(student_scenarios, all_history, graduation)
+
+    all_history.to_csv(COURSE_HISTORY_PATH, index=False, encoding="utf-8-sig")
+    STUDENTS_PATH.write_text(json.dumps(students, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"RANDOM_SEED: {RANDOM_SEED}")
+    print(f"생성 완료: {STUDENTS_PATH}")
+    print(f"생성 완료: {COURSE_HISTORY_PATH}")
+    print("\n학생별 총 취득학점")
+    print(all_history.groupby("student_id")["학점"].sum().to_string())
+    print("\n학생별 학기별 학점")
+    print(all_history.groupby(["student_id", "수강년도", "수강학기"])["학점"].sum().to_string())
+
+
+if __name__ == "__main__":
+    main()
