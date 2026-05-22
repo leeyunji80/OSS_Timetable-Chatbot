@@ -139,3 +139,16 @@ def standard_items_for_term(standard_curriculum, curriculum_year, grade, semeste
             continue
         course_names.append(text)
     return course_names, area_hints
+
+def is_standard_match(course_name, standard_names):
+    """실제 과목명이 표준이수모형 과목명과 직접 또는 정규화 표기로 맞는지 검사한다."""
+    course_normalized = normalize_course_name(course_name)
+    for standard_name in standard_names:
+        standard_normalized = normalize_course_name(standard_name)
+        if (
+            course_normalized == standard_normalized
+            or standard_normalized in course_normalized
+            or course_normalized in standard_normalized
+        ):
+            return True
+    return False
