@@ -532,3 +532,32 @@ def validate_history(history, lectures, liberal_arts, scenario):
             f"{scenario['student_id']} 총 취득학점 {total}이 목표 범위 "
             f"{target_min}-{target_max}를 벗어났습니다."
         )
+
+def calculate_completed_credits(history):
+    """생성된 course_history.csv 기준으로 completed 값을 집계한다."""
+    completed = {
+        "교양": {
+            "개신기초": 0,
+            "자연이공계기초": 0,
+            "일반": 0,
+            "확대": 0,
+            "OCU_기타": 0,
+        },
+        "일반선택": 0,
+        "전공": {"필수": 0, "선택": 0},
+        "졸업학점": 0,
+    }
+
+    if history.empty:
+        return completed
+
+    completed["졸업학점"] = int(history["학점"].sum())
+    for _, row in history.iterrows():
+        credits = int(row["학점"])
+        if row["영역"] in completed["교양"]:
+            completed["교양"][row["영역"]] += credits
+        elif row["영역"] == "전공":
+            completed["전공"][row["세부영역"]] += credits
+        elif row["영역"] == "일반선택":
+            completed["일반선택"] += credits
+    return completed
