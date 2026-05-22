@@ -102,3 +102,17 @@ def graduation_requirements(graduation, curriculum_year):
     # graduation.json에 일반선택 필수 이수학점이 별도로 정의되어 있지 않으므로 0으로 처리한다.
     required["일반선택"] = 0
     return required
+
+def semester_sequence(curriculum_year, completed_semesters):
+    """입학연도와 이수학기 수를 기반으로 실제 이수한 학기 목록을 만든다."""
+    semesters = []
+    for index in range(1, completed_semesters + 1):
+        semesters.append(
+            {
+                "term_index": index,
+                "수강년도": curriculum_year + (index - 1) // 2,
+                "수강학기": 1 if index % 2 == 1 else 2,
+                "학년": min(4, (index + 1) // 2),
+            }
+        )
+    return semesters
