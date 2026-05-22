@@ -274,3 +274,24 @@ def select_liberal_courses(
 
     candidates.sort(key=lambda item: item[0], reverse=True)
     return take_courses(candidates, selected_course_numbers, max_credits, max_courses=max_courses)
+
+def distribute_credit_targets(total_credits, completed_semesters, scenario):
+    """총 목표학점을 현실적인 학기별 목표학점으로 나눈다."""
+    low, high = scenario.get("semester_credit_range", [12, 18])
+    max_total = high * completed_semesters
+    min_total = min(low * completed_semesters, max_total)
+    total_credits = max(min_total, min(total_credits, max_total))
+
+    targets = [random.randint(low, high) for _ in range(completed_semesters)]
+    while sum(targets) != total_credits:
+        diff = total_credits - sum(targets)
+        adjustable = [
+            index
+            for index, value in enumerate(targets)
+            if (diff > 0 and value < high) or (diff < 0 and value > low)
+        ]
+        if not adjustable:
+            break
+        index = random.choice(adjustable)
+        targets[index] += 1 if diff > 0 else -1
+    return targets
