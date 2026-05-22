@@ -181,3 +181,38 @@ def scenario_allows_course(course, scenario, standard_phase=False):
         return random.random() < (0.30 if standard_phase else 0.08)
     return True
 
+def row_to_history(course, scenario, semester):
+    """카탈로그 행을 course_history.csv 행 구조로 변환한다."""
+    return {
+        "student_id": scenario["student_id"],
+        "수강년도": semester["수강년도"],
+        "수강학기": semester["수강학기"],
+        "교과목번호": course["교과목번호"],
+        "교과목명": course["교과목명"],
+        "이수구분": course["이수구분"],
+        "영역": course["영역"],
+        "세부영역": course["세부영역"],
+        "학점": int(course["학점"]),
+    }
+
+
+def take_courses(candidates, selected_course_numbers, max_credits, max_courses=None):
+    """후보 목록에서 남은 학점 범위 안에 들어가는 과목을 랜덤으로 고른다."""
+    selected = []
+    total = 0
+    shuffled = list(candidates)
+    random.shuffle(shuffled)
+
+    for _, course in shuffled:
+        credits = int(course["학점"])
+        if credits <= 0:
+            continue
+        if total + credits > max_credits:
+            continue
+        selected.append(course)
+        selected_course_numbers.add(course["교과목번호"])
+        total += credits
+        if max_courses is not None and len(selected) >= max_courses:
+            break
+    return selected
+
