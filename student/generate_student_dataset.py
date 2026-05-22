@@ -152,3 +152,11 @@ def is_standard_match(course_name, standard_names):
         ):
             return True
     return False
+
+def can_take_course(course, selected_course_numbers, academic_grade):
+    """이미 수강한 과목과 학년 수준을 고려해 후보 과목을 거른다."""
+    return (
+        course["교과목번호"] not in selected_course_numbers
+        and int(course["학점"]) > 0
+        and int(course["권장학년"]) <= academic_grade
+    )
