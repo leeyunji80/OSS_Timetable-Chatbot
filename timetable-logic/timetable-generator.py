@@ -63,21 +63,21 @@ def parse_day_and_period(day_raw, period_raw):
         return []
         
     PERIOD_TO_TIME = {
-        0: ("08:00, 09:00"),
-        1: ("09:00, 10:00"),
-        2: ("10:00 , 11:00"),
-        3: ("11:00, 12:00"),
-        4: ("12:00, 13:00"),
-        5: ("13:00, 14:00"),
-        6: ("14:00, 15:00"),
-        7: ("15:00, 16:00"),
-        8: ("16:00, 17:00"),
-        9: ("17:00, 18:00"),
-        10: ("18:00, 19:00"),
-        11: ("19:00, 20:00"),
-        12: ("20:00, 21:00"),
-        13: ("21:00, 22:00"),
-        14: ("22:00, 23:00")
+        0: ("08:00", "09:00"),
+        1: ("09:00", "10:00"),
+        2: ("10:00", "11:00"),
+        3: ("11:00", "12:00"),
+        4: ("12:00", "13:00"),
+        5: ("13:00", "14:00"),
+        6: ("14:00", "15:00"),
+        7: ("15:00", "16:00"),
+        8: ("16:00", "17:00"),
+        9: ("17:00", "18:00"),
+        10: ("18:00", "19:00"),
+        11: ("19:00", "20:00"),
+        12: ("20:00", "21:00"),
+        13: ("21:00", "22:00"),
+        14: ("22:00", "23:00")
     }
 
     time_slots = []
@@ -89,11 +89,21 @@ def parse_day_and_period(day_raw, period_raw):
     for day_chunk, period_chunk in zip(day_splits, period_splits):
         day_str = day_chunk.strip()
         
-        periods = sorted([
-            int(p.strip())
-            for p in period_chunk.split(',')
-            if p.strip().isdigit()
-        ])
+         # 1~3 형태 처리
+        if '~' in period_chunk:
+
+            start_period, end_period = map(
+                int,
+                period_chunk.split('~')
+            )
+
+        else:
+            # 1,2,3 형태 처리
+            periods = sorted([
+                int(p.strip())
+                for p in period_chunk.split(',')
+                if p.strip().isdigit()
+            ])
 
         if not periods:
             continue
