@@ -8,31 +8,6 @@ from typing import List, Optional, Literal
 from openai import OpenAI
 
 
-# 사용자의 학적 정보 및 전체 시간표 메타 요구사항을 정의하는 클래스
-class ExtractedSchedule(BaseModel):
-    # 1. 개인정보 및 학적 정보 
-    major: Literal["컴퓨터공학", "일반전공", "비전공"] = Field(
-        "일반전공", 
-        description="사용자의 주전공 분류 (학과별 표준이수모형 매핑용)"
-    )
-    grade: Optional[Literal["1학년", "2학년", "3학년", "4학년"]] = Field(
-        None, 
-        description="사용자의 현재 학년 (해당 학년 전공 필수/선택 추천용)"
-    )
-    
-    # 2. 이수 조건 및 졸업 조건 관련 키워드 추출
-    course_priority: Optional[List[Literal["전공필수", "전공선택", "교양필수", "일반교양"]]] = Field(
-        default=[],
-        description="표준이수모형 충족을 위해 우선적으로 배치해야 하는 과목 유형 목록"
-    )
-    
-    # 3. 글로벌 시간표 제어 조건 (공강 일수 등)
-    target_free_days: Optional[Literal["0일", "1일", "2일"]] = Field(
-        None,
-        description="사용자가 희망하는 주중 총 공강 일수 지점"
-    )
-
-    slots: List[TimeSlot] = Field(description="추출된 요일별 상세 시간대 조건 목록")
 # 시간표의 단일 슬롯을 정의하는 클래스
 class TimeSlot(BaseModel):
     day: Literal["월요일", "화요일", "수요일", "목요일", "금요일"] = Field(
@@ -64,12 +39,34 @@ class TimeSlot(BaseModel):
 
 
 
+# 사용자의 학적 정보 및 전체 시간표 메타 요구사항을 정의하는 클래스
 class ExtractedSchedule(BaseModel):
-    slots: List[TimeSlot] = Field(description="추출된 시간표 조건 목록")
-    major: Optional[Literal["컴퓨터공학", "일반"]] = Field(
-        "일반", 
-        description="전공 언급 분류"
+    # 1. 개인정보 및 학적 정보 
+    major: Literal["컴퓨터공학", "일반전공", "비전공"] = Field(
+        "일반전공", 
+        description="사용자의 주전공 분류 (학과별 표준이수모형 매핑용)"
     )
+    grade: Optional[Literal["1학년", "2학년", "3학년", "4학년"]] = Field(
+        None, 
+        description="사용자의 현재 학년 (해당 학년 전공 필수/선택 추천용)"
+    )
+    
+    # 2. 이수 조건 및 졸업 조건 관련 키워드 추출
+    course_priority: Optional[List[Literal["전공필수", "전공선택", "교양필수", "일반교양"]]] = Field(
+        default=[],
+        description="표준이수모형 충족을 위해 우선적으로 배치해야 하는 과목 유형 목록"
+    )
+    
+    # 3. 글로벌 시간표 제어 조건 (공강 일수 등)
+    target_free_days: Optional[Literal["0일", "1일", "2일"]] = Field(
+        None,
+        description="사용자가 희망하는 주중 총 공강 일수 지점"
+    )
+
+    slots: List[TimeSlot] = Field(description="추출된 요일별 상세 시간대 조건 목록")
+
+
+
 
 def parse_schedule_text(user_text: str, api_key: str) -> str:
     # OpenAI 클라이언트 객체를 생성하는 구간

@@ -15,7 +15,7 @@ MY_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 def main():
 # 사용자가 입력할 예시 문장 정의 단계 
-    user_sentence = "컴공 기준 월요일 오전수업 피하고 금공강 만들어줘"
+    user_sentence = "나는 컴공 2학년인데 표준이수모형에 맞게 전선과 전필을 최대한 넣어주되 월요일 1교시는 피해주고 공강을 1일만 만들어줘"
     
     print(f"입력된 문장: {user_sentence}")
     print(" LLM 엔진 분석을 시작합니다...")
