@@ -159,10 +159,11 @@ def parse_schedule_text(user_text: str, api_key: str) -> str:
         response_format=ExtractedSchedule,
     )
     parsed_data = response.choices[0].message.parsed
-    if parsed_data and parsed_data.selected_courses:
-        #  [공백 예외 처리] 검증용 유저 문장에서 모든 띄어쓰기를 제거
-        clean_user_text = user_text.replace(" ", "")
+    if not parsed_data:
+        return '{"error": "Failed to parse schedule text"}'
         
+    if parsed_data.selected_courses:
+        clean_user_text = user_text.replace(" ", "").lower()
         # 과목명에서도 띄어쓰기를 빼고 포함 여부를 검사 
         filtered_courses = [
             course for course in parsed_data.selected_courses 
