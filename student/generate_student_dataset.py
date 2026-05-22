@@ -51,3 +51,13 @@ def liberal_area_name(raw_area):
         "확대교양": "확대",
     }
     return mapping.get(raw_area, raw_area)
+
+def prepare_major_catalog(lectures):
+    """전공 강의 CSV를 중복 분반 제거된 선택용 카탈로그로 변환한다."""
+    catalog = lectures.drop_duplicates("교과목 번호").copy()
+    catalog["교과목번호"] = catalog["교과목 번호"]
+    catalog["영역"] = "전공"
+    catalog["세부영역"] = catalog["이수구분"].map({"전공필수": "필수", "전공선택": "선택"})
+    catalog["권장학년"] = catalog["수강 대상"].map(parse_target_grade)
+    catalog["정규화과목명"] = catalog["교과목명"].map(normalize_course_name)
+    return catalog
