@@ -24,11 +24,14 @@ def is_conflict(course1, course2):
     for slot1 in course1["time_slots"]:
         for slot2 in course2["time_slots"]:
 
-            # 요일 + 교시가 같으면 충돌
-            if (
-                slot1["day"] == slot2["day"]
-                and slot1["period"] == slot2["period"]
-            ):
+            same_day = slot1["day"] == slot2["day"]
+
+            overlap = not (
+                slot1["end_period"] < slot2["start_period"]
+                or slot2["end_period"] < slot1["start_period"]
+            )
+
+            if same_day and overlap:
                 return True
 
     return False
