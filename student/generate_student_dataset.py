@@ -499,3 +499,36 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
     history = pd.DataFrame(rows, columns=COURSE_HISTORY_COLUMNS)
     validate_history(history, lectures, liberal_arts, scenario)
     return history
+
+def validate_history(history, lectures, liberal_arts, scenario):
+    """생성된 이력이 실제 과목만 사용했고 중복 수강이 없는지 검사한다."""
+    if history.empty:
+        raise ValueError(f"{scenario['student_id']} 수강이력이 생성되지 않았습니다.")
+
+    actual_courses = set(lectures["교과목명"]).union(set(liberal_arts["교과목명"]))
+    missing_courses = sorted(set(history["교과목명"]) - actual_courses)
+    if missing_courses:
+        raise ValueError(f"원본 CSV에 없는 과목이 포함되었습니다: {missing_courses}")
+
+    duplicated = history[history.duplicated(["student_id", "교과목번호"], keep=False)]
+    if not duplicated.empty:
+        raise ValueError(
+            "중복 수강 과목이 있습니다:\n"
+            + duplicated[["student_id", "교과목번호", "교과목명"]].to_string(index=False)
+        )
+
+    low, high = scenario.get("semester_credit_range", [12, 18])
+    semester_credits = history.groupby(["수강년도", "수강학기"])["학점"].sum()
+    if not semester_credits.between(low, high).all():
+        raise ValueError(
+            f"{scenario['student_id']} 학기별 학점이 범위를 벗어났습니다.\n"
+            f"허용 범위: {low}-{high}\n{semester_credits}"
+        )
+
+    target_min, target_max = scenario["target_completed_credits"]
+    total = int(history["학점"].sum())
+    if not target_min <= total <= target_max:
+        raise ValueError(
+            f"{scenario['student_id']} 총 취득학점 {total}이 목표 범위 "
+            f"{target_min}-{target_max}를 벗어났습니다."
+        )
