@@ -11,30 +11,25 @@ from openai import OpenAI
 # 시간표의 단일 슬롯을 정의하는 클래스
 class TimeSlot(BaseModel):
     day: Literal["월요일", "화요일", "수요일", "목요일", "금요일"] = Field(
-        description="요청사항에 언급된 요일 (주말은 제외)"
-    )
-
-    specific_time_slot: Optional[Literal[
-        "09시", "10시", "11시", "12시", "13시", "14시", "15시", "16시", "17시", "18시이후",
-        "1교시", "2교시", "3교시", "4교시", "5교시", "6교시"
-    ]] = Field(
-        None, 
-        description="문장에 구체적인 시간이나 교시가 언급된 경우 해당 키워드로만 매핑"
+        description="제약 조건이 적용되는 요일"
     )
     
-    # 시간대 키워드 제한 (오전/오후/공강 분기)
-    time_range: Optional[Literal["아침", "오전", "점심", "오후", "야간"]] = Field(
-        None, 
-        description="9시 전후는 '아침', 18시 이후는 '야간', 그 외 점심 전후 분류"
+    # [교시 제어를 위한 정수 배열 필드 스펙 확정]
+    specific_time_slot: Optional[List[int]] = Field(
+        None,
+        description="피하거나 선호하는 구체적인 교시 리스트 (예: [1, 2] 또는 [6, 7, 8])"
     )
-
-    special_condition: Optional[Literal["우주공강", "연강", "풀강", "반공강"]] = Field(
+    
+    time_range: Optional[Literal["오전", "오후"]] = Field(
         None, 
-        description="우주공강, 연강, 풀강, 반공강 등 대학생 특유의 시간표 성향 키워드"
+        description="상대적 시간대 범위 (교시가 명확히 지정되면 서브 데이터로 매핑)"
     )
-
+    special_condition: Optional[Literal["풀강"]] = Field(
+        None, 
+        description="'몰아서', '풀강' 등 요일 전체를 꽉 채우는 경우에만 '풀강' 매핑"
+    )
     condition: Literal["선호", "피함", "공강"] = Field(
-        description="사용자의 최종 요구 조건 상태"
+        description="해당 요일/교시에 대한 유저의 태도 ('공강'일 때는 교시 필드는 null)"
     )
 
 
@@ -167,18 +162,11 @@ class ExtractedSchedule(BaseModel):
         description="사용자가 문장에서 피하고 싶다, 제외해달라고 직접 언급한 교과목 이름 목록"
     )
     
-    # 2. 이수 조건 및 졸업 조건 관련 키워드 추출
-    course_priority: Optional[List[Literal["전공필수", "전공선택", "교양필수", "일반교양"]]] = Field(
-        default=[],
-        description="표준이수모형 충족을 위해 우선적으로 배치해야 하는 과목 유형 목록"
+    course_priority: Optional[Literal["전공필수", "교양필수"]] = Field(
+        None,
+        description="표준이수모형 충족을 위해 우선적으로 배치해야 하는 과목 유형 ('전공위주' -> '전공필수', '교양위주' -> '교양필수')"
     )
     
-    # 3. 글로벌 시간표 제어 조건 (공강 일수 등)
-    target_free_days: Optional[Literal["0일", "1일", "2일"]] = Field(
-        None,
-        description="사용자가 희망하는 주중 총 공강 일수 지점"
-    )
-
     assignment_preference: Optional[Literal["과제적음", "과제많음"]] = Field(
         None,
         description="사용자가 희망하는 과제 양의 성향 (적음, 많음 등 언급 시 매핑)"
@@ -189,7 +177,6 @@ class ExtractedSchedule(BaseModel):
         description="사용자가 희망하는 팀플레이(조별과제) 유무 성향"
     )
     
-
     target_credit: Optional[Literal[
         "12학점", "15학점", "18학점", "19학점", "21학점", "최대학점", "최소학점"
     ]] = Field(
@@ -197,15 +184,12 @@ class ExtractedSchedule(BaseModel):
         description="사용자가 이번 학기에 이수하고자 희망하는 목표 학점 양"
     )
 
-
-    #  요일 공강과 필수 과목이 충돌할 때 알고리즘이 참고할 해결 규칙
     conflict_resolution_rule: Literal["과목우선", "공강우선", "균형추천"] = Field(
         "과목우선",
         description="희망 공강 요일과 필수 과목 개설일이 충돌할 때의 백엔드 처리 우선순위 규칙"
     )
 
-    slots: List[TimeSlot] = Field(description="추출된 요일별 상세 시간대 조건 목록")
-
+    slots: List[TimeSlot] = Field(default=[], description="추출된 요일별 상세 시간대 조건 목록")
 
 
 
@@ -217,24 +201,33 @@ def parse_schedule_text(user_text: str, api_key: str) -> str:
     
 
     system_instruction = (
-        "너는 대학생들의 수강신청 요구사항 문장에서 학적 데이터와 시간표 요구 조건을 추출하는 고성능 정밀 파서야.\n"
-        "문맥을 자의적으로 유추하거나 가상의 데이터를 상상해서 채워 넣는 것을 엄격히 금지한다.\n\n"
+        "너는 대학생들의 시간표 요구사항 문장을 분석하여 정형화된 JSON 제약 조건으로 변환하는 정밀 데이터 파서야.\n"
+        "유저가 던지는 요구사항을 다음 [3단계 파이프라인]에 맞춰서 순서대로만 분석해라.\n\n"
         
-        "[slots 배열 생성 및 필드 매핑 규칙]:\n"
-        "1. [명시적 요일 조건]: 문장에 요일 이름이 직접 언급된 조건(예: '수요일은 일찍', '목요일은 공강')은 해당 요일을 기준으로 슬롯을 생성해라.\n"
-        "2. [전역 시간대 조건]: (중요) 문장에 특정 요일 언급 없이 시간대만 단독으로 언급된 경우, 특정 선호 요일을 제외한 나머지 모든 평일 요일 각각에 대해 시간대 슬롯을 분할 생성해라.\n"
-        "3. [time_range 상대적 뉘앙스 처리]:\n"
-        "   - '오전', '오후', '아침' 등 단어가 직접 등장하면 해당 값을 정직하게 매핑해라.\n"
-        "   - [중요]: '아침수업 피하고 싶다'는 요구사항이 나오면 해당 요일의 `time_range`를 '오전'로 설정하고 `condition`을 '피함'으로 매핑하여 오전 수업을 기피하도록 처리해라.\n"
-        "   - [중요]: '일찍 혹은 빨리 끝나고 싶다'는 요구사항이 나오면 해당 요일의 `time_range`를 '오후'로 설정하고 `condition`을 '피함'으로 매핑하여 오후 수업을 기피하도록 처리해라.\n"
-        "4. [special_condition 대학생 은어 처리]: 문장에 '꽉 차게', '풀강', '몰아서'라는 의미나 단어가 포함되어 있다면, 해당 요일 슬롯의 `special_condition` 필드를 반드시 '풀강'으로 매핑해라.\n"
-        "5. [과목 선호도 분리]: 특정 과목을 넣어달라는 요구사항 때문에 `slots` 배열에 선호 슬롯을 중복 생성하지 마라. 과목은 오직 `selected_courses`에만 담긴다.\n"
-        "6. [condition 매핑 기준]:\n"
-        "   - '요일 전체'를 비우거나 쉬고 싶다 (공강, 휴강 등) -> '공강' ( 전체를 비우는게 아니면 피함으로 매핑, 특정 요일공강이라는 말이 있으면 공강으로 매핑)\n"
-        "   - 특정 시간/요일을 피하고 싶다, 없다, 제외, 일찍 끝나기(오후 피함) -> '피함'\n"
-        "   - 특정 요일/시간대 자체를 선호한다 (원한다, 넣어줘, 선호, 몰아서 등) -> '선호'"
+        "[slots 생성 3단계 파이프라인]\n"
+        "단계 1. 요일 전체 공강 처리:\n"
+        "   - 'X요일 학교 안 갈래', 'X요일 공강/비우기' 성향 감지 -> 해당 요일에 대해 condition='공강' 슬롯 1개만 생성 (나머지 필드는 null).\n\n"
+        
+        "단계 2. 특정 요일 명시 조건 처리 (★핵심: 이 조건은 오직 '해당 요일'에만 적용한다):\n"
+        "   - 'X요일 오후 수업만 선호' -> 오직 X요일에 대해서만 specific_time_slot=[6,7,8,9], time_range='오후', condition='선호' 슬롯 생성.\n"
+        "   - 'X요일 일찍 끝내기/오후 피함' -> 오직 X요일에 대해서만 specific_time_slot=[6,7,8,9], time_range='오후', condition='피함' 슬롯 생성.\n"
+        "   - 이 단계에서 처리된 요일별 특수 성향은 절대로 다른 요일로 복사하거나 확장하지 마라.\n\n"
+        
+        "단계 3. 요일 언급이 없는 '전역 조건' 처리:\n"
+        "   - 문장 맨 뒤나 중간에 요일 언급 없이 독립적으로 던진 제약 조건만 추출한다.\n"
+        "   - 적용 대상 요일: 단계 1에서 '공강'으로 지정된 요일을 제외한 나머지 모든 평일 요일들.\n"
+        "   - [1교시 극혐 / 1교시 절대 싫어] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1], time_range='오전', condition='피함' 슬롯 생성.\n"
+        "   - [아침 기피 / 못 일어남 / 오전 적게] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1, 2], time_range='오전', condition='피함' 슬롯 생성.\n"
+        "   - [오전 전체 기피 / 아침 수업 패스] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1, 2, 3, 4], time_range='오전', condition='피함' 슬롯 생성.\n\n"
+        
+        "[글로벌 필드 제약]\n"
+        "- `course_priority`: '전공 위주' -> '전공필수' / '교양 위주' -> '교양필수' (단일 문자열 값)\n"
+        
+        "- `conflict_resolution_rule`: 기본값은 '과목우선'으로 하되, 유저가 문장에서 '무조건', '꼭', '절대', '필수' 등의 강한 강조 표현을 사용하여 공강이나 특정 조건을 요구한 것이 감지되면 반드시 '공강우선'으로 값을 변경해라.\n"
+        
+        "- `special_condition`: 오직 '풀강'만 허용하며, 해당 요일에 '몰아서 듣고 싶다'고 할 때 선호 슬롯에만 부여한다. ★특히 condition이 '공강'인 슬롯에는 절대로 '풀강'을 넣지 말고 무조건 null 처리해라.\n"
+        "- 주의: 단계 2의 '월요일 오후 선호' 같은 조건 때문에 단계 3의 전역 규칙이 오염되어 화, 수, 목요일에 뜬금없는 오후 피함 슬롯이 생성되지 않도록 로직을 철저히 격리해라."
     )
-    
     response = client.beta.chat.completions.parse(
         model="gpt-4o-mini",
         messages=[
