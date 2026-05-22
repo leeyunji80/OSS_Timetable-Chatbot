@@ -143,6 +143,10 @@ def parse_schedule_text(user_text: str, api_key: str) -> str:
         "2. [이수 과목 우선순위]: '전필이랑 전선', '표준이수모형' -> course_priority=['전공필수', '전공선택']\n"
         "3. [전체 공강 일수]: '공강은 하루만', '주 4일 시간표' -> target_free_days='1일'\n"
         "4. [요일별 상세 슬롯]: '월요일 1교시는 피해줘' -> day='월요일', specific_time_slot='1교시', condition='피함'"
+
+        "극도로 중요한 주의사항 (버그 방지):\n"
+        "1. 사용자가 '컴공', '전공', '교양'이라는 단어를 말했다고 해서, 과목명에 '전공'이나 '공학'이 들어간 다른 과목들을 리스트에 마음대로 추가하면 절대 안 돼.\n"
+        "2. 반드시 문맥상 유저가 선택한 진짜 과목명만 정확하게 딱 골라내어 매핑해라."
     )
     
     response = client.beta.chat.completions.parse(
@@ -154,4 +158,16 @@ def parse_schedule_text(user_text: str, api_key: str) -> str:
 
         response_format=ExtractedSchedule,
     )
-    return response.choices[0].message.content
+    parsed_data = response.choices[0].message.parsed
+    if parsed_data and parsed_data.selected_courses:
+        #  [공백 예외 처리] 검증용 유저 문장에서 모든 띄어쓰기를 제거
+        clean_user_text = user_text.replace(" ", "")
+        
+        # 과목명에서도 띄어쓰기를 빼고 포함 여부를 검사 
+        filtered_courses = [
+            course for course in parsed_data.selected_courses 
+            if course.replace(" ", "") in clean_user_text
+        ]
+        parsed_data.selected_courses = filtered_courses
+        
+    return parsed_data.model_dump_json(indent=2)
