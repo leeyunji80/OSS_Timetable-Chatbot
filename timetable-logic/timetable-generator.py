@@ -60,16 +60,21 @@ def parse_day_and_period(day_raw, period_raw):
         return []
         
     PERIOD_TO_TIME = {
-        1: "09:00 ~ 09:50",
-        2: "10:00 ~ 10:50",
-        3: "11:00 ~ 11:50",
-        4: "12:00 ~ 12:50",
-        5: "13:00 ~ 13:50",
-        6: "14:00 ~ 14:50",
-        7: "15:00 ~ 15:50",
-        8: "16:00 ~ 16:50",
-        9: "17:00 ~ 17:50",
-        10: "18:00 ~ 18:50"
+        0: ("08:00, 09:00"),
+        1: ("09:00, 10:00"),
+        2: ("10:00 , 11:00"),
+        3: ("11:00, 12:00"),
+        4: ("12:00, 13:00"),
+        5: ("13:00, 14:00"),
+        6: ("14:00, 15:00"),
+        7: ("15:00, 16:00"),
+        8: ("16:00, 17:00"),
+        9: ("17:00, 18:00"),
+        10: ("18:00, 19:00"),
+        11: ("19:00, 20:00"),
+        12: ("20:00, 21:00"),
+        13: ("21:00, 22:00"),
+        14: ("22:00, 23:00")
     }
 
     time_slots = []
@@ -81,16 +86,28 @@ def parse_day_and_period(day_raw, period_raw):
     for day_chunk, period_chunk in zip(day_splits, period_splits):
         day_str = day_chunk.strip()
         
-        # 교시 문자열을 숫자로 변환 (예: "06" -> 6)
-        periods = [int(p.strip()) for p in period_chunk.split(',') if p.strip().isdigit()]
-        
-        for p_num in periods:
-            time_slots.append({
-                "day": day_str,      # '월', '화', '수' 등 요일 텍스트
-                "period": p_num,      # 실제 교시 숫자 (예: 6)
-                "time_range": PERIOD_TO_TIME.get(p_num, "")   # 테이블에서 교시를 찾아 변환
-            })
-            
+        periods = sorted([
+            int(p.strip())
+            for p in period_chunk.split(',')
+            if p.strip().isdigit()
+        ])
+
+        if not periods:
+            continue
+
+        start_period = periods[0]
+        end_period = periods[-1]
+
+        start_time = PERIOD_TO_TIME[start_period][0]
+        end_time = PERIOD_TO_TIME[end_period][1]
+
+        time_slots.append({
+            "day": day_str,
+            "start_period": start_period,
+            "end_period": end_period,
+            "time_range": f"{start_time} ~ {end_time}"
+        })
+
     return time_slots
 
 
