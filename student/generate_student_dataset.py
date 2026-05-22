@@ -19,3 +19,11 @@ GRADUATION_PATH = DOWNLOAD_DIR / "graduation.json"
 
 STUDENTS_PATH = OUTPUT_DIR / "students.json"
 COURSE_HISTORY_PATH = OUTPUT_DIR / "course_history.csv"
+
+def read_source_files():
+    """원본 CSV/JSON을 읽는다. 교과목 번호는 앞자리 0 보존을 위해 문자열로 읽는다."""
+    lectures = pd.read_csv(LECTURES_PATH, encoding="utf-8-sig", dtype={"교과목 번호": str})
+    liberal_arts = pd.read_csv(LIBERAL_ARTS_PATH, encoding="utf-8-sig", dtype={"교과목 번호": str})
+    standard_curriculum = pd.read_csv(STANDARD_CURRICULUM_PATH, encoding="utf-8-sig")
+    graduation = json.loads(GRADUATION_PATH.read_text(encoding="utf-8"))
+    return lectures, liberal_arts, standard_curriculum, graduation
