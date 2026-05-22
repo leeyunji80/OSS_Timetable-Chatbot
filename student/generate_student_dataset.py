@@ -216,3 +216,30 @@ def take_courses(candidates, selected_course_numbers, max_credits, max_courses=N
             break
     return selected
 
+def select_major_courses(
+    major_catalog,
+    selected_course_numbers,
+    academic_grade,
+    max_credits,
+    standard_names,
+    scenario,
+    preferred_subarea=None,
+    standard_only=False,
+    max_courses=None,
+):
+    """전공필수/전공선택 과목을 실제 lectures_database.csv 카탈로그에서 선택한다."""
+    candidates = []
+    for _, course in major_catalog.iterrows():
+        if not can_take_course(course, selected_course_numbers, academic_grade):
+            continue
+        if preferred_subarea and course["세부영역"] != preferred_subarea:
+            continue
+        standard_match = is_standard_match(course["교과목명"], standard_names)
+        if standard_only and not standard_match:
+            continue
+        if not scenario_allows_course(course, scenario, standard_phase=standard_only):
+            continue
+        candidates.append((standard_match, course))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return take_courses(candidates, selected_course_numbers, max_credits, max_courses=max_courses)
