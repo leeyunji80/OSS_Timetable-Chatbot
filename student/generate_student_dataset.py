@@ -338,3 +338,164 @@ def next_fill_category(scenario, academic_grade, history_so_far, required):
     choices = list(weights.keys())
     return random.choices(choices, weights=[weights[key] for key in choices], k=1)[0]
 
+def add_courses_to_term(term_rows, courses, scenario, semester):
+    """선택된 과목들을 현재 학기 행에 추가한다."""
+    for course in courses:
+        term_rows.append(row_to_history(course, scenario, semester))
+
+
+def build_course_history(lectures, liberal_arts, standard_curriculum, graduation, scenario):
+    """
+    하나의 학생 시나리오를 기반으로 수강이력을 자동 생성한다.
+    과목 선택은 항상 실제 lectures_database.csv / liberal_arts.csv 카탈로그에서만 수행한다.
+    """
+    major_catalog = prepare_major_catalog(lectures)
+    liberal_catalog = prepare_liberal_catalog(liberal_arts)
+    required = graduation_requirements(graduation, scenario["curriculum_year"])
+
+    target_min, target_max = scenario["target_completed_credits"]
+    target_total = random.randint(target_min, target_max)
+    semesters = semester_sequence(scenario["curriculum_year"], scenario["completed_semesters"])
+    semester_targets = distribute_credit_targets(target_total, len(semesters), scenario)
+
+    selected_course_numbers = set()
+    rows = []
+
+    for semester, semester_target in zip(semesters, semester_targets):
+        term_rows = []
+        standard_names, area_hints = standard_items_for_term(
+            standard_curriculum,
+            scenario["curriculum_year"],
+            semester["학년"],
+            semester["수강학기"],
+        )
+        academic_grade = semester["학년"]
+
+        if scenario.get("prefer_standard_curriculum", True):
+            # 표준이수모형에 실제 CSV 과목명으로 매칭되는 과목을 우선 배치한다.
+            standard_room = min(semester_target, 18)
+            liberal_standard = select_liberal_courses(
+                liberal_catalog,
+                selected_course_numbers,
+                academic_grade,
+                standard_room,
+                standard_names,
+                scenario,
+                standard_only=True,
+            )
+            add_courses_to_term(term_rows, liberal_standard, scenario, semester)
+
+            remaining_room = max(0, standard_room - sum(row["학점"] for row in term_rows))
+            major_standard = select_major_courses(
+                major_catalog,
+                selected_course_numbers,
+                academic_grade,
+                remaining_room,
+                standard_names,
+                scenario,
+                standard_only=True,
+            )
+            add_courses_to_term(term_rows, major_standard, scenario, semester)
+
+        # 표준이수모형의 "확대교양 택1", "일반교양 인간과문화 택1" 같은 힌트를 실제 교양으로 채운다.
+        for hint in area_hints:
+            term_credits = sum(row["학점"] for row in term_rows)
+            if term_credits >= semester_target:
+                break
+            courses = select_liberal_courses(
+                liberal_catalog,
+                selected_course_numbers,
+                academic_grade,
+                semester_target - term_credits,
+                [],
+                scenario,
+                preferred_area=hint["영역"],
+                preferred_subarea=hint["세부영역"],
+                max_courses=1,
+            )
+            add_courses_to_term(term_rows, courses, scenario, semester)
+
+        # 학기 목표학점에 도달할 때까지 시나리오와 학년 수준을 고려해 랜덤으로 채운다.
+        attempts = 0
+        while sum(row["학점"] for row in term_rows) < semester_target and attempts < 80:
+            attempts += 1
+            term_credits = sum(row["학점"] for row in term_rows)
+            remaining = semester_target - term_credits
+            category = next_fill_category(scenario, academic_grade, pd.DataFrame(rows + term_rows), required)
+
+            if category == "major_required":
+                courses = select_major_courses(
+                    major_catalog,
+                    selected_course_numbers,
+                    academic_grade,
+                    remaining,
+                    [],
+                    scenario,
+                    preferred_subarea="필수",
+                    max_courses=1,
+                )
+            elif category == "major_elective":
+                courses = select_major_courses(
+                    major_catalog,
+                    selected_course_numbers,
+                    academic_grade,
+                    remaining,
+                    [],
+                    scenario,
+                    preferred_subarea="선택",
+                    max_courses=1,
+                )
+            elif category == "basic_liberal":
+                courses = select_liberal_courses(
+                    liberal_catalog,
+                    selected_course_numbers,
+                    academic_grade,
+                    remaining,
+                    [],
+                    scenario,
+                    preferred_area="개신기초",
+                    max_courses=1,
+                )
+            elif category == "science_liberal":
+                courses = select_liberal_courses(
+                    liberal_catalog,
+                    selected_course_numbers,
+                    academic_grade,
+                    remaining,
+                    [],
+                    scenario,
+                    preferred_area="자연이공계기초",
+                    max_courses=1,
+                )
+            elif category == "general_liberal":
+                courses = select_liberal_courses(
+                    liberal_catalog,
+                    selected_course_numbers,
+                    academic_grade,
+                    remaining,
+                    [],
+                    scenario,
+                    preferred_area="일반",
+                    max_courses=1,
+                )
+            else:
+                courses = select_liberal_courses(
+                    liberal_catalog,
+                    selected_course_numbers,
+                    academic_grade,
+                    remaining,
+                    [],
+                    scenario,
+                    preferred_area="확대",
+                    max_courses=1,
+                )
+
+            if not courses:
+                continue
+            add_courses_to_term(term_rows, courses, scenario, semester)
+
+        rows.extend(term_rows)
+
+    history = pd.DataFrame(rows, columns=COURSE_HISTORY_COLUMNS)
+    validate_history(history, lectures, liberal_arts, scenario)
+    return history
