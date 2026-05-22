@@ -160,3 +160,24 @@ def can_take_course(course, selected_course_numbers, academic_grade):
         and int(course["학점"]) > 0
         and int(course["권장학년"]) <= academic_grade
     )
+
+def scenario_allows_course(course, scenario, standard_phase=False):
+    """
+    시나리오별 결핍 플래그를 반영한다.
+    표준이수모형 우선 선발 단계에서는 너무 강하게 막지 않고 확률적으로 누락을 만든다.
+    """
+    area = course["영역"]
+    subarea = course["세부영역"]
+
+    if area == "전공" and subarea == "필수" and scenario.get("lack_major_required"):
+        return random.random() < (0.25 if standard_phase else 0.08)
+    if area == "전공" and subarea == "선택" and scenario.get("lack_major_elective"):
+        return random.random() < (0.35 if standard_phase else 0.12)
+    if area in ["개신기초", "자연이공계기초", "일반", "확대"] and scenario.get("lack_liberal_arts"):
+        return random.random() < (0.35 if standard_phase else 0.12)
+    if area == "개신기초" and scenario.get("lack_basic_liberal"):
+        return random.random() < (0.35 if standard_phase else 0.10)
+    if area == "일반" and scenario.get("lack_general_liberal"):
+        return random.random() < (0.30 if standard_phase else 0.08)
+    return True
+
