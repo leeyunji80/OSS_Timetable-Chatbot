@@ -295,3 +295,46 @@ def distribute_credit_targets(total_credits, completed_semesters, scenario):
         index = random.choice(adjustable)
         targets[index] += 1 if diff > 0 else -1
     return targets
+
+def next_fill_category(scenario, academic_grade, history_so_far, required):
+    """
+    다음에 채울 과목군을 고른다.
+    학년이 올라갈수록 전공 비중이 커지고, 결핍 시나리오는 해당 영역 가중치를 낮춘다.
+    """
+    completed = calculate_completed_credits(history_so_far)
+    liberal_done = sum(completed["교양"].values())
+    major_required_done = completed["전공"]["필수"]
+    major_elective_done = completed["전공"]["선택"]
+
+    weights = {
+        "major_required": 2 + academic_grade,
+        "major_elective": 2 + academic_grade * 2,
+        "basic_liberal": 4 if academic_grade <= 2 else 2,
+        "science_liberal": 3 if academic_grade <= 2 else 1,
+        "general_liberal": 2,
+        "expanded_liberal": 1,
+    }
+
+    if major_required_done < min(required["전공"]["필수"], academic_grade * 7):
+        weights["major_required"] += 4
+    if major_elective_done < academic_grade * 9:
+        weights["major_elective"] += 3
+    if liberal_done < min(33, academic_grade * 10):
+        weights["basic_liberal"] += 2
+        weights["general_liberal"] += 2
+
+    if scenario.get("lack_major_required"):
+        weights["major_required"] = 1
+    if scenario.get("lack_major_elective"):
+        weights["major_elective"] = 1
+    if scenario.get("lack_liberal_arts"):
+        for key in ["basic_liberal", "science_liberal", "general_liberal", "expanded_liberal"]:
+            weights[key] = 1
+    if scenario.get("lack_basic_liberal"):
+        weights["basic_liberal"] = 1
+    if scenario.get("lack_general_liberal"):
+        weights["general_liberal"] = 1
+
+    choices = list(weights.keys())
+    return random.choices(choices, weights=[weights[key] for key in choices], k=1)[0]
+
