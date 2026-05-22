@@ -116,3 +116,26 @@ def semester_sequence(curriculum_year, completed_semesters):
             }
         )
     return semesters
+
+def standard_items_for_term(standard_curriculum, curriculum_year, grade, semester):
+    """해당 학년/학기의 표준이수모형 과목명과 '택1' 형태의 영역 힌트를 분리한다."""
+    target = standard_curriculum[
+        (standard_curriculum["년도"] == curriculum_year)
+        & (standard_curriculum["학년"] == grade)
+        & (standard_curriculum["학기"] == semester)
+    ]
+
+    course_names = []
+    area_hints = []
+    for name in target["과목명"].dropna().tolist():
+        text = str(name)
+        if "택" in text or "영역" in text or "분야" in text:
+            if "확대교양" in text:
+                area_hints.append({"영역": "확대", "세부영역": None})
+            elif "일반교양" in text and "인간과문화" in text:
+                area_hints.append({"영역": "일반", "세부영역": "인간과문화"})
+            elif "일반교양" in text:
+                area_hints.append({"영역": "일반", "세부영역": None})
+            continue
+        course_names.append(text)
+    return course_names, area_hints
