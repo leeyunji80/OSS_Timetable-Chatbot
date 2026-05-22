@@ -600,3 +600,11 @@ def generate_student(scenario, history, graduation):
             },
         },
     }
+
+def build_students_json(scenarios, all_history, graduation):
+    """전체 학생 목록을 students.json 구조로 만든다."""
+    students = []
+    for scenario in scenarios:
+        student_history = all_history[all_history["student_id"] == scenario["student_id"]]
+        students.append(generate_student(scenario, student_history, graduation))
+    return students
