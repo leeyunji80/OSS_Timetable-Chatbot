@@ -71,3 +71,34 @@ def prepare_liberal_catalog(liberal_arts):
     catalog["권장학년"] = catalog["수강 대상"].map(parse_target_grade)
     catalog["정규화과목명"] = catalog["교과목명"].map(normalize_course_name)
     return catalog
+
+def graduation_requirements(graduation, curriculum_year):
+    """입학연도에 맞는 졸업요건에서 required 값을 계산한다."""
+    rule_sets = graduation["rule_sets"]
+    year_key = str(curriculum_year)
+    if year_key not in rule_sets:
+        raise ValueError(f"graduation.json에 {curriculum_year}학년도 졸업요건이 없습니다.")
+
+    rule = rule_sets[year_key]
+    requirements = rule["requirements"]
+    general = requirements["general_education"]
+    major = requirements["major"]
+
+    required = {
+        "교양": {
+            "개신기초": general["areas"]["gaesin_basic"]["min_credits"],
+            "자연이공계기초": general["areas"]["basic_science_engineering"]["min_credits"],
+            "일반": general["areas"]["general"]["min_credits"],
+            "확대": general["areas"]["expanded"]["min_credits"],
+            "OCU_기타": 0,
+        },
+        "전공": {
+            "필수": major["types"]["major_required"]["min_credits"],
+            "선택": major["types"]["major_elective"]["min_credits"],
+        },
+        "졸업학점": rule["graduation"]["min_total_credits"],
+    }
+
+    # graduation.json에 일반선택 필수 이수학점이 별도로 정의되어 있지 않으므로 0으로 처리한다.
+    required["일반선택"] = 0
+    return required
