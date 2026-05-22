@@ -231,7 +231,7 @@ def generate_timetable_combinations(major_path, ge_path, slots):
 
     target_grade = slots.get("target_grade")
     exclude_days = slots.get("exclude_days", [])
-    num_to_pick = slots.get("num_to_pick")
+    target_credit = slots.get("target_credit")
     
     df['수강 대상'] = df['수강 대상'].fillna('')
     df['이수구분'] = df['이수구분'].fillna('')
@@ -267,20 +267,35 @@ def generate_timetable_combinations(major_path, ge_path, slots):
 
     all_combinations = []
 
-    for combo in combinations(course_pool, num_to_pick):
+    for r in range(1, len(course_pool) + 1):
 
-       combo_list = list(combo)
+     for combo in combinations(course_pool, r):
 
-    # 시간 충돌 없을 때만 추가
-       if is_valid_combination(combo_list):
-          all_combinations.append(combo_list)
+        combo_list = list(combo)
 
-    # 최대 10개만 저장
-          if len(all_combinations) >= 10:
-               break
-    
-    return [list(combo) for combo in all_combinations]
+        total_credit = sum(
+            course["credit"]
+            for course in combo_list
+        )
 
+        # 목표 학점 범위 검사
+        if total_credit < target_credit - 1:
+            continue
+
+        if total_credit > target_credit + 1:
+            continue
+
+        # 시간 충돌 검사
+        if is_valid_combination(combo_list):
+            all_combinations.append(combo_list)
+
+        # 최대 10개 저장
+        if len(all_combinations) >= 10:
+            break
+
+        if len(all_combinations) >= 10:
+             break
+     return [list(combo) for combo in all_combinations]
 
 user_sentence = "목요일 공강이고 오전 수업은 피하고 싶어"
 
@@ -299,9 +314,9 @@ for slot in parsed_data["slots"]:
         exclude_days.append(day)
 
 slots_input = {
-    "target_grade": "2학년",
+    "target_grade": parsed_data.get("target_grade"),
     "exclude_days": exclude_days,
-    "num_to_pick": 5
+    "target_credit": parsed_data.get("target_credit")
 }
 
 timetable_results = generate_timetable_combinations(
