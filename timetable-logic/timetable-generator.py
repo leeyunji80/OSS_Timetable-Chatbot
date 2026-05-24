@@ -219,7 +219,7 @@ def evaluate_load(row):
     else:
         return "적다"
 
-def generate_timetable_combinations(recommended_courses_df, filtered_df, target_credits, empty_days):
+def generate_timetable_combinations(recommended_courses_df, filtered_df, target_credits, empty_days, avoid_time_slots):
     # 추천 과목 이름 추출
     recommended_course_names = set(recommended_courses_df)
     
@@ -292,6 +292,31 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
 
             # 공강 요일 검사를 위해 이 조합에 포함된 요일들만 모읍니다.
             actual_days = {slot["day"] for course in combo_list for slot in course["time_slots"]}
+            # ❌ [기존 필터 로직 지우기] -> 💻 [이 코드로 대체하기]
+
+            # ⏰ 피해야 할 시간대(예: 오전) 페널티 계산 (탈락시키지 않음!)
+            avoid_penalty = 0
+            for course in combo_list:
+                # 필수 과목은 오전에 들어도 페널티를 주지 않습니다.
+                if course.get("is_required", False):
+                    continue
+
+                for slot in course["time_slots"]:
+                    for avoid in avoid_time_slots:
+                        if slot["day"] == avoid["day"]:
+                            # 오전 수업(1~4교시)이 포함될 때마다 페널티 점수를 누적합니다.
+                            if avoid["time_range"] == "오전" and slot["start_period"] < 5:
+                                avoid_penalty += 1
+
+            # 추천(필수) 과목 개수 카운트
+            required_count = sum(1 for course in combo_list if course["is_required"])
+
+            # 유효한 시간표 조합 저장 (오전 페널티 점수도 함께 기록)
+            all_combinations.append({
+                "schedule": combo_list,
+                "required_count": required_count,
+                "avoid_penalty": avoid_penalty  # 👈 페널티 기록
+            })
 
             # 사용자가 지정한 공강 요일에 수업이 들어갔는지 검사
             violates_empty_day = False
@@ -312,14 +337,14 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
                 "required_count": required_count
             })
 
-            # 최적의 시간표 3개를 찾았다면 즉시 루프를 종료하고 반환합니다.
-            if len(all_combinations) >= 3:
+            # 최적의 시간표 50개를 찾았다면 즉시 루프를 종료하고 반환합니다.
+            if len(all_combinations) >= 50:
                 all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
                 return [item["schedule"] for item in all_combinations[:3]]
 
-    # 모든 조합을 돌았는데 3개가 안 채워졌다면 있는 것만이라도 반환
     if all_combinations:
-        all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
+         # required_count는 높을수록 좋고(reverse), avoid_penalty는 낮을수록 좋습니다.
+        all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
         return [item["schedule"] for item in all_combinations[:3]]
         
     return []
@@ -388,7 +413,9 @@ timetable_results = generate_timetable_combinations(
     recommended_courses_df=recommended_courses,
     filtered_df=all_lectures_df,
     target_credits=slots_input["target_credit"] if slots_input["target_credit"] else 18,
-    empty_days=slots_input["exclude_days"]
+    empty_days=slots_input["exclude_days"],
+    avoid_time_slots=slots_input["avoid_time_slots"]
+    
 )
 
 if timetable_results:
