@@ -205,3 +205,99 @@ graduation_status = analyze_graduation_status(
 
 print("\n학생 이수 현황")
 print(graduation_status)
+
+# ---------------------------------
+# 졸업요건 부족 현황 계산
+# ---------------------------------
+
+def calculate_remaining_requirements(
+    graduation_rule,
+    graduation_status
+):
+
+    remaining = {}
+
+    # -----------------------------
+    # 전공
+    # -----------------------------
+
+    major_rules = graduation_rule[
+        "requirements"
+    ]["major"]["types"]
+
+    required_major_required = major_rules[
+        "major_required"
+    ]["min_credits"]
+
+    required_major_elective = major_rules[
+        "major_elective"
+    ]["min_credits"]
+
+    remaining["major_required"] = max(
+        0,
+        required_major_required
+        - graduation_status["major_required"]
+    )
+
+    remaining["major_elective"] = max(
+        0,
+        required_major_elective
+        - graduation_status["major_elective"]
+    )
+
+    # -----------------------------
+    # 교양 세부영역
+    # -----------------------------
+
+    remaining["areas"] = {}
+
+    areas = graduation_rule[
+        "requirements"
+    ]["general_education"]["areas"]
+
+    for _, area_data in areas.items():
+
+        subareas = area_data.get(
+            "subareas",
+            {}
+        )
+
+        for _, subarea_data in subareas.items():
+
+            subarea_name = subarea_data["name"]
+
+            required_credit = subarea_data.get(
+                "min_credits"
+            )
+
+            if required_credit is None:
+                continue
+
+            completed_credit = (
+                graduation_status["areas"].get(
+                    subarea_name,
+                    0
+                )
+            )
+
+            remaining_credit = max(
+                0,
+                required_credit
+                - completed_credit
+            )
+
+            remaining["areas"][
+                subarea_name
+            ] = remaining_credit
+
+    return remaining
+
+remaining_requirements = (
+    calculate_remaining_requirements(
+        graduation_rule,
+        graduation_status
+    )
+)
+
+print("\n남은 졸업요건")
+print(remaining_requirements)
