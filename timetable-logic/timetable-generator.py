@@ -454,7 +454,93 @@ if timetable_results:
 
         clean_result.append(clean_course)
 
-    print(json.dumps(clean_result, ensure_ascii=False, indent=2))
+if timetable_results:
+    print("\n-------- [시각화 팀 전달용 최종 JSON 출력] --------")
 
-    print("exclude_days =", exclude_days)
-print("avoid_time_slots =", avoid_time_slots)
+    final_json_output = {
+        "status": "success",
+        "total_alternatives": len(timetable_results),
+        "alternatives": []
+    }
+
+    # 최대 3개의 시간표 대안을 순회하며 JSON 구조를 생성합니다.
+    for index, selected_schedule in enumerate(timetable_results):
+        course_color_map = assign_course_colors(selected_schedule)
+        
+        # 1. 이 시간표의 특징을 분석하여 추천 사유(Reason)를 동적으로 생성합니다.
+        has_empty_day = False
+        morning_course_count = 0
+        total_credits_sum = 0
+        required_course_names = []
+
+        cleaned_courses = []
+        for course in selected_schedule:
+            total_credits_sum += course["credit"]
+            if course.get("is_required"):
+                required_course_names.append(course["name"])
+
+            cleaned_slots = []
+            for slot in course["time_slots"]:
+                cleaned_slots.append({
+                    "day": slot["day"],
+                    "time_range": slot["time_range"],
+                })
+                # 오전 수업(5교시/13시 이전 시작) 개수 카운트
+                if slot["start_period"] < 5:
+                    morning_course_count += 1
+
+            course_color = course_color_map[course["name"]]
+            
+            cleaned_courses.append({
+                "name": course["name"],
+                "room": course["room"],
+                "credit": course["credit"],
+                "is_required": course.get("is_required", False),
+                "background_color": course_color["background"],
+                "text_color": course_color["text"],
+                "time_slots": cleaned_slots
+            })
+
+        # 2. 사용자 맞춤형 추천 사유 문장 작성
+        reason_segments = []
+        
+        # 공강 요일 반영 여부 체크
+        actual_days = {slot["day"] for c in selected_schedule for slot in c["time_slots"]}
+        achieved_empty_days = [day for day in exclude_days if day not in actual_days]
+        if achieved_empty_days:
+            reason_segments.append(f"{', '.join(achieved_empty_days)}요일 공강을 완벽히 확보했습니다.")
+        
+        # 오전 수업 피하기 반영 여부 체크
+        if morning_course_count == 0:
+            reason_segments.append("오전 수업을 하나도 포함하지 않은 쾌적한 오후 시간표입니다.")
+        else:
+            # 어쩔 수 없이 오전에 잡힌 필수 전공이 있는지 체크
+            required_morning = [c["name"] for c in selected_schedule if c.get("is_required") and any(s["start_period"] < 5 for s in c["time_slots"])]
+            if required_morning:
+                reason_segments.append(f"졸업 필수 과목({', '.join(required_morning)})으로 인해 불가피하게 포함된 오전을 제외하고는 최대한 오후로 배치했습니다.")
+            else:
+                reason_segments.append(f"오전 수업을 최소화하여 총 {morning_course_count}개로 조율했습니다.")
+
+        if required_course_names:
+            reason_segments.append(f"우선순위가 높은 추천 과목({', '.join(required_course_names)})이 포함되어 있습니다.")
+
+        recommendation_reason = " ".join(reason_segments)
+
+        # 3. 개별 시간표 대안 구조화
+        alternative_item = {
+            "alternative_id": index + 1,
+            "total_credits": total_credits_sum,
+            "recommendation_reason": recommendation_reason,
+            "courses": cleaned_courses
+        }
+        
+        final_json_output["alternatives"].append(alternative_item)
+
+    # 시각화 팀이 바로 복사해서 쓸 수 있도록 깔끔한 JSON 스트링으로 출력
+    print(json.dumps(final_json_output, ensure_ascii=False, indent=2))
+
+else:
+    print(json.dumps({
+        "status": "error",
+        "message": "조건을 만족하는 시간표 조합을 찾지 못했습니다. 조건을 완화해 주세요."
+    }, ensure_ascii=False, indent=2))
