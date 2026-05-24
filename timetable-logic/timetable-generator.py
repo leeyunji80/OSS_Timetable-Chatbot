@@ -219,148 +219,110 @@ def evaluate_load(row):
     else:
         return "적다"
 
-def generate_timetable_combinations(major_path, ge_path, slots, recommended_course_names):
-    """
-    슬롯 데이터를 바탕으로 필터링 후, 시각화 팀원에게 줄 핵심 3가지 정보(과목명, 강의실, 시간)만 추출
-    """
-    # 원래 있던 컴퓨터공학과 전공 데이터 로드
-    df_major = pd.read_csv(major_path)
-    df_ge = pd.read_csv(ge_path)
+def generate_timetable_combinations(recommended_courses_df, filtered_df, target_credits, empty_days):
+    # 추천 과목 이름 추출
+    recommended_course_names = set(recommended_courses_df)
     
-    
-   # 2. 전공과 교양 데이터프레임을 하나로 통합
-    df = pd.concat([df_major, df_ge], ignore_index=True)
+    major_pool = []
+    ge_pool = []
 
-    exclude_days = slots.get("exclude_days", [])
-    target_credit = slots.get("target_credit") or 18  # 결측치 대비 기본값 설정
-    avoid_time_slots = slots.get("avoid_time_slots", [])
-    
-    # 기본 결측치 채우기 및 전처리
-    df['교과목명'] = df['교과목명'].fillna('')
-    df['이수구분'] = df['이수구분'].fillna('')
-    df['요일'] = df['요일'].fillna('')
-
-    # 공강 요일이 있다면 원본 df에서 먼저 제거
-    if exclude_days:
-        for day in exclude_days:
-            df = df[~df['요일'].str.contains(day)]
-            
-    filtered_df = df # 시간대 검사로 넘겨줄 베이스 데이터프레임 지정
-   
-   # 시간대 필터링
-    filtered_rows = []
-
-    for _, row in filtered_df.iterrows():
-
-        remove_course = False
-
-        parsed_slots = parse_day_and_period(
-            row['요일'],
-            row['교시']
-        )
-
-        for avoid_slot in avoid_time_slots:
-
-            avoid_day = avoid_slot["day"]
-            avoid_time = avoid_slot["time_range"]
-
-            for slot in parsed_slots:
-
-                # 같은 요일 검사
-                if slot["day"] != avoid_day:
-                    continue
-
-                # 오전 검사
-                if avoid_time == "오전":
-
-                    if slot["start_period"] <= 3:
-                        remove_course = True
-                        break
-
-                # 오후 검사
-                elif avoid_time == "오후":
-
-                    if slot["start_period"] >= 4:
-                        remove_course = True
-                        break
-
-            if remove_course:
-                break
-
-        if not remove_course:
-            filtered_rows.append(row)
-
-    filtered_df = pd.DataFrame(filtered_rows)
-            
-    course_pool = []
+    # 전체 데이터 프레임을 돌면서 전공(추천과목)과 교양을 분류하여 담습니다.
     for _, row in filtered_df.iterrows():
         course_name = row['교과목명']
         is_ge = '교양' in row['이수구분']
         is_recommended = course_name in recommended_course_names
         
-        # [필터] 교양이 아니면서(즉, 전공인데) 졸업 추천 필수과목 리스트에 없다면 패스
+        # 전공 과목인데 추천 리스트에 없거나, 교양 과목이 아니면 건너뜁니다.
         if not is_ge and not is_recommended:
             continue
 
         time_slots = parse_day_and_period(row['요일'], row['교시'])
-        
-        course_pool.append({
+        course_item = {
             "name": course_name,
-            "room": row['강의실'].split('(')[0] if pd.notna(row['강의실']) else "",
+            # 원본 코드의 '강의室' 혹은 '강의실' 컬럼 대응
+            "room": row['강의室'].split('(')[0] if '강의室' in row and pd.notna(row['강의室']) else (row['강의실'].split('(')[0] if '강의실' in row and pd.notna(row['강의실']) else ""),
             "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots,
-            "is_required": is_recommended  # 필수 과목인지 여부를 저장 (가중치용)
-        })
+            "is_required": is_recommended
+        }
         
+        if is_ge:
+            ge_pool.append(course_item)
+        else:
+            major_pool.append(course_item)
 
-    # combinations를 돌리기 전에 과목 순서를 완전히 무작위로 섞어버립니다.
+    # ⭐ [수정 핵심]: 무한 루프(오랜 멈춤)를 방지하기 위해 교양 과목 풀을 최대 15개로 제한합니다.
+    if len(ge_pool) > 15:
+        ge_pool = random.sample(ge_pool, 15)
+
+    # 전공 필수/추천 과목과 제한된 교양 과목을 합쳐서 최종 과목 풀을 만듭니다.
+    course_pool = major_pool + ge_pool
     random.shuffle(course_pool)
 
     all_combinations = []
-
-    for r in range(5, len(course_pool) + 1):
-
-     for combo in combinations(course_pool, r):
-
-         combo_list = list(combo)
-
-         total_credit = sum(
-            course["credit"]
-            for course in combo_list
-         )
-
-         # 목표 학점 범위 검사
-         if target_credit is not None:
-
-            if total_credit < target_credit - 1:
-                continue
-
-            if total_credit > target_credit + 1:
-                continue
-           
-        # 시간 충돌 검사
-        # 시간 충돌 검사
-         if is_valid_combination(combo_list):
-             # 이 조합 안에 추천 전공과목이 몇 개나 섞여있는지 계산
-             required_count = sum(1 for c in combo_list if c["is_required"])
-             all_combinations.append({
-                 "schedule": combo_list,
-                 "required_count": required_count
-             })
-
-         # [추가] 딕셔너리 형태로 저장된 조합이 10개 이상 쌓이면 안쪽 루프 탈출
-         if len(all_combinations) >= 10:
-             break
-
-     # [추가] 조합이 10개 이상 쌓이면 바깥쪽 루프도 탈출
-     if len(all_combinations) >= 10:
-         break
-
-    # 추천 전공과목 개수가 많은 순서대로 내림차순 정렬
-    all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
     
-    # 정렬된 결과에서 상위 10개의 시간표 데이터만 추출해서 반환
-    return [item["schedule"] for item in all_combinations[:10]]
+    # ⚠️ [수정 핵심 2]: 과도한 조합 연산으로 멈추는 것을 막기 위한 안전장치 추가
+    MAX_ITERATIONS = 50000
+    iteration_count = 0
+
+    # 조합 탐색 시작 (4개 과목 조합부터 전체 과목 조합까지)
+    for r in range(4, len(course_pool) + 1):
+        for combo in combinations(course_pool, r):
+            iteration_count += 1
+            
+            # 탐색 횟수가 5만 번을 넘어가면 컴퓨터를 쉬게 하고 지금까지 찾은 최선의 조합을 반환합니다.
+            if iteration_count > MAX_ITERATIONS:
+                if all_combinations:
+                    all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
+                    return [item["schedule"] for item in all_combinations[:3]]
+                return []
+
+            combo_list = list(combo)
+            
+            # 학점 총합 계산
+            total_credits = sum(course["credit"] for course in combo_list)
+            if total_credits != target_credits:
+                continue
+
+            # 시간표 충돌 및 공강 요일 검사
+            #  [새 코드] 지운 자리에 상단에 정의된 함수를 써서 딱 3줄만 넣으세요:
+            # 이미 상단에 구현해 두신 전체 충돌 검사 함수를 그대로 활용합니다!
+            if not is_valid_combination(combo_list):
+                continue
+
+            # 공강 요일 검사를 위해 이 조합에 포함된 요일들만 모읍니다.
+            actual_days = {slot["day"] for course in combo_list for slot in course["time_slots"]}
+
+            # 사용자가 지정한 공강 요일에 수업이 들어갔는지 검사
+            violates_empty_day = False
+            for day in empty_days:
+                if day in actual_days:
+                    violates_empty_day = True
+                    break
+            
+            if violates_empty_day:
+                continue
+
+            # 추천(필수) 과목이 몇 개 포함되었는지 카운트
+            required_count = sum(1 for course in combo_list if course["is_required"])
+
+            # 유효한 시간표 조합 저장
+            all_combinations.append({
+                "schedule": combo_list,
+                "required_count": required_count
+            })
+
+            # 최적의 시간표 3개를 찾았다면 즉시 루프를 종료하고 반환합니다.
+            if len(all_combinations) >= 3:
+                all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
+                return [item["schedule"] for item in all_combinations[:3]]
+
+    # 모든 조합을 돌았는데 3개가 안 채워졌다면 있는 것만이라도 반환
+    if all_combinations:
+        all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
+        return [item["schedule"] for item in all_combinations[:3]]
+        
+    return []
 
 user_sentence = "목요일 공강이고 오전 수업은 피하고 싶어"
 
@@ -418,12 +380,15 @@ graduation_analysis = get_final_recommendations(
 # 최종 추천 과목 리스트 추출
 recommended_courses = graduation_analysis.get("recommended_courses", [])
 
-# 시간표 조합 함수 호출
+# 1. 파일 경로에서 데이터를 읽어와 하나로 합쳐줍니다.
+all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_PATH)], ignore_index=True)
+
+# 2. 딕셔너리에 뭉쳐있던 인자들을 하나씩 풀어서 정확한 매개변수 이름으로 전달합니다.
 timetable_results = generate_timetable_combinations(
-    MAJOR_DATA_PATH,
-    GE_DATA_PATH,
-    slots_input,
-    recommended_course_names=recommended_courses
+    recommended_courses_df=recommended_courses,
+    filtered_df=all_lectures_df,
+    target_credits=slots_input["target_credit"] if slots_input["target_credit"] else 18,
+    empty_days=slots_input["exclude_days"]
 )
 
 if timetable_results:
