@@ -8,6 +8,8 @@ from llm_api import parse_schedule_text
 import os
 from dotenv import load_dotenv
 import json
+# 테스트를 위한 임시 파일에서 함수를 불러옴
+from condition import get_final_recommendations, students_list
 
 load_dotenv()
 
@@ -217,7 +219,7 @@ def evaluate_load(row):
     else:
         return "적다"
 
-def generate_timetable_combinations(major_path, ge_path, slots):
+def generate_timetable_combinations(major_path, ge_path, slots, recommended_course_names):
     """
     슬롯 데이터를 바탕으로 필터링 후, 시각화 팀원에게 줄 핵심 3가지 정보(과목명, 강의실, 시간)만 추출
     """
@@ -226,32 +228,24 @@ def generate_timetable_combinations(major_path, ge_path, slots):
     df_ge = pd.read_csv(ge_path)
     
     
-    # 2. 전공과 교양 데이터프레임을 하나로 통합
+   # 2. 전공과 교양 데이터프레임을 하나로 통합
     df = pd.concat([df_major, df_ge], ignore_index=True)
 
-    target_grade = slots.get("target_grade")
     exclude_days = slots.get("exclude_days", [])
-    target_credit = slots.get("target_credit")
+    target_credit = slots.get("target_credit") or 18  # 결측치 대비 기본값 설정
     avoid_time_slots = slots.get("avoid_time_slots", [])
     
-    df['수강 대상'] = df['수강 대상'].fillna('')
+    # 기본 결측치 채우기 및 전처리
+    df['교과목명'] = df['교과목명'].fillna('')
     df['이수구분'] = df['이수구분'].fillna('')
+    df['요일'] = df['요일'].fillna('')
 
-    # 2. 조건 설정
-    if target_grade:
-        is_target_grade = df['수강 대상'].str.contains(target_grade)
-    else:
-        is_target_grade = pd.Series([True] * len(df))
-    is_general_edu = df['이수구분'].str.contains('교양')
-    is_not_night = ~df['수강 대상'].str.contains("야간")
-
-    # 3. 필터링 (전공은 해당학년만, 교양은 무조건 합격 / 둘 다 야간은 제외)
-    mask = (is_target_grade | is_general_edu) & is_not_night
-    filtered_df = df[mask].copy()
-    
+    # 공강 요일이 있다면 원본 df에서 먼저 제거
     if exclude_days:
         for day in exclude_days:
-            filtered_df = filtered_df[~filtered_df['요일'].str.contains(day, na=False)]
+            df = df[~df['요일'].str.contains(day)]
+            
+    filtered_df = df # 시간대 검사로 넘겨줄 베이스 데이터프레임 지정
    
    # 시간대 필터링
     filtered_rows = []
@@ -300,15 +294,22 @@ def generate_timetable_combinations(major_path, ge_path, slots):
             
     course_pool = []
     for _, row in filtered_df.iterrows():
-        time_slots = parse_day_and_period(row['요일'], row['교시'])
+        course_name = row['교과목명']
+        is_ge = '교양' in row['이수구분']
+        is_recommended = course_name in recommended_course_names
+        
+        # [필터] 교양이 아니면서(즉, 전공인데) 졸업 추천 필수과목 리스트에 없다면 패스
+        if not is_ge and not is_recommended:
+            continue
 
-        assignment_status = evaluate_load(row)
+        time_slots = parse_day_and_period(row['요일'], row['교시'])
         
         course_pool.append({
-            "name": row['교과목명'],
+            "name": course_name,
             "room": row['강의실'].split('(')[0] if pd.notna(row['강의실']) else "",
             "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots,
+            "is_required": is_recommended  # 필수 과목인지 여부를 저장 (가중치용)
         })
         
 
@@ -338,16 +339,28 @@ def generate_timetable_combinations(major_path, ge_path, slots):
                 continue
            
         # 시간 충돌 검사
+        # 시간 충돌 검사
          if is_valid_combination(combo_list):
-            all_combinations.append(combo_list)
+             # 이 조합 안에 추천 전공과목이 몇 개나 섞여있는지 계산
+             required_count = sum(1 for c in combo_list if c["is_required"])
+             all_combinations.append({
+                 "schedule": combo_list,
+                 "required_count": required_count
+             })
 
-        # 최대 10개 저장
+         # [추가] 딕셔너리 형태로 저장된 조합이 10개 이상 쌓이면 안쪽 루프 탈출
          if len(all_combinations) >= 10:
-            break
+             break
 
+     # [추가] 조합이 10개 이상 쌓이면 바깥쪽 루프도 탈출
      if len(all_combinations) >= 10:
-        break
-    return [list(combo) for combo in all_combinations]
+         break
+
+    # 추천 전공과목 개수가 많은 순서대로 내림차순 정렬
+    all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
+    
+    # 정렬된 결과에서 상위 10개의 시간표 데이터만 추출해서 반환
+    return [item["schedule"] for item in all_combinations[:10]]
 
 user_sentence = "목요일 공강이고 오전 수업은 피하고 싶어"
 
@@ -390,10 +403,27 @@ slots_input = {
     "avoid_time_slots": avoid_time_slots
 }
 
+# ... (LLM 분석 및 slots_input 정제 완료 후) ...
+
+login_student_id = "20210001"
+target_semester = 1 
+
+# 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
+graduation_analysis = get_final_recommendations(
+    student_id=login_student_id,
+    target_semester=target_semester,
+    students_json_data=students_list
+)
+
+# 최종 추천 과목 리스트 추출
+recommended_courses = graduation_analysis.get("recommended_courses", [])
+
+# 시간표 조합 함수 호출
 timetable_results = generate_timetable_combinations(
     MAJOR_DATA_PATH,
     GE_DATA_PATH,
-    slots_input
+    slots_input,
+    recommended_course_names=recommended_courses
 )
 
 if timetable_results:
