@@ -18,6 +18,12 @@ COURSE_HISTORY_PATH = (
     "student/course_history.csv"
 )
 
+STUDENT_DATA_PATH = "student/students.json"
+
+def load_students_data(json_path):
+    with open(json_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 # ---------------------------------
 # 졸업요건 JSON 로드
 # ---------------------------------
@@ -189,34 +195,12 @@ curriculum_df = load_curriculum_model(
     CURRICULUM_MODEL_PATH
 )
 
-
+students_list = load_students_data(STUDENT_DATA_PATH)
 # ---------------------------------
 # 테스트
 # ---------------------------------
 
-admission_year = 2021
 
-graduation_rule = get_graduation_rule(
-    rules_data,
-    admission_year
-)
-
-print("\n선택된 졸업요건")
-print(graduation_rule["name"])
-
-student_id = "20210001"
-
-completed_courses = load_completed_courses(
-    COURSE_HISTORY_PATH,
-    student_id
-)
-
-graduation_status = analyze_graduation_status(
-    completed_courses
-)
-
-print("\n학생 이수 현황")
-print(graduation_status)
 
 # ---------------------------------
 # 졸업요건 부족 현황 계산
@@ -304,15 +288,7 @@ def calculate_remaining_requirements(
 
     return remaining
 
-remaining_requirements = (
-    calculate_remaining_requirements(
-        graduation_rule,
-        graduation_status
-    )
-)
 
-print("\n남은 졸업요건")
-print(remaining_requirements)
 
 def get_recommended_courses(
     curriculum_df,
@@ -331,14 +307,7 @@ def get_recommended_courses(
 
     return recommended_df["과목명"].tolist()
 
-recommended_courses = get_recommended_courses(
-    curriculum_df,
-    2021,
-    3,
-    1
-)
 
-print(recommended_courses)
 
 def filter_completed_courses(recommended_courses, completed_set):
 
@@ -346,12 +315,80 @@ def filter_completed_courses(recommended_courses, completed_set):
         course for course in recommended_courses
         if course not in completed_set
     ]
-completed_set = graduation_status["completed_course_names"]
 
-filtered_courses = filter_completed_courses(
-    recommended_courses,
-    completed_set
-)
+# ---------------------------------
+# [수정] 로그인 팀원에게 학번을 받아 처리하는 통합 함수
+# ---------------------------------
+def get_final_recommendations(student_id, target_semester, students_json_data):
+    # 1. 넘겨받은 student_id로 JSON에서 학생 정보 찾기
+    student_info = None
+    for s in students_json_data:
+        if str(s["student_id"]) == str(student_id):
+            student_info = s
+            break
+            
+    if not student_info:
+        return {"error": "존재하지 않는 학생 학번입니다."}
+    
+    # 2. 학생 정보에서 동적으로 변수 추출
+    admission_year = student_info["curriculum_year"]
+    current_grade = student_info["grade"]
+    
+    # 3. 입학년도에 맞는 졸업 규칙 로드
+    graduation_rule = get_graduation_rule(rules_data, admission_year)
+    if not graduation_rule:
+        return {"error": f"{admission_year}년도 졸업 요건 정의가 존재하지 않습니다."}
+        
+    # 4. 학생 수강 이력 로드 및 분석
+    completed_courses = load_completed_courses(COURSE_HISTORY_PATH, student_id)
+    graduation_status = analyze_graduation_status(completed_courses)
+    
+    # 5. 부족한 요건 분석
+    remaining_reqs = calculate_remaining_requirements(graduation_rule, graduation_status)
+    
+    # 6. 표준이수모형에서 과목 가져오기
+    # (주의: curriculum_df의 '년도'가 교육과정 지정 년도인지 확인 필요)
+    recommended_courses = get_recommended_courses(
+        curriculum_df, 
+        curriculum_year=admission_year, 
+        current_grade=current_grade, 
+        current_semester=target_semester
+    )
+    
+    # 7. 이미 이수한 과목 필터링
+    completed_set = graduation_status["completed_course_names"]
+    filtered_courses = filter_completed_courses(recommended_courses, completed_set)
+    
+    # 8. 최종 결과 반환
+    return {
+        "student_name": student_info["name"],
+        "remaining_requirements": remaining_reqs,
+        "recommended_courses": filtered_courses
+    }
 
-print("\n추천 과목 (필터 적용 후)")
-print(filtered_courses)
+# ---------------------------------
+# 실행 예시 (서버 구동 시 또는 라우터 내부에서 호출)
+# ---------------------------------
+# students_list = [ ... 상단에 적어주신 학생 JSON 리스트 ... ]
+# result = get_final_recommendations(student_id="20210001", target_semester=1, students_json_data=students_list)
+# print(result)
+
+# =============================================================
+# 실제 함수 호출 및 테스트 구역
+# =============================================================
+if __name__ == "__main__":
+    
+    # 1. 로그인 담당 팀원이 넘겨준 "학번"과 "추천받을 학기" 예시
+    login_student_id = "20210001"
+    target_semester = 1
+
+    # 2. 파일에서 불러온 students_list를 그대로 인자에 주입!
+    final_result = get_final_recommendations(
+        student_id=login_student_id,
+        target_semester=target_semester,
+        students_json_data=students_list
+    )
+
+    # 3. 결과 출력
+    print(f"\n==== {login_student_id} 학생의 최종 분석 및 추천 결과 ====")
+    print(json.dumps(final_result, indent=4, ensure_ascii=False))
