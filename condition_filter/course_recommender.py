@@ -194,7 +194,7 @@ curriculum_df = load_curriculum_model(
 # 테스트
 # ---------------------------------
 
-admission_year = 2025
+admission_year = 2021
 
 graduation_rule = get_graduation_rule(
     rules_data,
@@ -313,3 +313,29 @@ remaining_requirements = (
 
 print("\n남은 졸업요건")
 print(remaining_requirements)
+
+def get_recommended_courses(
+    curriculum_df,
+    curriculum_year,
+    current_grade,
+    current_semester
+):
+
+    recommended_df = curriculum_df[
+        (curriculum_df["년도"] == curriculum_year)
+        &
+        (curriculum_df["학년"] == current_grade)
+        &
+        (curriculum_df["학기"] == current_semester)
+    ]
+
+    return recommended_df["과목명"].tolist()
+
+recommended_courses = get_recommended_courses(
+    curriculum_df,
+    2021,
+    3,
+    1
+)
+
+print(recommended_courses)
