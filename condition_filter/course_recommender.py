@@ -79,16 +79,18 @@ def analyze_graduation_status(
 
     status = {
 
-        "total_credits": 0,
+    "total_credits": 0,
 
-        "major_required": 0,
+    "major_required": 0,
 
-        "major_elective": 0,
+    "major_elective": 0,
 
-        "areas": {},
+    "areas": {},
 
-        "completed_course_names": set()
-    }
+    "subareas": {},
+
+    "completed_course_names": set()
+}
 
     for course in completed_courses:
 
@@ -117,6 +119,16 @@ def analyze_graduation_status(
             status["major_elective"] += credit
 
         area = course.get("area")
+
+        subarea = course.get("subarea")
+
+        if subarea:
+
+           if subarea not in status["subareas"]:
+
+               status["subareas"][subarea] = 0
+
+           status["subareas"][subarea] += credit
 
         if area:
 
@@ -274,7 +286,7 @@ def calculate_remaining_requirements(
                 continue
 
             completed_credit = (
-                graduation_status["areas"].get(
+                graduation_status["subareas"].get(
                     subarea_name,
                     0
                 )
