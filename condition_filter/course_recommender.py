@@ -327,7 +327,7 @@ def get_recommended_courses(
         (curriculum_df["학년"] == current_grade)
         &
         (curriculum_df["학기"] == current_semester)
-    ]
+    ].drop_duplicates(subset=["과목명"])
 
     return recommended_df["과목명"].tolist()
 
@@ -339,3 +339,19 @@ recommended_courses = get_recommended_courses(
 )
 
 print(recommended_courses)
+
+def filter_completed_courses(recommended_courses, completed_set):
+
+    return [
+        course for course in recommended_courses
+        if course not in completed_set
+    ]
+completed_set = graduation_status["completed_course_names"]
+
+filtered_courses = filter_completed_courses(
+    recommended_courses,
+    completed_set
+)
+
+print("\n추천 과목 (필터 적용 후)")
+print(filtered_courses)
