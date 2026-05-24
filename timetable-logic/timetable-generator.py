@@ -251,7 +251,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         else:
             major_pool.append(course_item)
 
-    # ⭐ [수정 핵심]: 무한 루프(오랜 멈춤)를 방지하기 위해 교양 과목 풀을 최대 15개로 제한합니다.
+    #무한 루프(오랜 멈춤)를 방지하기 위해 교양 과목 풀을 최대 15개로 제한합니다.
     if len(ge_pool) > 15:
         ge_pool = random.sample(ge_pool, 15)
 
@@ -261,7 +261,6 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
 
     all_combinations = []
     
-    # ⚠️ [수정 핵심 2]: 과도한 조합 연산으로 멈추는 것을 막기 위한 안전장치 추가
     MAX_ITERATIONS = 50000
     iteration_count = 0
 
@@ -285,27 +284,30 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
                 continue
 
             # 시간표 충돌 및 공강 요일 검사
-            #  [새 코드] 지운 자리에 상단에 정의된 함수를 써서 딱 3줄만 넣으세요:
-            # 이미 상단에 구현해 두신 전체 충돌 검사 함수를 그대로 활용합니다!
             if not is_valid_combination(combo_list):
                 continue
 
             # 공강 요일 검사를 위해 이 조합에 포함된 요일들만 모읍니다.
             actual_days = {slot["day"] for course in combo_list for slot in course["time_slots"]}
-            # ❌ [기존 필터 로직 지우기] -> 💻 [이 코드로 대체하기]
-
-            # ⏰ 피해야 할 시간대(예: 오전) 페널티 계산 (탈락시키지 않음!)
+           
             avoid_penalty = 0
             for course in combo_list:
-                # 필수 과목은 오전에 들어도 페널티를 주지 않습니다.
+                # 필수 과목은 오전에 듣든 오후에 듣든 페널티를 면제해 줍니다.
                 if course.get("is_required", False):
                     continue
 
                 for slot in course["time_slots"]:
                     for avoid in avoid_time_slots:
+                        # 🎯 1단계: 사용자가 지정한 '요일'과 현재 수업의 '요일'이 일치하는지 확인
                         if slot["day"] == avoid["day"]:
-                            # 오전 수업(1~4교시)이 포함될 때마다 페널티 점수를 누적합니다.
+                            
+                            # ☀️ 조건 A: 해당 요일에 '오전'을 피하고 싶을 때 (1~4교시 걸리면 페널티)
                             if avoid["time_range"] == "오전" and slot["start_period"] < 5:
+                                avoid_penalty += 1
+                            
+                            # 🌙 조건 B: 해당 요일에 '오후'를 피하고 싶을 때 (5교시/13:00 이후 걸리면 페널티)
+                            # 보통 5교시(13시)부터 대다수 오후 수업이 시작됩니다.
+                            if avoid["time_range"] == "오후" and slot["start_period"] >= 5:
                                 avoid_penalty += 1
 
             # 추천(필수) 과목 개수 카운트
@@ -501,29 +503,53 @@ if timetable_results:
                 "time_slots": cleaned_slots
             })
 
-        # 2. 사용자 맞춤형 추천 사유 문장 작성
+        
+        # 2. 요일별 오전/오후 회피 성공 여부 분석 및 추천 사유(Reason) 생성
         reason_segments = []
         
-        # 공강 요일 반영 여부 체크
+        # [공강 요일 반영 여부 체크]
         actual_days = {slot["day"] for c in selected_schedule for slot in c["time_slots"]}
         achieved_empty_days = [day for day in exclude_days if day not in actual_days]
         if achieved_empty_days:
             reason_segments.append(f"{', '.join(achieved_empty_days)}요일 공강을 완벽히 확보했습니다.")
         
-        # 오전 수업 피하기 반영 여부 체크
-        if morning_course_count == 0:
-            reason_segments.append("오전 수업을 하나도 포함하지 않은 쾌적한 오후 시간표입니다.")
-        else:
-            # 어쩔 수 없이 오전에 잡힌 필수 전공이 있는지 체크
-            required_morning = [c["name"] for c in selected_schedule if c.get("is_required") and any(s["start_period"] < 5 for s in c["time_slots"])]
-            if required_morning:
-                reason_segments.append(f"졸업 필수 과목({', '.join(required_morning)})으로 인해 불가피하게 포함된 오전을 제외하고는 최대한 오후로 배치했습니다.")
-            else:
-                reason_segments.append(f"오전 수업을 최소화하여 총 {morning_course_count}개로 조율했습니다.")
 
+        # 요일별 오전/오후 회피 성공 여부 체크
+        avoid_success_days = []
+        avoid_fail_details = []
+
+        for avoid in avoid_time_slots:
+            target_day = avoid["day"]
+            target_range = avoid["time_range"]
+            
+            # 현재 시간표에서 해당 요일, 해당 시간대에 걸리는 수업이 있는지 확인
+            is_violated = False
+            for course in selected_schedule:
+                for slot in course["time_slots"]:
+                    if slot["day"] == target_day:
+                        if target_range == "오전" and slot["start_period"] < 5:
+                            is_violated = True
+                        if target_range == "오후" and slot["start_period"] >= 5:
+                            is_violated = True
+            
+            if not is_violated:
+                avoid_success_days.append(f"{target_day}요일 {target_range}")
+            else:
+                avoid_fail_details.append(f"{target_day}요일 {target_range}")
+
+        # 문장 엮기
+        if avoid_success_days:
+            reason_segments.append(f"요청하신 {', '.join(avoid_success_days)} 수업을 깔끔하게 피했습니다.")
+        if avoid_fail_details:
+            # 어쩔 수 없이 들어간 경우 안내 (페널티 기반이라 들어갈 수도 있음)
+            reason_segments.append(f"다만 전체 학점 맞춤을 위해 {', '.join(avoid_fail_details)} 수업이 불가피하게 일부 포함되었습니다.")
+        # -------------------------------------------------------------------------
+
+        # [우선순위 추천 과목 체크]
         if required_course_names:
             reason_segments.append(f"우선순위가 높은 추천 과목({', '.join(required_course_names)})이 포함되어 있습니다.")
 
+        # 최종 합치기
         recommendation_reason = " ".join(reason_segments)
 
         # 3. 개별 시간표 대안 구조화
