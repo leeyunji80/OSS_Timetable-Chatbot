@@ -678,6 +678,25 @@
             let chatSessions = [];
             let currentSessionId = null;
 
+            function saveSessionStorage() {
+
+                sessionStorage.setItem(
+                    'chatSessions',
+                    JSON.stringify(chatSessions)
+                );
+
+                sessionStorage.setItem(
+                    'currentSessionId',
+                    currentSessionId
+                );
+
+                sessionStorage.setItem(
+                    'currentStudent',
+                    JSON.stringify(currentStudent)
+                );
+
+            }
+
             textarea.addEventListener('input', function() {
                 // 1. 높이 계산을 위해 임시로 'auto' 초기화
                 this.style.height = '75px'; 
