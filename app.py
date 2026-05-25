@@ -7,6 +7,10 @@ from flask import Flask, render_template, request, jsonify
 from threading import Thread
 import os
 import PyQt5
+import json
+
+with open('students.json', 'r', encoding='utf-8') as f:
+    students = json.load(f)
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
     os.path.dirname(PyQt5.__file__),
