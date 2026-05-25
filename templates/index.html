@@ -420,14 +420,6 @@
 
         <div class="timetable-history" id="timetable-history">
 
-            <div class="history-card">
-                <div class="history-info">
-                    <p>다음 학기 전공 필수 위주</p>
-                    <span>2026. 4. 15.</span>
-                </div>
-
-            </div>
-
         </div>
 
         <div class="profile-section">
@@ -640,6 +632,14 @@
                     content: message
                 });
 
+                if (session.messages.length === 1) {
+
+                    session.title = message.trim().substring(0, 10);
+
+                    session.preview = '(예비)';
+
+                }
+
                 renderHistory();
 
             }
@@ -676,7 +676,7 @@
                     card.innerHTML = `
                         <div class="history-info">
                             <p>${session.title}</p>
-                            <span>채팅 ${session.messages.length}개</span>
+                            <span>${session.preview}</span>
                         </div>
                     `;
 
