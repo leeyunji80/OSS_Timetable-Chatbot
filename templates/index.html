@@ -1415,11 +1415,7 @@
 
                 if (!currentStudent) return;
 
-                const studentData =
-                    studentCreditData.find(student =>
-                        student.student_id ===
-                        currentStudent.student_id
-                    );
+                const studentData = urrentStudentData();
 
                 if (!studentData) return;
 
@@ -1442,11 +1438,7 @@
 
                 if (!currentStudent) return;
 
-                const studentData =
-                    studentCreditData.find(student =>
-                        student.student_id ===
-                        currentStudent.student_id
-                    );
+                const studentData = urrentStudentData();
 
                 if (!studentData) return;
 
@@ -1485,11 +1477,7 @@
 
                 if (!currentStudent) return;
 
-                const studentData =
-                    studentCreditData.find(student =>
-                        student.student_id ===
-                        currentStudent.student_id
-                    );
+                const studentData = urrentStudentData();
 
                 if (!studentData) return;
 
@@ -1550,6 +1538,17 @@
                     container.appendChild(div);
 
                 });
+
+            }
+
+            function getCurrentStudentData() {
+
+                if (!currentStudent) return null;
+
+                return studentCreditData.find(student =>
+                    student.student_id ===
+                    currentStudent.student_id
+                );
 
             }
 
