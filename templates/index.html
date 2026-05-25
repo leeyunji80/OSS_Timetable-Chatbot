@@ -526,19 +526,6 @@
 
         </div>
 
-        <div class="profile-section">
-
-            <div class="profile-image">
-                김
-            </div>
-
-            <div class="profile-info">
-                <p>김철수</p>
-                <span>2021123456</span>
-            </div>
-
-        </div>
-
         <div class="profile-section" id="profile-btn">
 
             <div class="profile-avatar">
@@ -592,6 +579,54 @@
                 </button>
             </div>
         </footer>
+
+        <div class="login-modal" id="login-modal">
+
+        <div class="login-box">
+
+            <h2>로그인</h2>
+
+            <input
+                type="text"
+                id="student-name"
+                placeholder="이름 입력"
+            >
+
+            <input
+                type="text"
+                id="student-id"
+                placeholder="학번 입력"
+            >
+
+            <button id="login-submit-btn">
+                로그인
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="student-modal" id="student-modal">
+
+        <div class="student-box">
+
+            <div class="student-header">
+
+                <h2>학생정보</h2>
+
+                <button id="logout-btn">
+                    로그아웃
+                </button>
+
+            </div>
+
+            <div id="student-info">
+
+            </div>
+
+        </div>
+
+    </div>
 
     <script>
             const textarea = document.getElementById('user-input');
@@ -909,7 +944,7 @@
             function updateProfileUI() {
 
                 const profileInfo =
-                    document.querySelector('.profile-info');
+                    document.getElementById('.profile-info');
 
                 if (currentStudent) {
 
@@ -930,54 +965,6 @@
             }
 
         </script>
-    </div>
-
-    <div class="login-modal" id="login-modal">
-
-        <div class="login-box">
-
-            <h2>로그인</h2>
-
-            <input
-                type="text"
-                id="student-name"
-                placeholder="이름 입력"
-            >
-
-            <input
-                type="text"
-                id="student-id"
-                placeholder="학번 입력"
-            >
-
-            <button id="login-submit-btn">
-                로그인
-            </button>
-
-        </div>
-
-    </div>
-
-    <div class="student-modal" id="student-modal">
-
-        <div class="student-box">
-
-            <div class="student-header">
-
-                <h2>학생정보</h2>
-
-                <button id="logout-btn">
-                    로그아웃
-                </button>
-
-            </div>
-
-            <div id="student-info">
-
-            </div>
-
-        </div>
-
     </div>
 
 </body>

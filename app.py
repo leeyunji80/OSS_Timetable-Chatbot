@@ -52,7 +52,7 @@ def login():
 
         if (
             student['student_id'] == student_id
-            and student['name'] == name
+            and student['name'] == student_name
         ):
 
             return jsonify({
