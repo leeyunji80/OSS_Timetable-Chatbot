@@ -526,6 +526,117 @@
             margin-bottom: 20px;
         }
 
+        .student-basic-info {
+
+            margin-bottom: 35px;
+        }
+
+        .student-row {
+
+            display: flex;
+
+            gap: 60px;
+
+            margin-bottom: 25px;
+        }
+
+        .student-item label {
+
+            display: block;
+
+            font-size: 14px;
+
+            color: #d67f7f;
+
+            margin-bottom: 8px;
+
+            font-weight: 600;
+        }
+
+        .student-item p {
+
+            font-size: 28px;
+
+            font-weight: 700;
+
+            color: #222;
+        }
+
+        .credit-section,
+        .graduation-section,
+        .history-section {
+
+            margin-top: 40px;
+        }
+
+        .credit-header {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+
+            width: 100%;
+
+            height: 10px;
+
+            background-color: #f5dede;
+
+            border-radius: 999px;
+
+            overflow: hidden;
+
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+
+            height: 100%;
+
+            width: 0%;
+
+            background-color: #ff4d4d;
+        }
+
+        .history-table-wrapper {
+
+            margin-top: 20px;
+
+            max-height: 300px;
+
+            overflow-y: auto;
+        }
+
+        .history-table {
+
+            width: 100%;
+
+            border-collapse: collapse;
+        }
+
+        .history-table th,
+        .history-table td {
+
+            padding: 12px;
+
+            text-align: center;
+
+            border-bottom: 1px solid #eee;
+
+            font-size: 14px;
+        }
+
+        .history-table th {
+
+            background-color: #fff3f3;
+        }
+
     </style>
 </head>
 <body>
@@ -763,6 +874,7 @@
             let currentStudent = null;
             let chatSessions = [];
             let currentSessionId = null;
+            let courseHistoryData = [];
 
             function saveSessionStorage() {
 
@@ -1157,6 +1269,52 @@
                     profileAvatar.innerHTML = '👤';
 
                     profileAvatar.style.backgroundColor = '#ffe3e3';
+
+                }
+
+            }
+
+            async function loadCourseHistoryData() {
+
+                try {
+
+                    const response =
+                        await fetch('/student/course_history.csv');
+
+                    const csvText = await response.text();
+
+                    const rows =
+                        csvText.trim().split('\n');
+
+                    const headers =
+                        rows[0].split(',');
+
+                    courseHistoryData = rows.slice(1).map(row => {
+
+                        const values = row.split(',');
+
+                        return {
+
+                            student_id: values[0],
+                            year: values[1],
+                            semester: values[2],
+                            course_code: values[3],
+                            course_name: values[4],
+                            category: values[5],
+                            area: values[6],
+                            detail_area: values[7],
+                            credit: values[8]
+
+                        };
+
+                    });
+
+                } catch (error) {
+
+                    console.error(
+                        'CSV 로드 실패:',
+                        error
+                    );
 
                 }
 
