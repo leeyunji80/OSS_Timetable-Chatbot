@@ -109,3 +109,60 @@ def calculate_haversine_distance(lat1, lon1, lat2, lon2):
     distance_meters = EARTH_RADIUS_METERS * c
 
     return distance_meters
+
+# 전체 건물 조합 거리 계산
+results = []
+
+for _, row in pairs_df.iterrows():
+    start_building = str(row["출발 건물"]).strip()
+    end_building = str(row["도착 건물"]).strip()
+
+    print(f"[{start_building} → {end_building}]")
+
+    try:
+        start_latitude, start_longitude = get_building_coordinates(start_building)
+        end_latitude, end_longitude = get_building_coordinates(end_building)
+
+        distance_meters = calculate_haversine_distance(
+            start_latitude,
+            start_longitude,
+            end_latitude,
+            end_longitude
+        )
+
+        adjusted_distance_meters = distance_meters * DISTANCE_CORRECTION_RATE
+
+        # 도보 시간은 소수점이 나오므로 올림 처리
+        walking_minutes = math.ceil(
+            adjusted_distance_meters / WALKING_SPEED_METERS_PER_MINUTE
+        )
+
+        # CSV 저장과 출력용으로 meter 값을 정수 반올림
+        distance_meters_rounded = round(distance_meters)
+        adjusted_distance_meters_rounded = round(adjusted_distance_meters)
+
+        print(f"직선 거리: {distance_meters_rounded}m")
+        print(f"보정 거리: {adjusted_distance_meters_rounded}m")
+        print(f"예상 도보 시간: {walking_minutes}분")
+        print()
+
+        results.append({
+            "출발 건물": start_building,
+            "도착 건물": end_building,
+            "거리(m)": distance_meters_rounded,
+            "보정 거리(m)": adjusted_distance_meters_rounded,
+            "도보 시간(분)": walking_minutes
+        })
+
+    except Exception as error:
+        print(f"처리 실패: {error}")
+        print()
+
+        results.append({
+            "출발 건물": start_building,
+            "도착 건물": end_building,
+            "거리(m)": None,
+            "보정 거리(m)": None,
+            "도보 시간(분)": None
+        })
+
