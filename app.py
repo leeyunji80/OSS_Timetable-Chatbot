@@ -40,6 +40,30 @@ def chat():
         'image': '/static/timetable.png'
     })
 
+@app.route('/login', methods=['POST'])
+def login():
+
+    data = request.get_json()
+
+    student_id = data['student_id']
+    name = data['name']
+
+    for student in students:
+
+        if (
+            student['student_id'] == student_id
+            and student['name'] == name
+        ):
+
+            return jsonify({
+                'success': True,
+                'student': student
+            })
+
+    return jsonify({
+        'success': False
+    })
+
 def run_flask():
     app.run(port=5000)
 
