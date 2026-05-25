@@ -526,6 +526,7 @@
 
                 // 사용자 메시지 출력
                 addMessage(message, 'user');
+                saveMessage(message, 'user');
 
                 // 입력창 초기화
                 textarea.value = '';
@@ -551,6 +552,7 @@
 
                     // AI 응답 출력
                     addMessage(data.reply, 'ai');
+                    saveMessage(data.reply, 'ai');
                     addImageMessage(data.image);
 
                 } catch (error) {
@@ -622,6 +624,21 @@
                 createNewSession();
 
             });
+
+            function saveMessage(message, type) {
+
+                const session = chatSessions.find(
+                    session => session.id === currentSessionId
+                );
+
+                if (!session) return;
+
+                session.messages.push({
+                    type: type,
+                    text: message
+                });
+
+            }
 
         </script>
     </div>
