@@ -41,7 +41,7 @@ student_scenarios = [
         "name": "김컴공",
         "curriculum_year": 2021,
         "type": "normal",
-        "target_completed_credits": [115, 130],
+        "target_completed_credits": [115, 140],
         "lack_major_required": False,
         "lack_major_elective": False,
         "lack_liberal_arts": False,
@@ -55,6 +55,7 @@ student_scenarios = [
         "curriculum_year": 2021,
         "type": "lack_major_required",
         "target_completed_credits": [100, 120],
+        "semester_credit_range": [10, 15],
         "lack_major_required": True,
         "lack_major_elective": False,
         "lack_liberal_arts": False,
@@ -68,6 +69,7 @@ student_scenarios = [
         "curriculum_year": 2021,
         "type": "lack_general_liberal",
         "target_completed_credits": [95, 115],
+        "semester_credit_range": [9, 14],
         "lack_major_required": False,
         "lack_major_elective": False,
         "lack_liberal_arts": False,
@@ -850,6 +852,7 @@ def main():
 
     print(f"RANDOM_SEED: {RANDOM_SEED}")
     print(f"생성 완료: {STUDENTS_PATH}")
+    print(f"TARGET_YEAR/TARGET_SEMESTER: {TARGET_YEAR}-{TARGET_SEMESTER}")
     print(f"생성 완료: {COURSE_HISTORY_PATH}")
     print("\n학생별 총 취득학점")
     print(all_history.groupby("student_id")["학점"].sum().to_string())
