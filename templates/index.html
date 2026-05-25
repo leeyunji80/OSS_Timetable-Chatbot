@@ -523,6 +523,24 @@
             overflow: hidden;
         }
 
+        .student-fixed-section {
+
+            flex-shrink: 0;
+
+            padding-bottom: 20px;
+
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .student-scroll-section {
+
+            flex: 1;
+
+            overflow-y: auto;
+
+            padding-top: 20px;
+        }
+
         .student-header {
 
             display: flex;
@@ -780,17 +798,17 @@
 
         <div class="student-box">
 
-            <div class="student-header">
+            <div class="student-fixed-section">
 
-                <h2>학생정보</h2>
+                <div class="student-header">
 
-                <button id="logout-btn">
-                    로그아웃
-                </button>
+                    <h2>학생정보</h2>
 
-            </div>
+                    <button id="logout-btn">
+                        로그아웃
+                    </button>
 
-            <div id="student-info">
+                </div>
 
                 <div class="student-basic-info">
 
@@ -819,60 +837,68 @@
 
                 </div>
 
-                <div class="credit-section">
+            </div>
 
-                    <div class="credit-header">
+            <div class="student-scroll-section">
 
-                        <h3>전체 학점 이수 현황</h3>
+                <div id="student-info">
 
-                        <span id="total-credit-text">
-                            0 / 0 학점
-                        </span>
+                    <div class="credit-section">
 
-                    </div>
+                        <div class="credit-header">
 
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="total-progress-bar"></div>
-                    </div>
+                            <h3>전체 학점 이수 현황</h3>
 
-                    <p id="credit-percent-text">
-                        0% 완료
-                    </p>
+                            <span id="total-credit-text">
+                                0 / 0 학점
+                            </span>
 
-                </div>
+                        </div>
 
-                <div class="graduation-section">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="total-progress-bar"></div>
+                        </div>
 
-                    <h3>졸업 요건</h3>
-
-                    <div id="graduation-requirement-list">
+                        <p id="credit-percent-text">
+                            0% 완료
+                        </p>
 
                     </div>
 
-                </div>
+                    <div class="graduation-section">
 
-                <div class="history-section">
+                        <h3>졸업 요건</h3>
 
-                    <h3>수강 이력</h3>
+                        <div id="graduation-requirement-list">
 
-                    <div class="history-table-wrapper">
+                        </div>
 
-                        <table class="history-table">
+                    </div>
 
-                            <thead>
-                                <tr>
-                                    <th>학기</th>
-                                    <th>과목코드</th>
-                                    <th>과목명</th>
-                                    <th>학점</th>
-                                </tr>
-                            </thead>
+                    <div class="history-section">
 
-                            <tbody id="history-table-body">
+                        <h3>수강 이력</h3>
 
-                            </tbody>
+                        <div class="history-table-wrapper">
 
-                        </table>
+                            <table class="history-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>학기</th>
+                                        <th>과목코드</th>
+                                        <th>과목명</th>
+                                        <th>학점</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="history-table-body">
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
 
                     </div>
 
