@@ -694,7 +694,6 @@
                     'currentStudent',
                     JSON.stringify(currentStudent)
                 );
-
             }
 
             textarea.addEventListener('input', function() {
@@ -803,7 +802,14 @@
 
             });
 
-            const savedStudent = sessionStorage.getItem('currentStudent');
+            const savedStudent =
+                sessionStorage.getItem('currentStudent');
+
+            const savedSessions =
+                sessionStorage.getItem('chatSessions');
+
+            const savedSessionId =
+                sessionStorage.getItem('currentSessionId');
 
             if (savedStudent) {
 
@@ -813,7 +819,21 @@
 
             }
 
-            createNewSession();
+            if (savedSessions) {
+
+                chatSessions = JSON.parse(savedSessions);
+
+                currentSessionId = Number(savedSessionId);
+
+                renderHistory();
+
+                loadSession(currentSessionId);
+
+            } else {
+
+                createNewSession();
+
+            }
 
             function createNewSession() {
 
@@ -861,6 +881,7 @@
                 }
 
                 renderHistory();
+                saveSessionStorage();
 
             }
 
@@ -878,6 +899,7 @@
                 });
 
                 renderHistory();
+                saveSessionStorage();
 
             }
 
