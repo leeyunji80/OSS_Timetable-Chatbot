@@ -73,3 +73,39 @@ def get_building_coordinates(building_code):
         raise ValueError(f"잘못된 좌표 형식입니다: {building_code}")
 
     return latitude, longitude
+
+# Haversine 거리 계산 함수
+def calculate_haversine_distance(lat1, lon1, lat2, lon2):
+    """
+    Haversine 공식을 사용하여 두 좌표 사이의 직선거리를 계산합니다.
+
+    입력:
+        lat1, lon1: 출발지 위도, 경도
+        lat2, lon2: 도착지 위도, 경도
+
+    반환:
+        거리, meter 단위
+    """
+    # 위도와 경도를 degree에서 radian으로 변환
+    lat1_rad = math.radians(lat1)
+    lon1_rad = math.radians(lon1)
+    lat2_rad = math.radians(lat2)
+    lon2_rad = math.radians(lon2)
+
+    # 좌표 차이 계산
+    delta_lat = lat2_rad - lat1_rad
+    delta_lon = lon2_rad - lon1_rad
+
+    # Haversine 공식
+    a = (
+        math.sin(delta_lat / 2) ** 2
+        + math.cos(lat1_rad)
+        * math.cos(lat2_rad)
+        * math.sin(delta_lon / 2) ** 2
+    )
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    distance_meters = EARTH_RADIUS_METERS * c
+
+    return distance_meters
