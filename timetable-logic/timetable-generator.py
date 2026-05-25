@@ -269,9 +269,9 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         else:
             major_pool.append(course_item)
 
-    #무한 루프(오랜 멈춤)를 방지하기 위해 교양 과목 풀을 최대 15개로 제한합니다.
-    if len(ge_pool) > 15:
-        ge_pool = random.sample(ge_pool, 15)
+    #무한 루프(오랜 멈춤)를 방지하기 위해 교양 과목 풀을 최대 30개로 제한합니다.
+    if len(ge_pool) > 30:
+        ge_pool = random.sample(ge_pool, 30)
 
     # 전공 필수/추천 과목과 제한된 교양 과목을 합쳐서 최종 과목 풀을 만듭니다.
     course_pool = major_pool + ge_pool
@@ -281,9 +281,15 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
     
     MAX_ITERATIONS = 50000
     iteration_count = 0
-
-    # 조합 탐색 시작 (4개 과목 조합부터 전체 과목 조합까지)
-    for r in range(4, len(course_pool) + 1):
+    
+    if target_credits >= 21:
+        start_r = 6
+    elif target_credits >= 18:
+        start_r = 5
+    else:
+        start_r = 4
+    # 조합 탐색 시작 
+    for r in range(start_r, len(course_pool) + 1):
         for combo in combinations(course_pool, r):
             iteration_count += 1
             
@@ -378,7 +384,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         
     return []
 
-user_sentence = "과제가 적은 과목으로 시간표 추천해줘"
+user_sentence = "금요일 공강인 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -421,7 +427,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20210001"
+login_student_id = "20260001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
@@ -442,11 +448,19 @@ user_preferences_input = {
     "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선")
 }
 
+import re
+raw_credit = slots_input.get("target_credit") # 단수형 키로 정확하게 매핑
+if raw_credit:
+    digit_match = re.search(r'\d+', str(raw_credit))
+    target_credit_int = int(digit_match.group()) if digit_match else 18
+else:
+    target_credit_int = 18
+
 # 2. 딕셔너리에 뭉쳐있던 인자들을 하나씩 풀어서 정확한 매개변수 이름으로 전달합니다.
 timetable_results = generate_timetable_combinations(
     recommended_courses_df=recommended_courses,
     filtered_df=all_lectures_df,
-    target_credits=slots_input["target_credit"] if slots_input["target_credit"] else 18,
+    target_credits=target_credit_int,
     empty_days=slots_input["exclude_days"],
     avoid_time_slots=slots_input["avoid_time_slots"],
     user_preferences=user_preferences_input
