@@ -166,3 +166,22 @@ for _, row in pairs_df.iterrows():
             "도보 시간(분)": None
         })
 
+# 결과 CSV 저장
+result_df = pd.DataFrame(
+    results,
+    columns=[
+        "출발 건물",
+        "도착 건물",
+        "거리(m)",
+        "보정 거리(m)",
+        "도보 시간(분)"
+    ]
+)
+
+result_df.to_csv(
+    OUTPUT_CSV,
+    index=False,
+    encoding="utf-8-sig"
+)
+
+print(f"저장 완료: {OUTPUT_CSV}")
