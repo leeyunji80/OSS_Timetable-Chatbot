@@ -504,9 +504,20 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
     liberal_catalog = prepare_liberal_catalog(liberal_arts)
     required = graduation_requirements(graduation, scenario["curriculum_year"])
 
+    completed_semesters = calculate_max_completed_semesters(
+        scenario["curriculum_year"],
+        TARGET_YEAR,
+        TARGET_SEMESTER,
+    )
+
+    if completed_semesters == 0:
+        history = pd.DataFrame(columns=COURSE_HISTORY_COLUMNS)
+        validate_history(history, lectures, liberal_arts, scenario)
+        return history
+
     target_min, target_max = scenario["target_completed_credits"]
     target_total = random.randint(target_min, target_max)
-    semesters = semester_sequence(scenario["curriculum_year"], scenario["completed_semesters"])
+    semesters = semester_sequence(scenario["curriculum_year"], completed_semesters)
     semester_targets = distribute_credit_targets(target_total, len(semesters), scenario)
 
     selected_course_numbers = set()
@@ -654,6 +665,9 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
 def validate_history(history, lectures, liberal_arts, scenario):
     """생성된 이력이 실제 과목만 사용했고 중복 수강이 없는지 검사한다."""
     if history.empty:
+        if calculate_max_completed_semesters(scenario["curriculum_year"], TARGET_YEAR, TARGET_SEMESTER) == 0:
+            return
+        
         raise ValueError(f"{scenario['student_id']} 수강이력이 생성되지 않았습니다.")
 
     actual_courses = set(lectures["교과목명"]).union(set(liberal_arts["교과목명"]))
@@ -675,7 +689,17 @@ def validate_history(history, lectures, liberal_arts, scenario):
             f"{scenario['student_id']} 학기별 학점이 범위를 벗어났습니다.\n"
             f"허용 범위: {low}-{high}\n{semester_credits}"
         )
-
+    
+    future_or_target = history[
+        (history["수강년도"] > TARGET_YEAR)
+        | ((history["수강년도"] == TARGET_YEAR) & (history["수강학기"] >= TARGET_SEMESTER))
+    ]
+    if not future_or_target.empty:
+        raise ValueError(
+            f"{TARGET_YEAR}-{TARGET_SEMESTER} 또는 이후 학기 수강이력이 포함되었습니다:\n"
+            + future_or_target[["student_id", "수강년도", "수강학기", "교과목명"]].to_string(index=False)
+        )
+    
     target_min, target_max = scenario["target_completed_credits"]
     total = int(history["학점"].sum())
     if not target_min <= total <= target_max:
