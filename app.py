@@ -45,8 +45,8 @@ def login():
 
     data = request.get_json()
 
-    student_id = data['student_id']
-    name = data['name']
+    student_name = data.get('name')
+    student_id = data.get('student_id')
 
     for student in students:
 
