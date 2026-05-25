@@ -258,7 +258,11 @@ def generate_timetable_combinations(recommended_major_courses,
 
     # 8. 5만 번 탐색을 마쳤거나 전체 루프가 끝났을 때의 최종 정렬 반환
     if all_combinations:
-        all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
+        all_combinations.sort(key=lambda x: (
+            -x["required_count"],
+            -x["priority_ge_count"],
+            x["avoid_penalty"]
+        ))
         return [item["schedule"] for item in all_combinations[:3]]
         
     return []
@@ -306,7 +310,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20260001"
+login_student_id = "20250001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
@@ -325,6 +329,12 @@ required_ge_areas = graduation_analysis.get(
     "required_general_education_areas",
     []
 )
+
+print("추천 전공 과목:")
+print(recommended_major_courses)
+
+print("부족 교양 영역:")
+print(required_ge_areas)
 
 # 1. 파일 경로에서 데이터를 읽어와 하나로 합쳐줍니다.
 all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_PATH)], ignore_index=True)
