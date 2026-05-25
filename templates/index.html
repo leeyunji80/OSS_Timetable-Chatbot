@@ -555,6 +555,7 @@
                     addMessage(data.reply, 'ai');
                     saveMessage(data.reply, 'ai');
                     addImageMessage(data.image);
+                    saveImageMessage(data.image);
 
                 } catch (error) {
 
@@ -636,7 +637,24 @@
 
                 session.messages.push({
                     type: type,
-                    text: message
+                    content: message
+                });
+
+                renderHistory();
+
+            }
+
+            function saveImageMessage(imageUrl) {
+
+                const session = chatSessions.find(
+                    session => session.id === currentSessionId
+                );
+
+                if (!session) return;
+
+                session.messages.push({
+                    type: 'image',
+                    content: imageUrl
                 });
 
                 renderHistory();
