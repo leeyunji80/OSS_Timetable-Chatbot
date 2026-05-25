@@ -418,7 +418,7 @@
             이전 시간표
         </div>
 
-        <div class="timetable-history">
+        <div class="timetable-history" id="timetable-history">
 
             <div class="history-card">
                 <div class="history-info">
@@ -492,6 +492,7 @@
             const sidebar = document.querySelector('.sidebar');
             const menuBtn = document.getElementById('menu-btn');
             const mainContainer = document.querySelector('.main-container');
+            const historyContainer = document.getElementById('timetable-history');
             const newChatBtn = document.querySelector('.new-chat-btn');
 
             let chatSessions = [];
@@ -636,6 +637,59 @@
                 session.messages.push({
                     type: type,
                     text: message
+                });
+
+                renderHistory();
+
+            }
+
+            function renderHistory() {
+
+                historyContainer.innerHTML = '';
+
+                chatSessions.forEach(session => {
+
+                    if (session.messages.length === 0) return;
+
+                    const card = document.createElement('div');
+
+                    card.classList.add('history-card');
+
+                    card.innerHTML = `
+                        <div class="history-info">
+                            <p>${session.title}</p>
+                            <span>채팅 ${session.messages.length}개</span>
+                        </div>
+                    `;
+
+                    card.addEventListener('click', function () {
+
+                        loadSession(session.id);
+
+                    });
+
+                    historyContainer.appendChild(card);
+
+                });
+
+            }
+
+            function loadSession(sessionId) {
+
+                currentSessionId = sessionId;
+
+                chatArea.innerHTML = '';
+
+                const session = chatSessions.find(
+                    session => session.id === sessionId
+                );
+
+                if (!session) return;
+
+                session.messages.forEach(message => {
+
+                    addMessage(message.text, message.type);
+
                 });
 
             }
