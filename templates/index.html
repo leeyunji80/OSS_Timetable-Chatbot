@@ -906,6 +906,29 @@
 
             });
 
+            function updateProfileUI() {
+
+                const profileInfo =
+                    document.querySelector('.profile-info');
+
+                if (currentStudent) {
+
+                    profileInfo.innerHTML = `
+                        <p>${currentStudent.name}</p>
+                        <span>${currentStudent.student_id}</span>
+                    `;
+
+                } else {
+
+                    profileInfo.innerHTML = `
+                        <p>로그인 필요</p>
+                        <span>프로필 보기</span>
+                    `;
+
+                }
+
+            }
+
         </script>
     </div>
 
