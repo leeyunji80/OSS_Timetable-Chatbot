@@ -219,12 +219,15 @@ def evaluate_load(row):
     else:
         return "적다"
 
-def generate_timetable_combinations(recommended_courses_df, filtered_df, target_credits, empty_days, avoid_time_slots):
+def generate_timetable_combinations(recommended_courses_df, filtered_df, target_credits, empty_days, avoid_time_slots, user_preferences):
     # 추천 과목 이름 추출
     recommended_course_names = set(recommended_courses_df)
     
     major_pool = []
     ge_pool = []
+
+    assign_pref = user_preferences.get("assignment_preference")     # "과제적음", "과제많음" 또는 None
+    conflict_rule = user_preferences.get("conflict_resolution_rule", "과목우선") # 충돌 해결 규칙
 
     # 전체 데이터 프레임을 돌면서 전공(추천과목)과 교양을 분류하여 담습니다.
     for _, row in filtered_df.iterrows():
@@ -235,6 +238,21 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         # 전공 과목인데 추천 리스트에 없거나, 교양 과목이 아니면 건너뜁니다.
         if not is_ge and not is_recommended:
             continue
+
+        if not is_recommended: # 필수/추천 전공 과목은 졸업을 위해 필터링 면제
+            
+            # 1. 기존에 만든 evaluate_load 함수 활용하기
+            if assign_pref:
+                # 현재 과목의 과제 양 판단 ("많다", "보통이다", "적다" 중 하나 반환)
+                current_load = evaluate_load(row) 
+                
+                # 사용자가 과제 적은 걸 원하는데, "많다" 또는 "보통이다"가 나오면 패스
+                if assign_pref == "과제적음" and current_load in ["많다", "보통이다"]:
+                    continue
+                
+                # 사용자가 과제 많은 걸 원하는데, "적다"가 나오면 패스 (취향에 따라 보통이다도 패스 가능)
+                if assign_pref == "과제많음" and current_load == "적다":
+                    continue
 
         time_slots = parse_day_and_period(row['요일'], row['교시'])
         course_item = {
@@ -298,14 +316,14 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
 
                 for slot in course["time_slots"]:
                     for avoid in avoid_time_slots:
-                        # 🎯 1단계: 사용자가 지정한 '요일'과 현재 수업의 '요일'이 일치하는지 확인
+                        # 1단계: 사용자가 지정한 '요일'과 현재 수업의 '요일'이 일치하는지 확인
                         if slot["day"] == avoid["day"]:
                             
-                            # ☀️ 조건 A: 해당 요일에 '오전'을 피하고 싶을 때 (1~4교시 걸리면 페널티)
+                            # 조건 A: 해당 요일에 '오전'을 피하고 싶을 때 (1~4교시 걸리면 페널티)
                             if avoid["time_range"] == "오전" and slot["start_period"] < 5:
                                 avoid_penalty += 1
                             
-                            # 🌙 조건 B: 해당 요일에 '오후'를 피하고 싶을 때 (5교시/13:00 이후 걸리면 페널티)
+                            # 조건 B: 해당 요일에 '오후'를 피하고 싶을 때 (5교시/13:00 이후 걸리면 페널티)
                             # 보통 5교시(13시)부터 대다수 오후 수업이 시작됩니다.
                             if avoid["time_range"] == "오후" and slot["start_period"] >= 5:
                                 avoid_penalty += 1
@@ -317,7 +335,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
             all_combinations.append({
                 "schedule": combo_list,
                 "required_count": required_count,
-                "avoid_penalty": avoid_penalty  # 👈 페널티 기록
+                "avoid_penalty": avoid_penalty  # 페널티 기록
             })
 
             # 사용자가 지정한 공강 요일에 수업이 들어갔는지 검사
@@ -351,7 +369,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         
     return []
 
-user_sentence = "목요일 공강이고 오전 수업은 피하고 싶어"
+user_sentence = "목요일 공강이고 과제 적은 교양 과목 위주로 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -410,14 +428,19 @@ recommended_courses = graduation_analysis.get("recommended_courses", [])
 # 1. 파일 경로에서 데이터를 읽어와 하나로 합쳐줍니다.
 all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_PATH)], ignore_index=True)
 
+user_preferences_input = {
+    "assignment_preference": parsed_data.get("assignment_preference"),
+    "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선")
+}
+
 # 2. 딕셔너리에 뭉쳐있던 인자들을 하나씩 풀어서 정확한 매개변수 이름으로 전달합니다.
 timetable_results = generate_timetable_combinations(
     recommended_courses_df=recommended_courses,
     filtered_df=all_lectures_df,
     target_credits=slots_input["target_credit"] if slots_input["target_credit"] else 18,
     empty_days=slots_input["exclude_days"],
-    avoid_time_slots=slots_input["avoid_time_slots"]
-    
+    avoid_time_slots=slots_input["avoid_time_slots"],
+    user_preferences=user_preferences_input
 )
 
 if timetable_results:
