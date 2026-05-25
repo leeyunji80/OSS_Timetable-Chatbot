@@ -655,6 +655,38 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             if not courses:
                 continue
             add_courses_to_term(term_rows, courses, scenario, semester)
+           
+            # 목표 학점 조합이 1~2학점 차이로 맞지 않아도 학기 최소 학점은 지키도록 보충
+        low, high = scenario.get("semester_credit_range", [12, 18])
+        top_up_attempts = 0
+        while sum(row["학점"] for row in term_rows) < low and top_up_attempts < 40:
+            top_up_attempts += 1
+            room = high - sum(row["학점"] for row in term_rows)
+            if room <= 0:
+                break
+
+            if random.random() < 0.55:
+                courses = select_liberal_courses(
+                    liberal_catalog,
+                    selected_course_numbers,
+                    academic_grade,
+                    room,
+                    [],
+                    scenario,
+                    max_courses=1,
+                )
+            else:
+                courses = select_major_courses(
+                    major_catalog,
+                    selected_course_numbers,
+                    academic_grade,
+                    room,
+                    [],
+                    scenario,
+                    max_courses=1,
+                )
+            if courses:
+                add_courses_to_term(term_rows, courses, scenario, semester)
 
         rows.extend(term_rows)
 
@@ -755,10 +787,10 @@ def generate_student(scenario, history, graduation):
     return {
         "student_id": scenario["student_id"],
         "name": scenario["name"],
-        "grade": scenario["grade"],
+        "grade": grade,
         "college": scenario.get("college", "전자정보대학"),
         "department": scenario.get("department", "컴퓨터공학과"),
-        "completed_semesters": scenario["completed_semesters"],
+        "completed_semesters": completed_semesters,
         "curriculum_year": scenario["curriculum_year"],
         "credits": {
             "교양": {
