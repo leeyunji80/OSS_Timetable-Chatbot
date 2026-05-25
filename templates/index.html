@@ -506,13 +506,21 @@
 
         .student-box {
 
-            width: 500px;
+            width: 700px;
+
+            height: 85vh;
 
             background-color: white;
 
             border-radius: 20px;
 
             padding: 30px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            overflow: hidden;
         }
 
         .student-header {
@@ -1497,7 +1505,7 @@
                 if (!currentStudent) return;
 
                 const studentData = getCurrentStudentData();
-                
+
                 if (!studentData) return;
 
                 const container =
