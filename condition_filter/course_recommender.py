@@ -359,11 +359,37 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
     completed_set = graduation_status["completed_course_names"]
     filtered_courses = filter_completed_courses(recommended_courses, completed_set)
     
-    # 8. 최종 결과 반환
+    # ---------------------------------
+    # 부족한 교양 세부영역 추출
+    # ---------------------------------
+
+    needed_general_areas = [
+        area_name
+        for area_name, remain_credit
+        in remaining_reqs["areas"].items()
+        if remain_credit > 0
+    ]
+
     return {
         "student_name": student_info["name"],
-        "remaining_requirements": remaining_reqs,
-        "recommended_courses": filtered_courses
+
+        # 학생 정보
+        "student_context": {
+            "grade": current_grade,
+            "curriculum_year": admission_year
+        },
+
+        # 부족 전공 학점
+        "remaining_major": {
+            "major_required": remaining_reqs["major_required"],
+            "major_elective": remaining_reqs["major_elective"]
+        },
+
+        # 부족 교양 세부영역
+        "needed_general_areas": needed_general_areas,
+ 
+        # 현재 학년 추천 전공 과목
+        "recommended_major_courses": filtered_courses
     }
 
 # ---------------------------------
@@ -379,7 +405,7 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
 if __name__ == "__main__":
     
     # 1. 로그인 담당 팀원이 넘겨준 "학번"과 "추천받을 학기" 예시
-    login_student_id = "20210001"
+    login_student_id = "20260001"
     target_semester = 1
 
     # 2. 파일에서 불러온 students_list를 그대로 인자에 주입!
