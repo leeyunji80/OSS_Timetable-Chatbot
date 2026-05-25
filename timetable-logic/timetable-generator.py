@@ -378,7 +378,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         
     return []
 
-user_sentence = "목요일 공강이고 시간표 추천해줘"
+user_sentence = "과제가 적은 과목으로 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -488,6 +488,8 @@ if timetable_results:
 
         clean_result.append(clean_course)
 
+assign_pref = parsed_data.get("assignment_preference")
+
 if timetable_results:
     print("\n-------- [시각화 팀 전달용 최종 JSON 출력] --------")
 
@@ -523,6 +525,15 @@ if timetable_results:
                 if slot["start_period"] < 5:
                     morning_course_count += 1
 
+            matched_rows = all_lectures_df[all_lectures_df['교과목명'] == course["name"]]
+            if not matched_rows.empty:
+                course_row = matched_rows.iloc[0]
+                load_status = evaluate_load(course_row)  # "많다", "보통이다", "적다"
+                raw_ratio = pd.to_numeric(course_row.get('평가_과제(%)'), errors='coerce') or 0
+            else:
+                load_status = "정보 없음"
+                raw_ratio = 0
+
             course_color = course_color_map[course["name"]]
             
             cleaned_courses.append({
@@ -530,6 +541,10 @@ if timetable_results:
                 "room": course["room"],
                 "credit": course["credit"],
                 "is_required": course.get("is_required", False),
+                # 임시 출력
+                "assignment_load_test": load_status,         # "적다", "보통이다", "많다"
+                "assignment_percentage_test": f"{raw_ratio}%", # "15.0%" 형태
+
                 "background_color": course_color["background"],
                 "text_color": course_color["text"],
                 "time_slots": cleaned_slots
@@ -544,6 +559,17 @@ if timetable_results:
         achieved_empty_days = [day for day in exclude_days if day not in actual_days]
         if achieved_empty_days:
             reason_segments.append(f"{', '.join(achieved_empty_days)}요일 공강을 완벽히 확보했습니다.")
+
+        if assign_pref:
+            # 이 시간표 조합에 포함된 교양(is_required=False) 과목들의 과제 성향 확인
+            ge_courses_in_schedule = [c for c in selected_schedule if not c.get("is_required")]
+            
+            if ge_courses_in_schedule:
+                # 사용자가 과제 적은 걸 원했고, 실제로 교양 과목들이 다 잘 필터링 되었는지 검증
+                if assign_pref == "과제적음":
+                    reason_segments.append("과제 부담이 적은 교양 과목 위주로 구성된 시간표입니다.")
+                elif assign_pref == "과제많음":
+                    reason_segments.append("과제 비중이 있는 과목들로 구성되었습니다.")
         
 
         # 요일별 오전/오후 회피 성공 여부 체크
