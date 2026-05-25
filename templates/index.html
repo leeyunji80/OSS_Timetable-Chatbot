@@ -803,6 +803,16 @@
 
             });
 
+            const savedStudent = sessionStorage.getItem('currentStudent');
+
+            if (savedStudent) {
+
+                currentStudent = JSON.parse(savedStudent);
+
+                updateProfileUI();
+
+            }
+
             createNewSession();
 
             function createNewSession() {
@@ -973,6 +983,7 @@
                     loginModal.style.display = 'none';
 
                     updateProfileUI();
+                    saveSessionStorage();
 
                 } else {
 
@@ -989,6 +1000,7 @@
                 studentModal.style.display = 'none';
 
                 updateProfileUI();
+                saveSessionStorage();
 
             });
 
