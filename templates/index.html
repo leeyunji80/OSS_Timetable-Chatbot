@@ -596,13 +596,16 @@
 
             });
 
+            createNewSession();
+
             function createNewSession() {
 
                 currentSessionId = Date.now();
 
                 chatSessions.push({
                     id: currentSessionId,
-                    title: '새 시간표',
+                    title: '',
+                    preview: '',
                     messages: []
                 });
 
@@ -685,7 +688,7 @@
                         loadSession(session.id);
 
                     });
-
+                    
                     historyContainer.appendChild(card);
 
                 });
@@ -711,8 +714,6 @@
 
                      else 
                         addMessage(message.content, message.type);
-
-                    
 
                 });
 
