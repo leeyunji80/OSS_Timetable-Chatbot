@@ -472,6 +472,18 @@
             cursor: pointer;
         }
 
+        #login-close-btn {
+
+            border: none;
+            background: none;
+
+            font-size: 18px;
+
+            cursor: pointer;
+
+            color: #999;
+        }
+
         .student-modal {
 
             position: fixed;
@@ -590,7 +602,15 @@
 
         <div class="login-box">
 
-            <h2>로그인</h2>
+            <div class="student-header">
+
+                <h2>로그인</h2>
+
+                <button id="login-close-btn">
+                    ✕
+                </button>
+
+            </div>
 
             <input
                 type="text"
@@ -651,6 +671,7 @@
             const loginSubmitBtn = document.getElementById('login-submit-btn');
             const studentModal = document.getElementById('student-modal');
             const logoutBtn = document.getElementById('logout-btn');
+            const loginCloseBtn = document.getElementById('login-close-btn');
 
 
             let currentStudent = null;
@@ -949,6 +970,26 @@
                 studentModal.style.display = 'none';
 
                 updateProfileUI();
+
+            });
+
+            loginModal.addEventListener('click', function (event) {
+
+                if (event.target === loginModal) {
+
+                    loginModal.style.display = 'none';
+
+                }
+
+            });
+
+            loginModal.addEventListener('click', function (event) {
+
+                if (event.target === loginModal) {
+
+                    loginModal.style.display = 'none';
+
+                }
 
             });
 
