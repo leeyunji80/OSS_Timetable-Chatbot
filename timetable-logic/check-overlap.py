@@ -28,7 +28,10 @@ def is_valid_combination(schedule):
 
     for i in range(len(schedule)):
         for j in range(i + 1, len(schedule)):
-
+            
+            if schedule[i]["name"] == schedule[j]["name"]:
+                return False
+            
             if is_conflict(schedule[i], schedule[j]):
                 return False
 
