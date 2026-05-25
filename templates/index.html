@@ -1320,6 +1320,52 @@
 
             }
 
+            function renderCourseHistory() {
+
+                if (!currentStudent) return;
+
+                const tableBody =
+                    document.getElementById(
+                        'history-table-body'
+                    );
+
+                tableBody.innerHTML = '';
+
+                const studentCourses =
+                    courseHistoryData.filter(course =>
+                        course.student_id ===
+                        currentStudent.student_id
+                    );
+
+                studentCourses.forEach(course => {
+
+                    const tr =
+                        document.createElement('tr');
+
+                    tr.innerHTML = `
+                        <td>
+                            ${course.year}-${course.semester}
+                        </td>
+
+                        <td>
+                            ${course.course_code}
+                        </td>
+
+                        <td>
+                            ${course.course_name}
+                        </td>
+
+                        <td>
+                            ${course.credit}
+                        </td>
+                    `;
+
+                    tableBody.appendChild(tr);
+
+                });
+
+            }
+
         </script>
     </div>
 
