@@ -9,7 +9,7 @@ import os
 import PyQt5
 import json
 
-with open('students.json', 'r', encoding='utf-8') as f:
+with open('./student/students.json', 'r', encoding='utf-8') as f:
     students = json.load(f)
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
