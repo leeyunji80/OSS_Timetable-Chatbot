@@ -492,6 +492,10 @@
             const sidebar = document.querySelector('.sidebar');
             const menuBtn = document.getElementById('menu-btn');
             const mainContainer = document.querySelector('.main-container');
+            const newChatBtn = document.querySelector('.new-chat-btn');
+
+            let chatSessions = [];
+            let currentSessionId = null;
 
             textarea.addEventListener('input', function() {
                 // 1. 높이 계산을 위해 임시로 'auto' 초기화
@@ -593,6 +597,28 @@
 
                 sidebar.classList.toggle('active');
                 mainContainer.classList.toggle('shift');
+
+            });
+
+            function createNewSession() {
+
+                currentSessionId = Date.now();
+
+                chatSessions.push({
+                    id: currentSessionId,
+                    title: '새 시간표',
+                    messages: []
+                });
+
+                chatArea.innerHTML = '';
+
+                welcomeScreen.style.display = 'block';
+
+            }
+
+            newChatBtn.addEventListener('click', function () {
+
+                createNewSession();
 
             });
 
