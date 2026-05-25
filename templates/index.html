@@ -1382,6 +1382,33 @@
 
             }
 
+            function renderStudentBasicInfo() {
+
+                if (!currentStudent) return;
+
+                const studentData =
+                    studentCreditData.find(student =>
+                        student.student_id ===
+                        currentStudent.student_id
+                    );
+
+                if (!studentData) return;
+
+                document.getElementById(
+                    'student-name-text'
+                ).innerText = studentData.name;
+
+                document.getElementById(
+                    'student-id-text'
+                ).innerText = studentData.student_id;
+
+                document.getElementById(
+                    'student-department-text'
+                ).innerText =
+                    `${studentData.department} ${studentData.grade}학년`;
+
+            }
+
         </script>
     </div>
 
