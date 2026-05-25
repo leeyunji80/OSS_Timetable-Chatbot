@@ -1189,10 +1189,7 @@
 
                 if (currentStudent) {
 
-                    renderCourseHistory();
-                    renderStudentBasicInfo();
-                    renderCreditProgress();
-                    renderGraduationRequirements();
+                    renderStudentModal();
 
                     studentModal.style.display = 'flex';
 
@@ -1431,6 +1428,18 @@
                     'student-department-text'
                 ).innerText =
                     `${studentData.department} ${studentData.grade}학년`;
+
+            }
+
+            function renderStudentModal() {
+
+                renderStudentBasicInfo();
+
+                renderCreditProgress();
+
+                renderGraduationRequirements();
+
+                renderCourseHistory();
 
             }
 
