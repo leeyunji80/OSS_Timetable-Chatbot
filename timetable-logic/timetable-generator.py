@@ -307,6 +307,15 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
 
             # 공강 요일 검사를 위해 이 조합에 포함된 요일들만 모읍니다.
             actual_days = {slot["day"] for course in combo_list for slot in course["time_slots"]}
+
+            violates_empty_day = False
+            for day in empty_days:
+                if day in actual_days:
+                    violates_empty_day = True
+                    break
+            
+            if violates_empty_day:
+                continue
            
             avoid_penalty = 0
             for course in combo_list:
@@ -369,7 +378,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         
     return []
 
-user_sentence = "목요일 공강이고 과제 적은 교양 과목 위주로 추천해줘"
+user_sentence = "목요일 공강이고 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
