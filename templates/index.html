@@ -732,6 +732,61 @@
             font-weight: 700;
         }
 
+        .student-header-left {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 12px;
+        }
+
+        #logout-btn {
+
+            border: none;
+
+            background-color: #ff6b6b;
+
+            color: white;
+
+            padding: 8px 14px;
+
+            border-radius: 999px;
+
+            font-size: 13px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+        #logout-btn:hover {
+
+            background-color: #fa5252;
+        }
+
+        #student-close-btn {
+
+            border: none;
+
+            background: none;
+
+            font-size: 18px;
+
+            color: #999;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+        #student-close-btn:hover {
+
+            color: #ff6b6b;
+        }
+
     </style>
 </head>
 <body>
@@ -846,10 +901,18 @@
 
                 <div class="student-header">
 
-                    <h2>학생정보</h2>
+                    <div class="student-header-left">
 
-                    <button id="logout-btn">
-                        로그아웃
+                        <h2>학생정보</h2>
+
+                        <button id="logout-btn">
+                            로그아웃
+                        </button>
+
+                    </div>
+
+                    <button id="student-close-btn">
+                        ✕
                     </button>
 
                 </div>
@@ -970,9 +1033,9 @@
             const loginModal = document.getElementById('login-modal');
             const loginSubmitBtn = document.getElementById('login-submit-btn');
             const studentModal = document.getElementById('student-modal');
-            const logoutBtn = document.getElementById('logout-btn');
+            const studentCloseBtn = document.getElementById('student-close-btn');
             const loginCloseBtn = document.getElementById('login-close-btn');
-
+            const logoutBtn = document.getElementById('logout-btn');
 
             let currentStudent = null;
             let chatSessions = [];
@@ -1332,11 +1395,27 @@
 
             });
 
+            studentCloseBtn.addEventListener('click', function () {
+
+                studentModal.style.display = 'none';
+
+            });
+
             loginModal.addEventListener('click', function (event) {
 
                 if (event.target === loginModal) {
 
                     loginModal.style.display = 'none';
+
+                }
+
+            });
+
+            studentModal.addEventListener('click', function (event) {
+
+                if (event.target === studentModal) {
+
+                    studentModal.style.display = 'none';
 
                 }
 
