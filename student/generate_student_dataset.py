@@ -254,6 +254,20 @@ def semester_sequence(curriculum_year, completed_semesters):
         )
     return semesters
 
+
+def calculate_max_completed_semesters(curriculum_year, target_year=TARGET_YEAR, target_semester=TARGET_SEMESTER):
+    """
+    추천 대상 학기 시작 직전까지 실제로 이수 완료 가능한 최대 학기 수를 계산
+    예: TARGET_YEAR=2026, TARGET_SEMESTER=1이면 2026학번은 0학기, 2025학번은 2학기, 2024학번은 4학기까지 가능
+    """
+    completed = (target_year - curriculum_year) * 2 + (target_semester - 1)
+    return max(0, completed)
+
+def calculate_current_grade(curriculum_year, target_year=TARGET_YEAR, target_semester=TARGET_SEMESTER):
+    """추천 대상 학기 기준 학생의 현재 학년을 계산"""
+    completed_semesters = calculate_max_completed_semesters(curriculum_year, target_year, target_semester)
+    return min(4, max(1, completed_semesters // 2 + 1))
+
 def standard_items_for_term(standard_curriculum, curriculum_year, grade, semester):
     """해당 학년/학기의 표준이수모형 과목명과 '택1' 형태의 영역 힌트를 분리한다."""
     target = standard_curriculum[
