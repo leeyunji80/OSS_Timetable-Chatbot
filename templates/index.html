@@ -1033,6 +1033,8 @@
 
             }
 
+            loadCourseHistoryData();
+
             function createNewSession() {
 
                 currentSessionId = Date.now();
@@ -1160,6 +1162,8 @@
 
                 if (currentStudent) {
 
+                    renderCourseHistory();
+
                     studentModal.style.display = 'flex';
 
                 } else {
@@ -1221,16 +1225,6 @@
 
                 updateProfileUI();
                 saveSessionStorage();
-
-            });
-
-            loginModal.addEventListener('click', function (event) {
-
-                if (event.target === loginModal) {
-
-                    loginModal.style.display = 'none';
-
-                }
 
             });
 
