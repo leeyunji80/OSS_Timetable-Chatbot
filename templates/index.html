@@ -605,7 +605,9 @@
             const newChatBtn = document.querySelector('.new-chat-btn');
             const profileBtn = document.getElementById('profile-btn');
             const loginModal = document.getElementById('login-modal');
+            const loginSubmitBtn = document.getElementById('login-submit-btn');
 
+            let currentStudent = null;
             let chatSessions = [];
             let currentSessionId = null;
 
@@ -843,6 +845,45 @@
                 loginModal.style.display = 'flex';
 
             });
+
+            loginSubmitBtn.addEventListener('click', async function () {
+
+                const name = document.getElementById('student-name').value;
+
+                const studentId = document.getElementById('student-id').value;
+
+                const response = await fetch('/login', {
+
+                    method: 'POST',
+
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+
+                    body: JSON.stringify({
+                        name: name,
+                        student_id: studentId
+                    })
+
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+
+                    currentStudent = data.student;
+
+                    loginModal.style.display = 'none';
+
+                    updateProfileUI();
+
+                } else {
+
+                    alert('로그인 실패');
+
+                }
+
+            });            
 
         </script>
     </div>
