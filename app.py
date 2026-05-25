@@ -3,7 +3,7 @@ import webbrowser
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from threading import Thread
 import os
 import PyQt5
@@ -63,6 +63,14 @@ def login():
     return jsonify({
         'success': False
     })
+
+@app.route('/student/<path:filename>')
+def student_files(filename):
+
+    return send_from_directory(
+        'student',
+        filename
+    )
 
 def run_flask():
     app.run(port=5000)

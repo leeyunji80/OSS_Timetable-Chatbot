@@ -1345,7 +1345,7 @@
                 try {
 
                     const response =
-                        await fetch('/student/student_data.json');
+                        await fetch('/student/students.json');
 
                     studentCreditData =
                         await response.json();
@@ -1411,7 +1411,7 @@
 
                 if (!currentStudent) return;
 
-                const studentData = urrentStudentData();
+                const studentData = getCurrentStudentData();
 
                 if (!studentData) return;
 
@@ -1457,7 +1457,7 @@
 
                 if (!currentStudent) return;
 
-                const studentData = urrentStudentData();
+                const studentData = getCurrentStudentData();
 
                 if (!studentData) return;
 
@@ -1496,8 +1496,8 @@
 
                 if (!currentStudent) return;
 
-                const studentData = urrentStudentData();
-
+                const studentData = getCurrentStudentData();
+                
                 if (!studentData) return;
 
                 const container =
