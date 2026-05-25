@@ -606,6 +606,7 @@
             const profileBtn = document.getElementById('profile-btn');
             const loginModal = document.getElementById('login-modal');
             const loginSubmitBtn = document.getElementById('login-submit-btn');
+            const studentModal = document.getElementById('student-modal');
 
             let currentStudent = null;
             let chatSessions = [];
@@ -842,7 +843,15 @@
 
             profileBtn.addEventListener('click', function () {
 
-                loginModal.style.display = 'flex';
+                if (currentStudent) {
+
+                    studentModal.style.display = 'flex';
+
+                } else {
+
+                    loginModal.style.display = 'flex';
+
+                }
 
             });
 
