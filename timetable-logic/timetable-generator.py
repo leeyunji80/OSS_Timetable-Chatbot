@@ -87,6 +87,21 @@ def evaluate_load(row):
     else:
         return "적다"
 
+def evaluate_team_project(row):
+    """
+    강의계획서의 팀플 여부 판단
+    - 많음 : 팀플 있음
+    - 없음 : 팀플 없음
+    """
+
+    team_ratio = pd.to_numeric(row.get("방법_토의토론(%)"), errors='coerce') or 0
+
+    # 팀플 관련 값이 있는 경우
+    if team_ratio > 0:
+        return "많음"
+
+    return "없음"
+
 def generate_timetable_combinations(recommended_major_courses,
     required_ge_areas, filtered_df, target_credits, empty_days, avoid_time_slots, user_preferences):
     # 추천 과목 이름 추출
@@ -96,7 +111,7 @@ def generate_timetable_combinations(recommended_major_courses,
     ge_pool = []
 
     assign_pref = user_preferences.get("assignment_preference")     # "과제적음", "과제많음" 또는 None
-    
+    team_pref = user_preferences.get("team_project_preference")
 
     # 전체 데이터 프레임을 돌면서 전공(추천과목)과 교양을 분류하여 담습니다.
     for _, row in filtered_df.iterrows():
@@ -138,6 +153,19 @@ def generate_timetable_combinations(recommended_major_courses,
                 
                 # 사용자가 과제 많은 걸 원하는데, "적다"가 나오면 패스 (취향에 따라 보통이다도 패스 가능)
                 if assign_pref == "과제많음" and current_load == "적다":
+                    continue
+            
+            # 팀플 선호도 필터링
+            if team_pref:
+
+                current_team_status = evaluate_team_project(row)
+
+                # 팀플 없는 수업 선호
+                if team_pref == "팀플없음" and current_team_status == "많음":
+                    continue
+
+                # 팀플 있는 수업 선호
+                if team_pref == "팀플많음" and current_team_status == "없음":
                     continue
 
         time_slots = parse_day_and_period(row['요일'], row['교시'])
@@ -267,7 +295,7 @@ def generate_timetable_combinations(recommended_major_courses,
         
     return []
 
-user_sentence = "18학점 시간표 추천해줘"
+user_sentence = "금요일 공강인 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -341,7 +369,9 @@ all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_P
 
 user_preferences_input = {
     "assignment_preference": parsed_data.get("assignment_preference"),
+    "team_project_preference": parsed_data.get("team_project_preference"),
     "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선")
+
 }
 
 import re
@@ -400,6 +430,7 @@ if timetable_results:
         clean_result.append(clean_course)
 
 assign_pref = parsed_data.get("assignment_preference")
+team_pref = parsed_data.get("team_project_preference")
 
 if timetable_results:
     print("\n-------- [시각화 팀 전달용 최종 JSON 출력] --------")
@@ -446,6 +477,7 @@ if timetable_results:
                 raw_ratio = 0
 
             course_color = course_color_map[course["name"]]
+            team_status = evaluate_team_project(course_row)
             
             cleaned_courses.append({
                 "name": course["name"],
@@ -455,6 +487,7 @@ if timetable_results:
                 # 임시 출력
                 "assignment_load_test": load_status,         # "적다", "보통이다", "많다"
                 "assignment_percentage_test": f"{raw_ratio}%", # "15.0%" 형태
+                "team_project_status": team_status,
 
                 "background_color": course_color["background"],
                 "text_color": course_color["text"],
@@ -481,7 +514,18 @@ if timetable_results:
                     reason_segments.append("과제 부담이 적은 교양 과목 위주로 구성된 시간표입니다.")
                 elif assign_pref == "과제많음":
                     reason_segments.append("과제 비중이 있는 과목들로 구성되었습니다.")
-        
+       
+        if team_pref:
+
+            if team_pref == "팀플없음":
+                reason_segments.append(
+                    "팀 프로젝트 부담이 적은 과목 위주로 구성되었습니다."
+                )
+
+            elif team_pref == "팀플많음":
+                reason_segments.append(
+                    "협업 중심의 팀 프로젝트 과목이 포함되어 있습니다."
+                )
 
         # 요일별 오전/오후 회피 성공 여부 체크
         avoid_success_days = []
