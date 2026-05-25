@@ -87,9 +87,10 @@ def evaluate_load(row):
     else:
         return "적다"
 
-def generate_timetable_combinations(recommended_courses_df, filtered_df, target_credits, empty_days, avoid_time_slots, user_preferences):
+def generate_timetable_combinations(recommended_major_courses,
+    required_ge_areas, filtered_df, target_credits, empty_days, avoid_time_slots, user_preferences):
     # 추천 과목 이름 추출
-    recommended_course_names = set(recommended_courses_df)
+    recommended_course_names = set(recommended_major_courses)
     
     major_pool = []
     ge_pool = []
@@ -103,9 +104,26 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         is_ge = '교양' in row['이수구분']
         is_recommended = course_name in recommended_course_names
         
-        # 전공 과목인데 추천 리스트에 없거나, 교양 과목이 아니면 건너뜁니다.
-        if not is_ge and not is_recommended:
-            continue
+        course_subarea = str(
+            row.get("세부영역", "")
+        ).strip()
+
+        # 전공 과목 처리
+        if not is_ge:
+
+            if not is_recommended:
+                continue
+
+        # 교양 과목 처리
+        else:
+
+            # 부족한 세부영역 아니면 제외
+            required_ge_areas_cleaned = [
+                str(area).strip()
+                for area in required_ge_areas
+            ]
+            
+            
 
         if not is_recommended: # 필수/추천 전공 과목은 졸업을 위해 필터링 면제
             
@@ -129,7 +147,8 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
             "room": row['강의室'].split('(')[0] if '강의室' in row and pd.notna(row['강의室']) else (row['강의실'].split('(')[0] if '강의실' in row and pd.notna(row['강의실']) else ""),
             "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots,
-            "is_required": is_recommended
+            "is_required": is_recommended,
+            "is_priority_ge": course_subarea in required_ge_areas
         }
         
         if is_ge:
@@ -211,18 +230,30 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
                                 avoid_penalty += 1
 
             # 5. 필수 과목 개수 카운트
-            required_count = sum(1 for course in combo_list if course["is_required"])
+            required_count = sum(
+                1 for course in combo_list
+                if course["is_required"]
+            )
 
+            priority_ge_count = sum(
+                 1 for course in combo_list
+                 if course.get("is_priority_ge", False)
+            )
             # 6. 유효한 시간표 조합 안전하게 딱 한 번만 저장 (페널티 포함)
             all_combinations.append({
                 "schedule": combo_list,
                 "required_count": required_count,
+                "priority_ge_count": priority_ge_count,
                 "avoid_penalty": avoid_penalty
             })
 
             # 7. 최적의 시간표 300개를 찾았다면 즉시 루프 종료 후 반환
             if len(all_combinations) >= 300:
-                all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
+                all_combinations.sort( key=lambda x: (
+                    -x["required_count"],
+                    -x["priority_ge_count"],
+                     x["avoid_penalty"]
+                ))
                 return [item["schedule"] for item in all_combinations[:3]]
 
     # 8. 5만 번 탐색을 마쳤거나 전체 루프가 끝났을 때의 최종 정렬 반환
@@ -232,7 +263,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
         
     return []
 
-user_sentence = "금요일 공강인 18학점 시간표 추천해줘"
+user_sentence = "18학점 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -275,7 +306,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20210001"
+login_student_id = "20260001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
@@ -285,8 +316,15 @@ graduation_analysis = get_final_recommendations(
     students_json_data=students_list
 )
 
-# 최종 추천 과목 리스트 추출
-recommended_courses = graduation_analysis.get("recommended_courses", [])
+recommended_major_courses = graduation_analysis.get(
+    "recommended_major_courses",
+    []
+)
+
+required_ge_areas = graduation_analysis.get(
+    "required_general_education_areas",
+    []
+)
 
 # 1. 파일 경로에서 데이터를 읽어와 하나로 합쳐줍니다.
 all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_PATH)], ignore_index=True)
@@ -306,7 +344,8 @@ else:
 
 # 2. 딕셔너리에 뭉쳐있던 인자들을 하나씩 풀어서 정확한 매개변수 이름으로 전달합니다.
 timetable_results = generate_timetable_combinations(
-    recommended_courses_df=recommended_courses,
+    recommended_major_courses=recommended_major_courses,
+    required_ge_areas=required_ge_areas,
     filtered_df=all_lectures_df,
     target_credits=target_credit_int,
     empty_days=slots_input["exclude_days"],
