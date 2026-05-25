@@ -1433,6 +1433,17 @@
 
             function renderStudentModal() {
 
+                if (
+                    studentCreditData.length === 0 ||
+                    courseHistoryData.length === 0
+                ) {
+
+                    alert('학생 데이터를 불러오는 중입니다.');
+
+                    return;
+
+                }
+
                 renderStudentBasicInfo();
 
                 renderCreditProgress();
