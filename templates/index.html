@@ -875,6 +875,7 @@
             let chatSessions = [];
             let currentSessionId = null;
             let courseHistoryData = [];
+            let studentCreditData = [];
 
             function saveSessionStorage() {
 
@@ -1309,6 +1310,27 @@
                         'CSV 로드 실패:',
                         error
                     )
+
+                }
+
+            }
+
+            async function loadStudentCreditData() {
+
+                try {
+
+                    const response =
+                        await fetch('/student/student_data.json');
+
+                    studentCreditData =
+                        await response.json();
+
+                } catch (error) {
+
+                    console.error(
+                        '학생 학점 데이터 로드 실패:',
+                        error
+                    );
 
                 }
 
