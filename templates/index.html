@@ -607,6 +607,8 @@
             const loginModal = document.getElementById('login-modal');
             const loginSubmitBtn = document.getElementById('login-submit-btn');
             const studentModal = document.getElementById('student-modal');
+            const logoutBtn = document.getElementById('logout-btn');
+
 
             let currentStudent = null;
             let chatSessions = [];
@@ -892,7 +894,17 @@
 
                 }
 
-            });            
+            });     
+            
+            logoutBtn.addEventListener('click', function () {
+
+                currentStudent = null;
+
+                studentModal.style.display = 'none';
+
+                updateProfileUI();
+
+            });
 
         </script>
     </div>
