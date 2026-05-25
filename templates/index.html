@@ -561,6 +561,8 @@
             const mainContainer = document.querySelector('.main-container');
             const historyContainer = document.getElementById('timetable-history');
             const newChatBtn = document.querySelector('.new-chat-btn');
+            const profileBtn = document.getElementById('profile-btn');
+            const loginModal = document.getElementById('login-modal');
 
             let chatSessions = [];
             let currentSessionId = null;
@@ -793,6 +795,12 @@
                 });
 
             }
+
+            profileBtn.addEventListener('click', function () {
+
+                loginModal.style.display = 'flex';
+
+            });
 
         </script>
     </div>
