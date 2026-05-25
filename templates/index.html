@@ -1409,6 +1409,49 @@
 
             }
 
+            function renderCreditProgress() {
+
+                if (!currentStudent) return;
+
+                const studentData =
+                    studentCreditData.find(student =>
+                        student.student_id ===
+                        currentStudent.student_id
+                    );
+
+                if (!studentData) return;
+
+                const graduationCredit =
+                    studentData.credits['졸업학점'];
+
+                const completed =
+                    graduationCredit.completed;
+
+                const required =
+                    graduationCredit.required;
+
+                const percent =
+                    Math.floor(
+                        (completed / required) * 100
+                    );
+
+                document.getElementById(
+                    'total-credit-text'
+                ).innerText =
+                    `${completed} / ${required} 학점`;
+
+                document.getElementById(
+                    'credit-percent-text'
+                ).innerText =
+                    `${percent}% 완료`;
+
+                document.getElementById(
+                    'total-progress-bar'
+                ).style.width =
+                    `${percent}%`;
+
+            }
+
         </script>
     </div>
 
