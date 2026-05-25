@@ -741,6 +741,16 @@ def generate_student(scenario, history, graduation):
     """한 학생의 students.json 엔트리를 생성한다."""
     required = graduation_requirements(graduation, scenario["curriculum_year"])
     completed = calculate_completed_credits(history)
+    completed_semesters = calculate_max_completed_semesters(
+        scenario["curriculum_year"],
+        TARGET_YEAR,
+        TARGET_SEMESTER,
+    )
+    grade = calculate_current_grade(
+        scenario["curriculum_year"],
+        TARGET_YEAR,
+        TARGET_SEMESTER,
+    )
 
     return {
         "student_id": scenario["student_id"],
