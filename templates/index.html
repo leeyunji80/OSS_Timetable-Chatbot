@@ -1060,6 +1060,7 @@
             }
 
             loadCourseHistoryData();
+            loadStudentCreditData();
 
             function createNewSession() {
 
@@ -1189,6 +1190,9 @@
                 if (currentStudent) {
 
                     renderCourseHistory();
+                    renderStudentBasicInfo();
+                    renderCreditProgress();
+                    renderGraduationRequirements();
 
                     studentModal.style.display = 'flex';
 
