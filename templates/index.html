@@ -951,15 +951,18 @@
 
             function updateProfileUI() {
 
-                const profileInfo =
-                    document.getElementById('.profile-info');
-
                 if (currentStudent) {
+
+                    const initial = currentStudent.name.charAt(0);
 
                     profileInfo.innerHTML = `
                         <p>${currentStudent.name}</p>
                         <span>${currentStudent.student_id}</span>
                     `;
+
+                    profileAvatar.innerHTML = initial;
+
+                    profileAvatar.style.backgroundColor = '#ffb3b3';
 
                 } else {
 
@@ -967,6 +970,10 @@
                         <p>로그인 필요</p>
                         <span>프로필 보기</span>
                     `;
+
+                    profileAvatar.innerHTML = '👤';
+
+                    profileAvatar.style.backgroundColor = '#ffe3e3';
 
                 }
 
