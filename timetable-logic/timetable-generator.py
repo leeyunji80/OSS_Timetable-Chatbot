@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 import json
 # 테스트를 위한 임시 파일에서 함수를 불러옴
 from condition import get_final_recommendations, students_list
+from timetable_colors import assign_course_colors
+from timetable_parser import parse_day_and_period
 
 load_dotenv()
 
@@ -65,140 +67,6 @@ def is_valid_combination(schedule):
 
     return True
 
-# -----------------------------
-# 과목 색상 팔레트
-# -----------------------------
-
-COLOR_PALETTE = [
-    {
-        "background": "#FFCDD2",
-        "text": "#000000"
-    },
-    {
-        "background": "#F8BBD0",
-        "text": "#000000"
-    },
-    {
-        "background": "#E1BEE7",
-        "text": "#000000"
-    },
-    {
-        "background": "#D1C4E9",
-        "text": "#000000"
-    },
-    {
-        "background": "#C5CAE9",
-        "text": "#000000"
-    },
-    {
-        "background": "#BBDEFB",
-        "text": "#000000"
-    },
-    {
-        "background": "#B2EBF2",
-        "text": "#000000"
-    },
-    {
-        "background": "#C8E6C9",
-        "text": "#000000"
-    },
-    {
-        "background": "#DCEDC8",
-        "text": "#000000"
-    },
-    {
-        "background": "#FFF9C4",
-        "text": "#000000"
-    }
-]
-
-
-# -----------------------------
-# 과목별 색상 지정
-# -----------------------------
-
-def assign_course_colors(schedule):
-
-    course_color_map = {}
-
-    for index, course in enumerate(schedule):
-
-        color = COLOR_PALETTE[index % len(COLOR_PALETTE)]
-
-        course_color_map[course["name"]] = color
-
-    return course_color_map
-
-
-def parse_day_and_period(day_raw, period_raw):
-    """
-    요일과 교시 문자열을 시각화 팀원이 가공 없이 바로 쓸 수 있게 텍스트와 숫자 형태로만 정제
-    """
-    if pd.isna(day_raw) or pd.isna(period_raw):
-        return []
-        
-    PERIOD_TO_TIME = {
-        0: ("08:00", "09:00"),
-        1: ("09:00", "10:00"),
-        2: ("10:00", "11:00"),
-        3: ("11:00", "12:00"),
-        4: ("12:00", "13:00"),
-        5: ("13:00", "14:00"),
-        6: ("14:00", "15:00"),
-        7: ("15:00", "16:00"),
-        8: ("16:00", "17:00"),
-        9: ("17:00", "18:00"),
-        10: ("18:00", "19:00"),
-        11: ("19:00", "20:00"),
-        12: ("20:00", "21:00"),
-        13: ("21:00", "22:00"),
-        14: ("22:00", "23:00")
-    }
-
-    time_slots = []
-    
-    # 파이프(|)를 기준으로 다중 요일/교시 분할
-    day_splits = str(day_raw).split('|')
-    period_splits = str(period_raw).replace('"', '').split('|')
-    
-    for day_chunk, period_chunk in zip(day_splits, period_splits):
-        day_str = day_chunk.strip()
-        
-         # 1~3 형태 처리
-        if '~' in period_chunk:
-
-            start_period, end_period = map(
-                int,
-                period_chunk.split('~')
-            )
-
-            periods = list(range(start_period, end_period + 1))
-
-        else:
-            # 1,2,3 형태 처리
-            periods = sorted([
-                int(p.strip())
-                for p in period_chunk.split(',')
-                if p.strip().isdigit()
-            ])
-
-        if not periods:
-            continue
-
-        start_period = periods[0]
-        end_period = periods[-1]
-
-        start_time = PERIOD_TO_TIME[start_period][0]
-        end_time = PERIOD_TO_TIME[end_period][1]
-
-        time_slots.append({
-            "day": day_str,
-            "start_period": start_period,
-            "end_period": end_period,
-            "time_range": f"{start_time} ~ {end_time}"
-        })
-
-    return time_slots
 
 
 def evaluate_load(row):
@@ -227,7 +95,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
     ge_pool = []
 
     assign_pref = user_preferences.get("assignment_preference")     # "과제적음", "과제많음" 또는 None
-    conflict_rule = user_preferences.get("conflict_resolution_rule", "과목우선") # 충돌 해결 규칙
+    
 
     # 전체 데이터 프레임을 돌면서 전공(추천과목)과 교양을 분류하여 담습니다.
     for _, row in filtered_df.iterrows():
@@ -275,11 +143,10 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
 
     # 전공 필수/추천 과목과 제한된 교양 과목을 합쳐서 최종 과목 풀을 만듭니다.
     course_pool = major_pool + ge_pool
-    random.shuffle(course_pool)
 
     all_combinations = []
     
-    MAX_ITERATIONS = 50000
+    MAX_ITERATIONS = 300000
     iteration_count = 0
     
     if target_credits >= 21:
@@ -304,7 +171,7 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
             
             # 학점 총합 계산
             total_credits = sum(course["credit"] for course in combo_list)
-            if total_credits != target_credits:
+            if abs(total_credits - target_credits)>1:
                 continue
 
             # 시간표 충돌 및 공강 요일 검사
@@ -343,48 +210,29 @@ def generate_timetable_combinations(recommended_courses_df, filtered_df, target_
                             if avoid["time_range"] == "오후" and slot["start_period"] >= 5:
                                 avoid_penalty += 1
 
-            # 추천(필수) 과목 개수 카운트
+            # 5. 필수 과목 개수 카운트
             required_count = sum(1 for course in combo_list if course["is_required"])
 
-            # 유효한 시간표 조합 저장 (오전 페널티 점수도 함께 기록)
+            # 6. 유효한 시간표 조합 안전하게 딱 한 번만 저장 (페널티 포함)
             all_combinations.append({
                 "schedule": combo_list,
                 "required_count": required_count,
-                "avoid_penalty": avoid_penalty  # 페널티 기록
+                "avoid_penalty": avoid_penalty
             })
 
-            # 사용자가 지정한 공강 요일에 수업이 들어갔는지 검사
-            violates_empty_day = False
-            for day in empty_days:
-                if day in actual_days:
-                    violates_empty_day = True
-                    break
-            
-            if violates_empty_day:
-                continue
-
-            # 추천(필수) 과목이 몇 개 포함되었는지 카운트
-            required_count = sum(1 for course in combo_list if course["is_required"])
-
-            # 유효한 시간표 조합 저장
-            all_combinations.append({
-                "schedule": combo_list,
-                "required_count": required_count
-            })
-
-            # 최적의 시간표 50개를 찾았다면 즉시 루프를 종료하고 반환합니다.
-            if len(all_combinations) >= 50:
-                all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
+            # 7. 최적의 시간표 300개를 찾았다면 즉시 루프 종료 후 반환
+            if len(all_combinations) >= 300:
+                all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
                 return [item["schedule"] for item in all_combinations[:3]]
 
+    # 8. 5만 번 탐색을 마쳤거나 전체 루프가 끝났을 때의 최종 정렬 반환
     if all_combinations:
-         # required_count는 높을수록 좋고(reverse), avoid_penalty는 낮을수록 좋습니다.
         all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
         return [item["schedule"] for item in all_combinations[:3]]
         
     return []
 
-user_sentence = "금요일 공강인 시간표 추천해줘"
+user_sentence = "금요일 공강인 18학점 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -427,7 +275,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20260001"
+login_student_id = "20210001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
@@ -518,7 +366,7 @@ if timetable_results:
         course_color_map = assign_course_colors(selected_schedule)
         
         # 1. 이 시간표의 특징을 분석하여 추천 사유(Reason)를 동적으로 생성합니다.
-        has_empty_day = False
+        
         morning_course_count = 0
         total_credits_sum = 0
         required_course_names = []
