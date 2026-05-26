@@ -218,7 +218,7 @@ def generate_timetable_combinations(recommended_major_courses,
             
             # 학점 총합 계산
             total_credits = sum(course["credit"] for course in combo_list)
-            if abs(total_credits - target_credits)>1:
+            if total_credits != target_credits:
                 continue
 
             # 시간표 충돌 및 공강 요일 검사
@@ -295,7 +295,7 @@ def generate_timetable_combinations(recommended_major_courses,
         
     return []
 
-user_sentence = "금요일 공강인 시간표 추천해줘"
+user_sentence = "20학점 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -338,7 +338,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20250001"
+login_student_id = "20240001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
