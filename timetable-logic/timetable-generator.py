@@ -108,20 +108,27 @@ def generate_timetable_combinations(recommended_major_courses,
     recommended_course_names = set(recommended_major_courses)
     
     major_pool = []
-    ge_pool = []
+    priority_ge_pool = []
+    normal_ge_pool = []
 
     assign_pref = user_preferences.get("assignment_preference")     # "과제적음", "과제많음" 또는 None
     team_pref = user_preferences.get("team_project_preference")
 
     # 전체 데이터 프레임을 돌면서 전공(추천과목)과 교양을 분류하여 담습니다.
     for _, row in filtered_df.iterrows():
+        is_priority_ge = False
         course_name = row['교과목명']
         is_ge = '교양' in row['이수구분']
         is_recommended = course_name in recommended_course_names
         
-        course_subarea = str(
-            row.get("세부영역", "")
+        major_category = str(
+            row.get("교양대분류", "")
         ).strip()
+
+        sub_category = str(
+            row.get("교양소분류", "")
+        ).strip()
+
 
         # 전공 과목 처리
         if not is_ge:
@@ -132,12 +139,18 @@ def generate_timetable_combinations(recommended_major_courses,
         # 교양 과목 처리
         else:
 
-            # 부족한 세부영역 아니면 제외
             required_ge_areas_cleaned = [
-                str(area).strip()
-                for area in required_ge_areas
+            str(area).strip()
+            for area in required_ge_areas
             ]
-            
+
+   
+
+            is_priority_ge = any(
+                sub_category.strip() == area.strip()
+                for area in required_ge_areas_cleaned
+                if area and str(area).strip()
+            )
             
 
         if not is_recommended: # 필수/추천 전공 과목은 졸업을 위해 필터링 면제
@@ -176,20 +189,41 @@ def generate_timetable_combinations(recommended_major_courses,
             "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots,
             "is_required": is_recommended,
-            "is_priority_ge": course_subarea in required_ge_areas
+            "is_priority_ge": is_priority_ge
         }
         
         if is_ge:
-            ge_pool.append(course_item)
+
+            if course_item["is_priority_ge"]:
+                priority_ge_pool.append(course_item)
+
+            else:
+                normal_ge_pool.append(course_item)
+
         else:
             major_pool.append(course_item)
 
-    #무한 루프(오랜 멈춤)를 방지하기 위해 교양 과목 풀을 최대 30개로 제한합니다.
-    if len(ge_pool) > 30:
-        ge_pool = random.sample(ge_pool, 30)
+    if len(normal_ge_pool) > 30:
 
-    # 전공 필수/추천 과목과 제한된 교양 과목을 합쳐서 최종 과목 풀을 만듭니다.
-    course_pool = major_pool + ge_pool
+        normal_ge_pool = random.sample(
+            normal_ge_pool,
+            30
+        )
+
+    course_pool = (
+    major_pool
+    + priority_ge_pool
+    + normal_ge_pool
+    )
+    #디버깅을 위한 출력
+    print("\n===== 전공 과목 수 =====")
+    print(len(major_pool))
+
+    print("\n===== 부족 교양 과목 수 =====")
+    print(len(priority_ge_pool))
+
+    print("\n===== 일반 교양 과목 수 =====")
+    print(len(normal_ge_pool))
 
     all_combinations = []
     
@@ -295,7 +329,7 @@ def generate_timetable_combinations(recommended_major_courses,
         
     return []
 
-user_sentence = "20학점 시간표 추천해줘"
+user_sentence = "18학점 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -354,7 +388,7 @@ recommended_major_courses = graduation_analysis.get(
 )
 
 required_ge_areas = graduation_analysis.get(
-    "required_general_education_areas",
+    "needed_general_areas",
     []
 )
 
@@ -366,6 +400,13 @@ print(required_ge_areas)
 
 # 1. 파일 경로에서 데이터를 읽어와 하나로 합쳐줍니다.
 all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_PATH)], ignore_index=True)
+all_lectures_df.columns = (
+    all_lectures_df.columns
+    .str.strip()
+)
+print(all_lectures_df.columns.tolist())
+print("===== 이수구분 종류 =====")
+print(all_lectures_df["이수구분"].unique())
 
 user_preferences_input = {
     "assignment_preference": parsed_data.get("assignment_preference"),
