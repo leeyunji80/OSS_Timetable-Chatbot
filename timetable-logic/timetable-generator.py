@@ -129,6 +129,8 @@ def generate_timetable_combinations(recommended_major_courses,
             row.get("교양소분류", "")
         ).strip()
 
+        course_credit = int(row["학점"]) if pd.notna(row["학점"]) else 0
+
 
         # 전공 과목 처리
         if not is_ge:
@@ -139,18 +141,19 @@ def generate_timetable_combinations(recommended_major_courses,
         # 교양 과목 처리
         else:
 
-            required_ge_areas_cleaned = [
-            str(area).strip()
-            for area in required_ge_areas
-            ]
+            required_ge_areas_cleaned = {
+                str(area).strip(): credit
+                for area, credit in required_ge_areas.items()
+            }
 
    
 
-            is_priority_ge = any(
-                sub_category.strip() == area.strip()
-                for area in required_ge_areas_cleaned
-                if area and str(area).strip()
+            remaining_credit = required_ge_areas_cleaned.get(
+                sub_category,
+                0
             )
+
+            is_priority_ge = remaining_credit > 0
             
 
         if not is_recommended: # 필수/추천 전공 과목은 졸업을 위해 필터링 면제
@@ -196,6 +199,7 @@ def generate_timetable_combinations(recommended_major_courses,
 
             if course_item["is_priority_ge"]:
                 priority_ge_pool.append(course_item)
+                required_ge_areas_cleaned[sub_category] -= course_credit
 
             else:
                 normal_ge_pool.append(course_item)
