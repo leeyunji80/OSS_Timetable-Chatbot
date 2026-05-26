@@ -363,12 +363,12 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
     # 부족한 교양 세부영역 추출
     # ---------------------------------
 
-    needed_general_areas = [
-        area_name
+    needed_general_areas = {
+        area_name: remain_credit
         for area_name, remain_credit
         in remaining_reqs["areas"].items()
         if remain_credit > 0
-    ]
+}
 
     return {
         "student_name": student_info["name"],
