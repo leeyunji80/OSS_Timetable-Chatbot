@@ -104,6 +104,16 @@ def evaluate_team_project(row):
 
 def generate_timetable_combinations(recommended_major_courses,
     required_ge_areas, filtered_df, target_credits, empty_days, avoid_time_slots, user_preferences):
+
+    required_ge_areas_cleaned = {
+        str(area).strip(): credit
+        for area, credit in required_ge_areas.items()
+    }
+
+    course_row_map = {
+        row["교과목명"]: row
+        for _, row in filtered_df.iterrows()
+    }
     # 추천 과목 이름 추출
     recommended_course_names = set(recommended_major_courses)
     
@@ -153,6 +163,7 @@ def generate_timetable_combinations(recommended_major_courses,
                 0
             )
 
+
             is_priority_ge = remaining_credit > 0
             
 
@@ -199,7 +210,6 @@ def generate_timetable_combinations(recommended_major_courses,
 
             if course_item["is_priority_ge"]:
                 priority_ge_pool.append(course_item)
-                required_ge_areas_cleaned[sub_category] -= course_credit
 
             else:
                 normal_ge_pool.append(course_item)
@@ -253,6 +263,44 @@ def generate_timetable_combinations(recommended_major_courses,
                 return []
 
             combo_list = list(combo)
+
+            # -----------------------------
+            # 부족 교양 학점 충족 여부 검사
+            # -----------------------------
+            ge_credit_progress = {
+                area: 0
+                for area in required_ge_areas_cleaned
+            }
+
+            for course in combo_list:
+
+                if not course.get("is_priority_ge"):
+                    continue
+
+                course_name = course["name"]
+
+                row = course_row_map.get(course_name)
+
+                if row is None:
+                   continue
+
+                sub_category = str(
+                    row.get("교양소분류", "")
+                ).strip()
+
+                ge_credit_progress[sub_category] += course["credit"]
+
+             # 부족 학점 충족 여부 확인
+            is_ge_requirement_satisfied = True
+
+            for area, required_credit in required_ge_areas_cleaned.items():
+
+                 if ge_credit_progress.get(area, 0) < required_credit:
+                     is_ge_requirement_satisfied = False
+                     break
+
+            if not is_ge_requirement_satisfied:
+                continue
             
             # 학점 총합 계산
             total_credits = sum(course["credit"] for course in combo_list)
@@ -393,7 +441,7 @@ recommended_major_courses = graduation_analysis.get(
 
 required_ge_areas = graduation_analysis.get(
     "needed_general_areas",
-    []
+    {}
 )
 
 print("추천 전공 과목:")
@@ -512,9 +560,14 @@ if timetable_results:
                 if slot["start_period"] < 5:
                     morning_course_count += 1
 
-            matched_rows = all_lectures_df[all_lectures_df['교과목명'] == course["name"]]
-            if not matched_rows.empty:
-                course_row = matched_rows.iloc[0]
+            lecture_row_map = {
+                row["교과목명"]: row
+                for _, row in all_lectures_df.iterrows()
+            }
+
+            course_row = lecture_row_map.get(course["name"])
+
+            if course_row is not None:
                 load_status = evaluate_load(course_row)  # "많다", "보통이다", "적다"
                 raw_ratio = pd.to_numeric(course_row.get('평가_과제(%)'), errors='coerce') or 0
             else:
