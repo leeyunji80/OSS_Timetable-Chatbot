@@ -251,7 +251,9 @@ def generate_timetable_combinations(recommended_major_courses,
     else:
         start_r = 4
     # 조합 탐색 시작 
-    for r in range(start_r, len(course_pool) + 1):
+    max_r = min(start_r + 2, len(course_pool) + 1)
+
+    for r in range(start_r, max_r):
         for combo in combinations(course_pool, r):
             iteration_count += 1
             
@@ -381,7 +383,7 @@ def generate_timetable_combinations(recommended_major_courses,
         
     return []
 
-user_sentence = "18학점 시간표 추천해줘"
+user_sentence = "과제 적은 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -459,6 +461,10 @@ all_lectures_df.columns = (
 print(all_lectures_df.columns.tolist())
 print("===== 이수구분 종류 =====")
 print(all_lectures_df["이수구분"].unique())
+lecture_row_map = {
+    row["교과목명"]: row
+    for _, row in all_lectures_df.iterrows()
+ }
 
 user_preferences_input = {
     "assignment_preference": parsed_data.get("assignment_preference"),
@@ -560,22 +566,25 @@ if timetable_results:
                 if slot["start_period"] < 5:
                     morning_course_count += 1
 
-            lecture_row_map = {
-                row["교과목명"]: row
-                for _, row in all_lectures_df.iterrows()
-            }
+           
 
             course_row = lecture_row_map.get(course["name"])
 
             if course_row is not None:
-                load_status = evaluate_load(course_row)  # "많다", "보통이다", "적다"
-                raw_ratio = pd.to_numeric(course_row.get('평가_과제(%)'), errors='coerce') or 0
+                load_status = evaluate_load(course_row)
+                raw_ratio = pd.to_numeric(
+                    course_row.get('평가_과제(%)'),
+                    errors='coerce'
+                ) or 0
+
+                team_status = evaluate_team_project(course_row)
+
             else:
                 load_status = "정보 없음"
                 raw_ratio = 0
+                team_status = "정보 없음"
 
             course_color = course_color_map[course["name"]]
-            team_status = evaluate_team_project(course_row)
             
             cleaned_courses.append({
                 "name": course["name"],
