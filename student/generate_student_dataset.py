@@ -272,6 +272,33 @@ def calculate_current_grade(curriculum_year, target_year=TARGET_YEAR, target_sem
     completed_semesters = calculate_max_completed_semesters(curriculum_year, target_year, target_semester)
     return min(4, max(1, completed_semesters // 2 + 1))
 
+def effective_completed_semesters(scenario):
+    """시나리오의 이수학기 수를 기준 시점 이전으로 제한한다."""
+    max_completed = calculate_max_completed_semesters(
+        scenario["curriculum_year"],
+        TARGET_YEAR,
+        TARGET_SEMESTER,
+    )
+    requested = scenario.get("completed_semesters", max_completed)
+    return max(0, min(requested, max_completed))
+
+def effective_grade(scenario):
+    """실제 생성에 사용할 이수학기 수 기준 학년을 계산한다."""
+    completed = effective_completed_semesters(scenario)
+    return min(4, max(1, completed // 2 + 1))
+
+def effective_target_credit_range(scenario, completed_semesters):
+    """시나리오 목표학점을 학기 수 대비 현실적인 최소 학점으로 보정한다."""
+    if completed_semesters == 0:
+        return 0, 0
+
+    scenario_min, scenario_max = scenario["target_completed_credits"]
+    minimum_total = completed_semesters * MIN_SEMESTER_CREDITS
+    maximum_total = completed_semesters * MAX_SEMESTER_CREDITS
+    target_min = max(scenario_min, minimum_total)
+    target_max = min(maximum_total, max(scenario_max, target_min + min(12, maximum_total - target_min)))
+    return target_min, target_max
+
 def standard_items_for_term(standard_curriculum, curriculum_year, grade, semester):
     """해당 학년/학기의 표준이수모형 과목명과 '택1' 형태의 영역 힌트를 분리한다."""
     target = standard_curriculum[
@@ -432,9 +459,11 @@ def select_liberal_courses(
 
 def distribute_credit_targets(total_credits, completed_semesters, scenario):
     """총 목표학점을 현실적인 학기별 목표학점으로 나눈다."""
-    low, high = scenario.get("semester_credit_range", [12, 18])
+    raw_low, raw_high = scenario.get("semester_credit_range", [MIN_SEMESTER_CREDITS, MAX_SEMESTER_CREDITS])
+    low = max(raw_low, MIN_SEMESTER_CREDITS)
+    high = max(raw_high, MAX_SEMESTER_CREDITS, low)
     max_total = high * completed_semesters
-    min_total = min(low * completed_semesters, max_total)
+    min_total = low * completed_semesters
     total_credits = max(min_total, min(total_credits, max_total))
 
     targets = [random.randint(low, high) for _ in range(completed_semesters)]
