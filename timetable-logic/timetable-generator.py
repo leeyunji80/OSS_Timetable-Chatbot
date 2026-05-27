@@ -129,9 +129,7 @@ def generate_timetable_combinations(
     for _, row in filtered_df.iterrows():
         course_name = row['교과목명']
         is_ge = '교양' in str(row['이수구분'])
-        is_recommended_major = (not is_ge) and (
-            (course_name in recommended_major_set) or ("전공필수" in str(row['이수구분']))
-        )
+        is_recommended_major = (not is_ge) and (course_name in recommended_major_set)
         
         if not is_ge and not is_recommended_major:
             continue
@@ -211,7 +209,6 @@ def generate_timetable_combinations(
             else:
                 course_item["base_score"] += 10
                 ge_normal_pool.append(course_item)  # 3순위 일반 교양 바구니
-                
 
     # -------------------------------------------------------------
     # [B] 후보 풀 다변화 
@@ -239,54 +236,62 @@ def generate_timetable_combinations(
     found_enough = False
 
     # -------------------------------------------------------------
-    # [C] 전공 우선 조합 알고리즘 (역순 탐색으로 전공 극대화)
+    # [C] 전공 우선 조합 알고리즘 
     # -------------------------------------------------------------
-    max_major_r = min(len(major_pool), 8) # 후보 풀에 있는 전공 최대 개수 (최대 8개)
-    min_major_r = min(len(major_pool), 2) # 최소 전공 개수 (최소 2개)
+    max_major_r = min(len(major_pool), 8) 
+    min_major_r = 1 if len(major_pool) > 0 else 0
 
-    # step을 -1로 주어 전공을 가장 많이 선택하는 조합부터 거꾸로 탐색
     for major_r in range(max_major_r, min_major_r - 1, -1):
         if found_enough: break
         for major_combo in combinations(major_pool, major_r):
             major_combo_list = list(major_combo)
             
-            # 전공끼리 시간표가 겹치면 탈락
+            # 전공끼리 시간표 겹치면 탈락
             if not is_valid_combination(major_combo_list):
                 continue
                 
             major_credits = sum(m["credit"] for m in major_combo_list)
             
-            # 만약 전공만으로 이미 목표 학점을 채웠거나 초과했다면 바로 유효 리스트에 추가
+            # -------------------------------------------------------------
+            # 전공만으로 이미 목표 학점을 채운 완벽한 케이스 우선 처리
+            # -------------------------------------------------------------
             if abs(major_credits - target_credits) <= 1:
-                final_score = sum(m["base_score"] for m in major_combo_list)
+                # 전공을 많이 들을수록 압도적인 점수를 부여 (개당 10,000점 가산)
+                final_score = sum(m["base_score"] for m in major_combo_list) + (major_r * 10000)
                 all_combinations.append({"schedule": major_combo_list, "final_score": final_score})
+                
+                # 전공으로 꽉 채웠으니 더 이상 교양을 붙일 필요가 없으므로 다음 전공 조합 탐색
+                if len(all_combinations) >= 150:
+                    found_enough = True
+                    break
                 continue
             
-            # 2. 전공을 고정해 두고, 남은 빈 시간에 교양 과목(부족 교양 우선순위)을 채워 넣음
-            # 모자란 학점 계산
+            # -------------------------------------------------------------
+            # 전공을 넣고 학점이 모자라 교양을 붙여야 하는 케이스
+            # -------------------------------------------------------------
             needed_credits = target_credits - major_credits
             
-            for ge_r in range(1, min(len(ge_pool) + 1, 5)):
+            # 교양 과목을 0개부터 최대 6개까지 붙일 수 있도록 범위 유연화
+            for ge_r in range(0, min(len(ge_pool) + 1, 7)):
                 for ge_combo in combinations(ge_pool, ge_r):
                     ge_combo_list = list(ge_combo)
-                    
                     ge_credits = sum(g["credit"] for g in ge_combo_list)
                     
-                    if abs((major_credits + ge_credits) - target_credits) > 1:
+                    # 학점 마진 체크 (허용 오차를 ±1에서 ±2로 살짝 넓혀 유연성 확보)
+                    if abs((major_credits + ge_credits) - target_credits) > 2:
                         continue
                         
-                    # 최종 합친 시간표 유효성(시간 충돌) 검사
                     full_combo = major_combo_list + ge_combo_list
                     if not is_valid_combination(full_combo):
                         continue
                         
-                    # 점수 계산 (부족 교양 보너스 포함)
-                    final_score = sum(c["base_score"] for c in full_combo)
+                    # 전공 개수에 비례한 강력한 가산점 배치 (전공 6개 조합이 무조건 이기도록)
+                    final_score = sum(c["base_score"] for c in full_combo) + (major_r * 8000)
                     
                     # 부족 교양 영역 만족도 보너스 연산
                     achieved_tracker = {}
                     for course in ge_combo_list:
-                        if course in ge_needed_pool: # 부족 교양 그룹에 속했던 과목이라면
+                        if any(neck["name"] == course["name"] for neck in ge_needed_pool):
                             a_name, s_name = course["area"], course["subarea"]
                             if a_name not in achieved_tracker:
                                 achieved_tracker[a_name] = {"total": 0, "subareas": {}}
@@ -297,15 +302,15 @@ def generate_timetable_combinations(
                     for a_name, req_info in needed_general_areas.items():
                         if a_name in achieved_tracker:
                             if "총필요학점" in req_info:
-                                ge_bonus += min(achieved_tracker[a_name]["total"], req_info["총필요학점"]) * 150
+                                ge_bonus += min(achieved_tracker[a_name]["total"], req_info["총필요학점"]) * 200
                             else:
                                 for s_name, needed_sub_credit in req_info.items():
-                                    ge_bonus += min(achieved_tracker[a_name]["subareas"].get(s_name, 0), needed_sub_credit) * 150
+                                    ge_bonus += min(achieved_tracker[a_name]["subareas"].get(s_name, 0), needed_sub_credit) * 200
                     
                     final_score += ge_bonus
                     all_combinations.append({"schedule": full_combo, "final_score": final_score})
                     
-                    if len(all_combinations) >= 50:
+                    if len(all_combinations) >= 150: # 탐색 풀을 늘려 6개짜리 조합이 뒤늦게 나와도 잘리지 않게 함
                         found_enough = True
                         break
                 if found_enough: break
@@ -371,7 +376,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20210001"
+login_student_id = "20250001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
