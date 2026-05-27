@@ -124,7 +124,7 @@ def generate_timetable_combinations(
     recommended_major_set = set(recommended_major_courses) if recommended_major_courses else set()
 
     # -------------------------------------------------------------
-    # [A] 1차 필터링 및 순위별 그룹 분리 (문제 1번 해결을 위한 정밀 분류)
+    # [A] 1차 필터링 및 순위별 그룹 분리
     # -------------------------------------------------------------
     for _, row in filtered_df.iterrows():
         course_name = row['교과목명']
@@ -171,8 +171,8 @@ def generate_timetable_combinations(
                 if current_team == "많음": continue
 
         # 가산점 계산 및 룸 정보 파싱
-        area_name = row.get('영역', '') if pd.notna(row.get('영역')) else ''
-        subarea_name = row.get('세부영역', '') if pd.notna(row.get('세부영역')) else ''
+        area_name = str(row.get('교양대분류', '')).strip() if pd.notna(row.get('교양대분류')) else ''
+        subarea_name = str(row.get('교양소분류', '')).strip() if pd.notna(row.get('교양소분류')) else ''
         base_score = 0
         
         room_info = ""
@@ -193,19 +193,39 @@ def generate_timetable_combinations(
             if has_empty_day_conflict or has_avoid_time_conflict:
                 course_item["base_score"] -= 100
             major_pool.append(course_item)
-        elif is_ge:
-            # 부족 교양 검사
-            is_needed_ge = False
-            if area_name in needed_general_areas:
-                sub_info = needed_general_areas[area_name]
-                if "총필요학점" in sub_info:
-                    if subarea_name in sub_info.get("선택가능영역", []): is_needed_ge = True
-                elif subarea_name in sub_info:
-                    is_needed_ge = True
             
+        elif is_ge:
+            # 부족 교양 검사 (데이터 구조에 구애받지 않는 안전한 유효성 체크)
+            is_needed_ge = False
+            
+            # 1. 대영역(area_name)이 부족 교양 딕셔너리의 Key에 존재하는지 확인
+            if area_name and area_name in needed_general_areas:
+                sub_info = needed_general_areas[area_name]
+                
+                # 시나리오 A: 딕셔너리 구조가 {'총필요학점': X, '선택가능영역': [...]} 일 때
+                if isinstance(sub_info, dict) and "총필요학점" in sub_info:
+                    # 선택가능영역 리스트에 들어있거나, 세부영역 정보가 아예 비어있으면 영역 매칭으로 인정
+                    if subarea_name in sub_info.get("선택가능영역", []) or not sub_info.get("선택가능영역"):
+                        is_needed_ge = True
+                        
+                # 시나리오 B: 딕셔너리 구조가 {'세부영역명': 부족학점} 일 때
+                elif isinstance(sub_info, dict):
+                    if subarea_name in sub_info:
+                        is_needed_ge = True
+                        
+                # 시나리오 C: sub_info가 단순히 세부영역 이름들을 담은 리스트일 때
+                elif isinstance(sub_info, list):
+                    if subarea_name in sub_info:
+                        is_needed_ge = True
+            
+            # 2. 예외 방지: 대영역이 아니라 세부영역 이름 자체가 대항목 Key로 바로 들어가 있는 경우 구제
+            if not is_needed_ge and subarea_name in needed_general_areas:
+                is_needed_ge = True
+
+            # 판정 결과에 따른 바구니 배정
             if is_needed_ge:
-                course_item["base_score"] += 1000
-                ge_needed_pool.append(course_item)  # 2순위 부족 교양 바구니
+                course_item["base_score"] += 2000  # 우선순위 가산점 대폭 상향
+                ge_needed_pool.append(course_item)  # 2순위 부족 교양 바구니로 정상 분류
             else:
                 course_item["base_score"] += 10
                 ge_normal_pool.append(course_item)  # 3순위 일반 교양 바구니
@@ -213,17 +233,22 @@ def generate_timetable_combinations(
     # -------------------------------------------------------------
     # [B] 후보 풀 다변화 
     # -------------------------------------------------------------
-    random.seed(random.randint(1, 10000)) # 실행할 때마다 결과가 바뀌도록 시드 유연화
-    
-    # 부족교양과 일반교양을 각각 랜덤하게 섞은 후 필요한 만큼 추출해서 후보군 중복 방지
+    # 객체 비교 오류를 방지하기 위해, 부족 교양 과목들에 명시적 마킹을 부여합니다.
+    for item in ge_needed_pool:
+        item["is_needed_ge"] = True
+    for item in ge_normal_pool:
+        item["is_needed_ge"] = False
+
+    # 실행할 때마다 다양한 시간표를 보기 위해 셔플하되, 부족 교양이 항상 최우선 배치되도록 합니다.
+    random.seed(random.randint(1, 10000))
     random.shuffle(ge_needed_pool)
     random.shuffle(ge_normal_pool)
     
-    # 부족 교양은 최대한 많이(전체 혹은 최대 40개), 일반 교양은 빈자리 채우기용으로 20개만 셈플링
-    sampled_ge_needed = ge_needed_pool[:40]
-    sampled_ge_normal = ge_normal_pool[:20]
+    # 부족 교양은 유실되면 안 되므로 최대한 넉넉히 담고, 일반 교양은 빈자리 메우기용으로만 제한합니다.
+    sampled_ge_needed = ge_needed_pool[:15]  
+    sampled_ge_normal = ge_normal_pool[:10]
     
-    # 교양 최종 풀은 '부족 교양'이 무조건 앞 순위를 차지하도록 합침
+    # 최종 교양 풀 구성
     ge_pool = sampled_ge_needed + sampled_ge_normal
 
     print("\n================ [필터링 결과 데이터 체크] ================")
@@ -233,51 +258,39 @@ def generate_timetable_combinations(
     print("============================================================\n")
 
     all_combinations = []
-    found_enough = False
 
     # -------------------------------------------------------------
-    # [C] 전공 우선 조합 알고리즘 
+    # [C] 전공 우선 조합 알고리즘 (수정본: 조기종료 제거 및 힙 격하 방지)
     # -------------------------------------------------------------
     max_major_r = min(len(major_pool), 8) 
     min_major_r = 1 if len(major_pool) > 0 else 0
 
     for major_r in range(max_major_r, min_major_r - 1, -1):
-        if found_enough: break
         for major_combo in combinations(major_pool, major_r):
             major_combo_list = list(major_combo)
             
-            # 전공끼리 시간표 겹치면 탈락
+            # 전공끼리 시간표 겹치면 무조건 탈락
             if not is_valid_combination(major_combo_list):
                 continue
                 
             major_credits = sum(m["credit"] for m in major_combo_list)
             
-            # -------------------------------------------------------------
-            # 전공만으로 이미 목표 학점을 채운 완벽한 케이스 우선 처리
-            # -------------------------------------------------------------
+            # 케이스 1: 전공만으로 이미 목표 학점을 채운 경우
             if abs(major_credits - target_credits) <= 1:
-                # 전공을 많이 들을수록 압도적인 점수를 부여 (개당 10,000점 가산)
-                final_score = sum(m["base_score"] for m in major_combo_list) + (major_r * 10000)
+                final_score = sum(m["base_score"] for m in major_combo_list) + (major_r * 20000)
                 all_combinations.append({"schedule": major_combo_list, "final_score": final_score})
-                
-                # 전공으로 꽉 채웠으니 더 이상 교양을 붙일 필요가 없으므로 다음 전공 조합 탐색
-                if len(all_combinations) >= 150:
-                    found_enough = True
-                    break
                 continue
             
-            # -------------------------------------------------------------
-            # 전공을 넣고 학점이 모자라 교양을 붙여야 하는 케이스
-            # -------------------------------------------------------------
+            # 케이스 2: 전공을 넣고 학점이 모자라 교양을 붙여야 하는 경우
             needed_credits = target_credits - major_credits
             
-            # 교양 과목을 0개부터 최대 6개까지 붙일 수 있도록 범위 유연화
-            for ge_r in range(0, min(len(ge_pool) + 1, 7)):
+            # 전공 고정 후 교양 과목 조합 매칭
+            for ge_r in range(1, min(len(ge_pool) + 1, 6)):
                 for ge_combo in combinations(ge_pool, ge_r):
                     ge_combo_list = list(ge_combo)
                     ge_credits = sum(g["credit"] for g in ge_combo_list)
                     
-                    # 학점 마진 체크 (허용 오차를 ±1에서 ±2로 살짝 넓혀 유연성 확보)
+                    # 학점 마진 체크 (목표 학점 대조)
                     if abs((major_credits + ge_credits) - target_credits) > 2:
                         continue
                         
@@ -285,13 +298,13 @@ def generate_timetable_combinations(
                     if not is_valid_combination(full_combo):
                         continue
                         
-                    # 전공 개수에 비례한 강력한 가산점 배치 (전공 6개 조합이 무조건 이기도록)
-                    final_score = sum(c["base_score"] for c in full_combo) + (major_r * 8000)
+                    # 점수 계산: 전공 개수 가중치 + 기본 과목 점수
+                    final_score = sum(c["base_score"] for c in full_combo) + (major_r * 15000)
                     
-                    # 부족 교양 영역 만족도 보너스 연산
+                    # 부족 교양 영역 만족도 보너스 연산 (플래그 기반으로 정확하게 수정)
                     achieved_tracker = {}
                     for course in ge_combo_list:
-                        if any(neck["name"] == course["name"] for neck in ge_needed_pool):
+                        if course.get("is_needed_ge", False):  # 마킹된 플래그 조건으로 명확하게 검사
                             a_name, s_name = course["area"], course["subarea"]
                             if a_name not in achieved_tracker:
                                 achieved_tracker[a_name] = {"total": 0, "subareas": {}}
@@ -302,18 +315,20 @@ def generate_timetable_combinations(
                     for a_name, req_info in needed_general_areas.items():
                         if a_name in achieved_tracker:
                             if "총필요학점" in req_info:
-                                ge_bonus += min(achieved_tracker[a_name]["total"], req_info["총필요학점"]) * 200
+                                # 가산점 배율을 대폭 상향하여 일반 교양 조합을 압도하도록 설정
+                                ge_bonus += min(achieved_tracker[a_name]["total"], req_info["총필요학점"]) * 3000
                             else:
                                 for s_name, needed_sub_credit in req_info.items():
-                                    ge_bonus += min(achieved_tracker[a_name]["subareas"].get(s_name, 0), needed_sub_credit) * 200
+                                    ge_bonus += min(achieved_tracker[a_name]["subareas"].get(s_name, 0), needed_sub_credit) * 3000
                     
                     final_score += ge_bonus
                     all_combinations.append({"schedule": full_combo, "final_score": final_score})
                     
-                    if len(all_combinations) >= 150: # 탐색 풀을 늘려 6개짜리 조합이 뒤늦게 나와도 잘리지 않게 함
-                        found_enough = True
-                        break
-                if found_enough: break
+        # 조기 종료(found_enough)를 제거하는 대신, 메모리 과부하를 방지하기 위해 
+        # 대형 루프가 한 번 끝날 때마다 점수 순으로 상위 300개만 남기고 슬라이싱합니다.
+        if len(all_combinations) > 500:
+            all_combinations.sort(key=lambda x: x["final_score"], reverse=True)
+            all_combinations = all_combinations[:300]
 
     if all_combinations:
         # 점수 높은 순(전공 가득 + 부족교양 포함 + 성향 만족)으로 정렬하여 탑 3 반환
@@ -333,7 +348,7 @@ def generate_timetable_combinations(
         
     return []
 
-user_sentence = "시간표 추천해줘"
+user_sentence = "과제 적은 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -519,6 +534,21 @@ if timetable_results:
         # 2. 요일별 오전/오후 회피 성공 여부 분석 및 추천 사유 생성
         reason_segments = []
         
+        # 현재 이 대안 시간표에 포함된 부족 교양(Needed GE)들을 추적
+        included_needed_ge_areas = []
+        for course in selected_schedule:
+            if course.get("is_needed_ge", False):
+                # 대분류와 소분류 명칭을 이쁘게 엮어줌 (예: "개신기초교양[정보문해]")
+                ge_label = f"{course['area']}({course['subarea']})" if course['subarea'] else course['area']
+                if ge_label not in included_needed_ge_areas:
+                    included_needed_ge_areas.append(ge_label)
+
+        # 1. 부족 교양 맞춤 추천 문구 선제 주입
+        if included_needed_ge_areas:
+            reason_segments.append(
+                f"졸업을 위해 이수가 필요한 부족 교양 영역인 **{', '.join(included_needed_ge_areas)}** 과목을 탐색하여 최우선으로 반영했습니다."
+            )
+
         # [공강 요일 반영 여부 체크]
         actual_days = {slot["day"] for c in selected_schedule for slot in c["time_slots"]}
         achieved_empty_days = [day for day in exclude_days if day not in actual_days]
@@ -526,17 +556,13 @@ if timetable_results:
             reason_segments.append(f"{', '.join(achieved_empty_days)}요일 공강을 완벽히 확보했습니다.")
 
         if assign_pref:
-            # 이 시간표 조합에 포함된 교양(is_required=False) 과목들의 과제 성향 확인
             ge_courses_in_schedule = [c for c in selected_schedule if not c.get("is_required")]
-            
             if ge_courses_in_schedule:
-                # 사용자가 과제 적은 걸 원했고, 실제로 교양 과목들이 다 잘 필터링 되었는지 검증
                 if assign_pref == "과제적음":
                     reason_segments.append("과제 부담이 적은 교양 과목 위주로 구성된 시간표입니다.")
                 elif assign_pref == "과제많음":
                     reason_segments.append("과제 비중이 있는 과목들로 구성되었습니다.")
         
-
         # 요일별 오전/오후 회피 성공 여부 체크
         avoid_success_days = []
         avoid_fail_details = []
@@ -545,7 +571,6 @@ if timetable_results:
             target_day = avoid["day"]
             target_range = avoid["time_range"]
             
-            # 현재 시간표에서 해당 요일, 해당 시간대에 걸리는 수업이 있는지 확인
             is_violated = False
             for course in selected_schedule:
                 for slot in course["time_slots"]:
@@ -560,17 +585,14 @@ if timetable_results:
             else:
                 avoid_fail_details.append(f"{target_day}요일 {target_range}")
 
-        # 문장 엮기
         if avoid_success_days:
             reason_segments.append(f"요청하신 {', '.join(avoid_success_days)} 수업을 깔끔하게 피했습니다.")
         if avoid_fail_details:
-            # 어쩔 수 없이 들어간 경우 안내 (페널티 기반이라 들어갈 수도 있음)
             reason_segments.append(f"다만 전체 학점 맞춤을 위해 {', '.join(avoid_fail_details)} 수업이 불가피하게 일부 포함되었습니다.")
-        # -------------------------------------------------------------------------
 
         # [우선순위 추천 과목 체크]
         if required_course_names:
-            reason_segments.append(f"우선순위가 높은 추천 과목({', '.join(required_course_names)})이 포함되어 있습니다.")
+            reason_segments.append(f"우선순위가 높은 추천 전공 과목({', '.join(required_course_names)})이 포함되어 있습니다.")
 
         # 최종 합치기
         recommendation_reason = " ".join(reason_segments)
