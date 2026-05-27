@@ -14,6 +14,11 @@ TARGET_YEAR = 2026
 TARGET_SEMESTER = 1
 MIN_SEMESTER_CREDITS = 18
 MAX_SEMESTER_CREDITS = 21
+# 휴학/복학 이력 등으로 기준시점까지 실제 이수 가능 학기가 단순 산식보다 작은 학번 보정값.
+# 2021학번은 2026-1 직전 기준 최대 8학기까지만 이수한 상태로 생성한다.
+MAX_COMPLETED_SEMESTERS_BY_YEAR = {
+    2021: 8,
+}
 OUTPUT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = OUTPUT_DIR.parent
 
@@ -267,10 +272,12 @@ def semester_sequence(curriculum_year, completed_semesters):
 def calculate_max_completed_semesters(curriculum_year, target_year=TARGET_YEAR, target_semester=TARGET_SEMESTER):
     """
     추천 대상 학기 시작 직전까지 실제로 이수 완료 가능한 최대 학기 수를 계산
-    예: TARGET_YEAR=2026, TARGET_SEMESTER=1이면 2026학번은 0학기, 2025학번은 2학기, 2024학번은 4학기까지 가능
+    예: TARGET_YEAR=2026, TARGET_SEMESTER=1이면 2026학번은 0학기, 2025학번은 2학기, 2024학번은 4학기까지 가능.
+    단, MAX_COMPLETED_SEMESTERS_BY_YEAR에 지정된 학번은 휴학 등 보정값을 우선 적용한다.
     """
     completed = (target_year - curriculum_year) * 2 + (target_semester - 1)
-    return max(0, completed)
+    corrected_max = MAX_COMPLETED_SEMESTERS_BY_YEAR.get(curriculum_year, completed)
+    return max(0, min(completed, corrected_max))
 
 def calculate_current_grade(curriculum_year, target_year=TARGET_YEAR, target_semester=TARGET_SEMESTER):
     """추천 대상 학기 기준 학생의 현재 학년을 계산"""
@@ -300,7 +307,9 @@ def effective_target_credit_range(scenario, completed_semesters):
     scenario_min, scenario_max = scenario["target_completed_credits"]
     minimum_total = completed_semesters * MIN_SEMESTER_CREDITS
     maximum_total = completed_semesters * MAX_SEMESTER_CREDITS
-    target_min = max(scenario_min, minimum_total)
+    target_min = min(max(scenario_min, minimum_total), maximum_total)
+    if target_max < target_min:
+        target_max = target_min
     target_max = min(maximum_total, max(scenario_max, target_min + min(12, maximum_total - target_min)))
     return target_min, target_max
 
