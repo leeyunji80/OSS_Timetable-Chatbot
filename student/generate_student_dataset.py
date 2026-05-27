@@ -12,13 +12,15 @@ RANDOM_SEED = 42
 # 시간표 추천 대상 학기. 학생 데이터는 이 학기 시작 직전 상태로 생성
 TARGET_YEAR = 2026
 TARGET_SEMESTER = 1
-DOWNLOAD_DIR = Path(r"C:\Users\leeyu\Downloads")
+MIN_SEMESTER_CREDITS = 18
+MAX_SEMESTER_CREDITS = 21
 OUTPUT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = OUTPUT_DIR.parent
 
-LECTURES_PATH = DOWNLOAD_DIR / "lectures_database.csv"
-LIBERAL_ARTS_PATH = DOWNLOAD_DIR / "liberal_arts.csv"
-STANDARD_CURRICULUM_PATH = DOWNLOAD_DIR / "standard_curriculum.csv"
-GRADUATION_PATH = DOWNLOAD_DIR / "graduation.json"
+LECTURES_PATH = PROJECT_ROOT / "data_processor" / "lectures_database.csv"
+LIBERAL_ARTS_PATH = PROJECT_ROOT / "data_processor" / "liberal_arts.csv"
+STANDARD_CURRICULUM_PATH = PROJECT_ROOT / "graduation_rule" / "standard_curriculum.csv"
+GRADUATION_PATH = PROJECT_ROOT / "graduation_rule" / "graduation.json"
 
 STUDENTS_PATH = OUTPUT_DIR / "students.json"
 COURSE_HISTORY_PATH = OUTPUT_DIR / "course_history.csv"
@@ -193,7 +195,7 @@ def liberal_area_name(raw_area):
 
 def prepare_major_catalog(lectures):
     """전공 강의 CSV를 중복 분반 제거된 선택용 카탈로그로 변환한다."""
-    catalog = lectures.drop_duplicates("교과목 번호").copy()
+    catalog = lectures.drop_duplicates("교과목명").copy()
     catalog["교과목번호"] = catalog["교과목 번호"]
     catalog["영역"] = "전공"
     catalog["세부영역"] = catalog["이수구분"].map({"전공필수": "필수", "전공선택": "선택"})
@@ -203,7 +205,7 @@ def prepare_major_catalog(lectures):
 
 def prepare_liberal_catalog(liberal_arts):
     """교양 강의 CSV를 중복 분반 제거된 선택용 카탈로그로 변환한다."""
-    catalog = liberal_arts.drop_duplicates("교과목 번호").copy()
+    catalog = liberal_arts.drop_duplicates("교과목명").copy()
     catalog["교과목번호"] = catalog["교과목 번호"]
     catalog["영역"] = catalog["교양대분류"].map(liberal_area_name)
     catalog["세부영역"] = catalog["교양소분류"]
@@ -306,10 +308,10 @@ def is_standard_match(course_name, standard_names):
             return True
     return False
 
-def can_take_course(course, selected_course_numbers, academic_grade):
+def can_take_course(course, selected_course_names, academic_grade):
     """이미 수강한 과목과 학년 수준을 고려해 후보 과목을 거른다."""
     return (
-        course["교과목번호"] not in selected_course_numbers
+        course["교과목명"] not in selected_course_names
         and int(course["학점"]) > 0
         and int(course["권장학년"]) <= academic_grade
     )
@@ -349,7 +351,7 @@ def row_to_history(course, scenario, semester):
     }
 
 
-def take_courses(candidates, selected_course_numbers, max_credits, max_courses=None):
+def take_courses(candidates, selected_course_names, max_credits, max_courses=None):
     """후보 목록에서 남은 학점 범위 안에 들어가는 과목을 랜덤으로 고른다."""
     selected = []
     total = 0
@@ -363,7 +365,7 @@ def take_courses(candidates, selected_course_numbers, max_credits, max_courses=N
         if total + credits > max_credits:
             continue
         selected.append(course)
-        selected_course_numbers.add(course["교과목번호"])
+        selected_course_names.add(course["교과목명"])
         total += credits
         if max_courses is not None and len(selected) >= max_courses:
             break
@@ -371,7 +373,7 @@ def take_courses(candidates, selected_course_numbers, max_credits, max_courses=N
 
 def select_major_courses(
     major_catalog,
-    selected_course_numbers,
+    selected_course_names,
     academic_grade,
     max_credits,
     standard_names,
@@ -383,7 +385,7 @@ def select_major_courses(
     """전공필수/전공선택 과목을 실제 lectures_database.csv 카탈로그에서 선택한다."""
     candidates = []
     for _, course in major_catalog.iterrows():
-        if not can_take_course(course, selected_course_numbers, academic_grade):
+        if not can_take_course(course, selected_course_names, academic_grade):
             continue
         if preferred_subarea and course["세부영역"] != preferred_subarea:
             continue
@@ -395,11 +397,11 @@ def select_major_courses(
         candidates.append((standard_match, course))
 
     candidates.sort(key=lambda item: item[0], reverse=True)
-    return take_courses(candidates, selected_course_numbers, max_credits, max_courses=max_courses)
+    return take_courses(candidates, selected_course_names, max_credits, max_courses=max_courses)
 
 def select_liberal_courses(
     liberal_catalog,
-    selected_course_numbers,
+    selected_course_names,
     academic_grade,
     max_credits,
     standard_names,
@@ -412,7 +414,7 @@ def select_liberal_courses(
     """교양 과목을 실제 liberal_arts.csv 카탈로그에서 선택한다."""
     candidates = []
     for _, course in liberal_catalog.iterrows():
-        if not can_take_course(course, selected_course_numbers, academic_grade):
+        if not can_take_course(course, selected_course_names, academic_grade):
             continue
         if preferred_area and course["영역"] != preferred_area:
             continue
@@ -426,7 +428,7 @@ def select_liberal_courses(
         candidates.append((standard_match, course))
 
     candidates.sort(key=lambda item: item[0], reverse=True)
-    return take_courses(candidates, selected_course_numbers, max_credits, max_courses=max_courses)
+    return take_courses(candidates, selected_course_names, max_credits, max_courses=max_courses)
 
 def distribute_credit_targets(total_credits, completed_semesters, scenario):
     """총 목표학점을 현실적인 학기별 목표학점으로 나눈다."""
