@@ -15,15 +15,15 @@
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 9
+          "completed": 15
         },
         "일반": {
           "required": 9,
-          "completed": 9
+          "completed": 6
         },
         "확대": {
           "required": 3,
-          "completed": 6
+          "completed": 10
         },
         "OCU_기타": {
           "required": 0,
@@ -37,16 +37,16 @@
       "전공": {
         "필수": {
           "required": 28,
-          "completed": 14
+          "completed": 17
         },
         "선택": {
           "required": 38,
-          "completed": 27
+          "completed": 30
         }
       },
       "졸업학점": {
         "required": 140,
-        "completed": 80
+        "completed": 93
       }
     }
   },
@@ -62,66 +62,15 @@
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 15
+          "completed": 21
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 12
+          "completed": 25
         },
         "일반": {
           "required": 9,
-          "completed": 6
-        },
-        "확대": {
-          "required": 3,
-          "completed": 6
-        },
-        "OCU_기타": {
-          "required": 0,
-          "completed": 0
-        }
-      },
-      "일반선택": {
-        "required": 0,
-        "completed": 0
-      },
-      "전공": {
-        "필수": {
-          "required": 28,
-          "completed": 4
-        },
-        "선택": {
-          "required": 38,
-          "completed": 42
-        }
-      },
-      "졸업학점": {
-        "required": 140,
-        "completed": 85
-      }
-    }
-  },
-  {
-    "student_id": "20210003",
-    "name": "박교양",
-    "grade": 3,
-    "college": "전자정보대학",
-    "department": "컴퓨터공학과",
-    "completed_semesters": 5,
-    "curriculum_year": 2021,
-    "credits": {
-      "교양": {
-        "개신기초": {
-          "required": 15,
-          "completed": 15
-        },
-        "자연이공계기초": {
-          "required": 6,
-          "completed": 6
-        },
-        "일반": {
-          "required": 9,
-          "completed": 3
+          "completed": 21
         },
         "확대": {
           "required": 3,
@@ -139,7 +88,58 @@
       "전공": {
         "필수": {
           "required": 28,
-          "completed": 10
+          "completed": 7
+        },
+        "선택": {
+          "required": 38,
+          "completed": 30
+        }
+      },
+      "졸업학점": {
+        "required": 140,
+        "completed": 109
+      }
+    }
+  },
+  {
+    "student_id": "20210003",
+    "name": "박교양",
+    "grade": 3,
+    "college": "전자정보대학",
+    "department": "컴퓨터공학과",
+    "completed_semesters": 5,
+    "curriculum_year": 2021,
+    "credits": {
+      "교양": {
+        "개신기초": {
+          "required": 15,
+          "completed": 24
+        },
+        "자연이공계기초": {
+          "required": 6,
+          "completed": 15
+        },
+        "일반": {
+          "required": 9,
+          "completed": 0
+        },
+        "확대": {
+          "required": 3,
+          "completed": 8
+        },
+        "OCU_기타": {
+          "required": 0,
+          "completed": 0
+        }
+      },
+      "일반선택": {
+        "required": 0,
+        "completed": 0
+      },
+      "전공": {
+        "필수": {
+          "required": 28,
+          "completed": 17
         },
         "선택": {
           "required": 38,
@@ -148,7 +148,7 @@
       },
       "졸업학점": {
         "required": 140,
-        "completed": 66
+        "completed": 91
       }
     }
   },
@@ -164,19 +164,70 @@
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 6
+          "completed": 18
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 13
+          "completed": 18
         },
         "일반": {
           "required": 9,
-          "completed": 3
+          "completed": 9
         },
         "확대": {
           "required": 3,
-          "completed": 1
+          "completed": 8
+        },
+        "OCU_기타": {
+          "required": 0,
+          "completed": 0
+        }
+      },
+      "일반선택": {
+        "required": 0,
+        "completed": 0
+      },
+      "전공": {
+        "필수": {
+          "required": 28,
+          "completed": 17
+        },
+        "선택": {
+          "required": 38,
+          "completed": 30
+        }
+      },
+      "졸업학점": {
+        "required": 140,
+        "completed": 100
+      }
+    }
+  },
+  {
+    "student_id": "20210005",
+    "name": "정위험",
+    "grade": 4,
+    "college": "전자정보대학",
+    "department": "컴퓨터공학과",
+    "completed_semesters": 7,
+    "curriculum_year": 2021,
+    "credits": {
+      "교양": {
+        "개신기초": {
+          "required": 15,
+          "completed": 24
+        },
+        "자연이공계기초": {
+          "required": 6,
+          "completed": 33
+        },
+        "일반": {
+          "required": 9,
+          "completed": 30
+        },
+        "확대": {
+          "required": 3,
+          "completed": 31
         },
         "OCU_기타": {
           "required": 0,
@@ -194,28 +245,181 @@
         },
         "선택": {
           "required": 38,
+          "completed": 12
+        }
+      },
+      "졸업학점": {
+        "required": 140,
+        "completed": 141
+      }
+    }
+  },
+  {
+    "student_id": "20260001",
+    "name": "한새내",
+    "grade": 1,
+    "college": "전자정보대학",
+    "department": "컴퓨터공학과",
+    "completed_semesters": 0,
+    "curriculum_year": 2026,
+    "credits": {
+      "교양": {
+        "개신기초": {
+          "required": 15,
+          "completed": 0
+        },
+        "자연이공계기초": {
+          "required": 6,
+          "completed": 0
+        },
+        "일반": {
+          "required": 9,
+          "completed": 0
+        },
+        "확대": {
+          "required": 3,
+          "completed": 0
+        },
+        "OCU_기타": {
+          "required": 0,
+          "completed": 0
+        }
+      },
+      "일반선택": {
+        "required": 0,
+        "completed": 0
+      },
+      "전공": {
+        "필수": {
+          "required": 31,
+          "completed": 0
+        },
+        "선택": {
+          "required": 35,
+          "completed": 0
+        }
+      },
+      "졸업학점": {
+        "required": 130,
+        "completed": 0
+      }
+    }
+  },
+  {
+    "student_id": "20250001",
+    "name": "오소포",
+    "grade": 2,
+    "college": "전자정보대학",
+    "department": "컴퓨터공학과",
+    "completed_semesters": 2,
+    "curriculum_year": 2025,
+    "credits": {
+      "교양": {
+        "개신기초": {
+          "required": 15,
+          "completed": 15
+        },
+        "자연이공계기초": {
+          "required": 6,
+          "completed": 12
+        },
+        "일반": {
+          "required": 9,
+          "completed": 3
+        },
+        "확대": {
+          "required": 3,
+          "completed": 4
+        },
+        "OCU_기타": {
+          "required": 0,
+          "completed": 0
+        }
+      },
+      "일반선택": {
+        "required": 0,
+        "completed": 0
+      },
+      "전공": {
+        "필수": {
+          "required": 31,
+          "completed": 3
+        },
+        "선택": {
+          "required": 35,
+          "completed": 0
+        }
+      },
+      "졸업학점": {
+        "required": 140,
+        "completed": 37
+      }
+    }
+  },
+  {
+    "student_id": "20240001",
+    "name": "서주니",
+    "grade": 3,
+    "college": "전자정보대학",
+    "department": "컴퓨터공학과",
+    "completed_semesters": 4,
+    "curriculum_year": 2024,
+    "credits": {
+      "교양": {
+        "개신기초": {
+          "required": 15,
+          "completed": 12
+        },
+        "자연이공계기초": {
+          "required": 6,
+          "completed": 16
+        },
+        "일반": {
+          "required": 9,
+          "completed": 12
+        },
+        "확대": {
+          "required": 3,
+          "completed": 8
+        },
+        "OCU_기타": {
+          "required": 0,
+          "completed": 0
+        }
+      },
+      "일반선택": {
+        "required": 0,
+        "completed": 0
+      },
+      "전공": {
+        "필수": {
+          "required": 28,
+          "completed": 7
+        },
+        "선택": {
+          "required": 38,
           "completed": 18
         }
       },
       "졸업학점": {
         "required": 140,
-        "completed": 52
+        "completed": 73
       }
     }
   },
   {
-    "student_id": "20210005",
-    "name": "정위험",
+    "student_id": "20230001",
+    "name": "윤시니",
     "grade": 4,
     "college": "전자정보대학",
     "department": "컴퓨터공학과",
-    "completed_semesters": 7,
-    "curriculum_year": 2021,
+    "completed_semesters": 6,
+    "curriculum_year": 2023,
     "credits": {
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 9
+          "completed": 24
         },
         "자연이공계기초": {
           "required": 6,
@@ -227,161 +431,8 @@
         },
         "확대": {
           "required": 3,
-          "completed": 29
-        },
-        "OCU_기타": {
-          "required": 0,
-          "completed": 0
-        }
-      },
-      "일반선택": {
-        "required": 0,
-        "completed": 0
-      },
-      "전공": {
-        "필수": {
-          "required": 28,
-          "completed": 8
-        },
-        "선택": {
-          "required": 38,
-          "completed": 4
-        }
-      },
-      "졸업학점": {
-        "required": 140,
-        "completed": 90
-      }
-    }
-  },
-  {
-    "student_id": "20260001",
-    "name": "한새내",
-    "grade": 1,
-    "college": "전자정보대학",
-    "department": "컴퓨터공학과",
-    "completed_semesters": 1,
-    "curriculum_year": 2026,
-    "credits": {
-      "교양": {
-        "개신기초": {
-          "required": 15,
-          "completed": 9
-        },
-        "자연이공계기초": {
-          "required": 6,
-          "completed": 6
-        },
-        "일반": {
-          "required": 9,
-          "completed": 0
-        },
-        "확대": {
-          "required": 3,
-          "completed": 0
-        },
-        "OCU_기타": {
-          "required": 0,
-          "completed": 0
-        }
-      },
-      "일반선택": {
-        "required": 0,
-        "completed": 0
-      },
-      "전공": {
-        "필수": {
-          "required": 31,
-          "completed": 3
-        },
-        "선택": {
-          "required": 35,
-          "completed": 0
-        }
-      },
-      "졸업학점": {
-        "required": 130,
-        "completed": 18
-      }
-    }
-  },
-  {
-    "student_id": "20250001",
-    "name": "오소포",
-    "grade": 2,
-    "college": "전자정보대학",
-    "department": "컴퓨터공학과",
-    "completed_semesters": 3,
-    "curriculum_year": 2025,
-    "credits": {
-      "교양": {
-        "개신기초": {
-          "required": 15,
-          "completed": 15
-        },
-        "자연이공계기초": {
-          "required": 6,
-          "completed": 9
-        },
-        "일반": {
-          "required": 9,
-          "completed": 3
-        },
-        "확대": {
-          "required": 3,
-          "completed": 3
-        },
-        "OCU_기타": {
-          "required": 0,
-          "completed": 0
-        }
-      },
-      "일반선택": {
-        "required": 0,
-        "completed": 0
-      },
-      "전공": {
-        "필수": {
-          "required": 31,
           "completed": 7
         },
-        "선택": {
-          "required": 35,
-          "completed": 9
-        }
-      },
-      "졸업학점": {
-        "required": 140,
-        "completed": 46
-      }
-    }
-  },
-  {
-    "student_id": "20240001",
-    "name": "서주니",
-    "grade": 3,
-    "college": "전자정보대학",
-    "department": "컴퓨터공학과",
-    "completed_semesters": 5,
-    "curriculum_year": 2024,
-    "credits": {
-      "교양": {
-        "개신기초": {
-          "required": 15,
-          "completed": 15
-        },
-        "자연이공계기초": {
-          "required": 6,
-          "completed": 9
-        },
-        "일반": {
-          "required": 9,
-          "completed": 9
-        },
-        "확대": {
-          "required": 3,
-          "completed": 6
-        },
         "OCU_기타": {
           "required": 0,
           "completed": 0
@@ -394,7 +445,7 @@
       "전공": {
         "필수": {
           "required": 28,
-          "completed": 13
+          "completed": 17
         },
         "선택": {
           "required": 38,
@@ -403,58 +454,7 @@
       },
       "졸업학점": {
         "required": 140,
-        "completed": 82
-      }
-    }
-  },
-  {
-    "student_id": "20230001",
-    "name": "윤시니",
-    "grade": 4,
-    "college": "전자정보대학",
-    "department": "컴퓨터공학과",
-    "completed_semesters": 7,
-    "curriculum_year": 2023,
-    "credits": {
-      "교양": {
-        "개신기초": {
-          "required": 15,
-          "completed": 18
-        },
-        "자연이공계기초": {
-          "required": 6,
-          "completed": 12
-        },
-        "일반": {
-          "required": 9,
-          "completed": 9
-        },
-        "확대": {
-          "required": 3,
-          "completed": 4
-        },
-        "OCU_기타": {
-          "required": 0,
-          "completed": 0
-        }
-      },
-      "일반선택": {
-        "required": 0,
-        "completed": 0
-      },
-      "전공": {
-        "필수": {
-          "required": 28,
-          "completed": 14
-        },
-        "선택": {
-          "required": 38,
-          "completed": 48
-        }
-      },
-      "졸업학점": {
-        "required": 140,
-        "completed": 105
+        "completed": 118
       }
     }
   }
