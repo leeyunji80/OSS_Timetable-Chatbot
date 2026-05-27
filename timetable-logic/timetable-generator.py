@@ -129,7 +129,9 @@ def generate_timetable_combinations(
     for _, row in filtered_df.iterrows():
         course_name = row['교과목명']
         is_ge = '교양' in str(row['이수구분'])
-        is_recommended_major = (not is_ge) and (course_name in recommended_major_set)
+        is_recommended_major = (not is_ge) and (
+            (course_name in recommended_major_set) or ("전공필수" in str(row['이수구분']))
+        )
         
         if not is_ge and not is_recommended_major:
             continue
@@ -209,6 +211,7 @@ def generate_timetable_combinations(
             else:
                 course_item["base_score"] += 10
                 ge_normal_pool.append(course_item)  # 3순위 일반 교양 바구니
+                
 
     # -------------------------------------------------------------
     # [B] 후보 풀 다변화 
@@ -238,7 +241,7 @@ def generate_timetable_combinations(
     # -------------------------------------------------------------
     # [C] 전공 우선 조합 알고리즘 (역순 탐색으로 전공 극대화)
     # -------------------------------------------------------------
-    max_major_r = min(len(major_pool), 6) # 후보 풀에 있는 전공 최대 개수 (최대 6개)
+    max_major_r = min(len(major_pool), 8) # 후보 풀에 있는 전공 최대 개수 (최대 8개)
     min_major_r = min(len(major_pool), 2) # 최소 전공 개수 (최소 2개)
 
     # step을 -1로 주어 전공을 가장 많이 선택하는 조합부터 거꾸로 탐색
@@ -268,7 +271,7 @@ def generate_timetable_combinations(
                     ge_combo_list = list(ge_combo)
                     
                     ge_credits = sum(g["credit"] for g in ge_combo_list)
-                    # 학점 마진 체크 (전공 + 교양)
+                    
                     if abs((major_credits + ge_credits) - target_credits) > 1:
                         continue
                         
@@ -325,7 +328,7 @@ def generate_timetable_combinations(
         
     return []
 
-user_sentence = "목요일 공강 시간표 추천해줘"
+user_sentence = "시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -368,7 +371,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20230001"
+login_student_id = "20210001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
