@@ -102,70 +102,25 @@ def evaluate_team_project(row):
 
     return "없음"
 
-def generate_timetable_combinations(recommended_major_courses,
-    required_ge_areas, filtered_df, target_credits, empty_days, avoid_time_slots, user_preferences):
-
-    required_ge_areas_cleaned = {
-        str(area).strip(): credit
-        for area, credit in required_ge_areas.items()
-    }
-
-    course_row_map = {
-        row["교과목명"]: row
-        for _, row in filtered_df.iterrows()
-    }
+def generate_timetable_combinations(recommended_courses_df, filtered_df, target_credits, empty_days, avoid_time_slots, user_preferences):
     # 추천 과목 이름 추출
-    recommended_course_names = set(recommended_major_courses)
+    recommended_course_names = set(recommended_courses_df)
     
     major_pool = []
-    priority_ge_pool = []
-    normal_ge_pool = []
+    ge_pool = []
 
     assign_pref = user_preferences.get("assignment_preference")     # "과제적음", "과제많음" 또는 None
-    team_pref = user_preferences.get("team_project_preference")
+    
 
     # 전체 데이터 프레임을 돌면서 전공(추천과목)과 교양을 분류하여 담습니다.
     for _, row in filtered_df.iterrows():
-        is_priority_ge = False
         course_name = row['교과목명']
         is_ge = '교양' in row['이수구분']
         is_recommended = course_name in recommended_course_names
         
-        major_category = str(
-            row.get("교양대분류", "")
-        ).strip()
-
-        sub_category = str(
-            row.get("교양소분류", "")
-        ).strip()
-
-        course_credit = int(row["학점"]) if pd.notna(row["학점"]) else 0
-
-
-        # 전공 과목 처리
-        if not is_ge:
-
-            if not is_recommended:
-                continue
-
-        # 교양 과목 처리
-        else:
-
-            required_ge_areas_cleaned = {
-                str(area).strip(): credit
-                for area, credit in required_ge_areas.items()
-            }
-
-   
-
-            remaining_credit = required_ge_areas_cleaned.get(
-                sub_category,
-                0
-            )
-
-
-            is_priority_ge = remaining_credit > 0
-            
+        # 전공 과목인데 추천 리스트에 없거나, 교양 과목이 아니면 건너뜁니다.
+        if not is_ge and not is_recommended:
+            continue
 
         if not is_recommended: # 필수/추천 전공 과목은 졸업을 위해 필터링 면제
             
@@ -181,19 +136,6 @@ def generate_timetable_combinations(recommended_major_courses,
                 # 사용자가 과제 많은 걸 원하는데, "적다"가 나오면 패스 (취향에 따라 보통이다도 패스 가능)
                 if assign_pref == "과제많음" and current_load == "적다":
                     continue
-            
-            # 팀플 선호도 필터링
-            if team_pref:
-
-                current_team_status = evaluate_team_project(row)
-
-                # 팀플 없는 수업 선호
-                if team_pref == "팀플없음" and current_team_status == "많음":
-                    continue
-
-                # 팀플 있는 수업 선호
-                if team_pref == "팀플많음" and current_team_status == "없음":
-                    continue
 
         time_slots = parse_day_and_period(row['요일'], row['교시'])
         course_item = {
@@ -202,42 +144,20 @@ def generate_timetable_combinations(recommended_major_courses,
             "room": row['강의室'].split('(')[0] if '강의室' in row and pd.notna(row['강의室']) else (row['강의실'].split('(')[0] if '강의실' in row and pd.notna(row['강의실']) else ""),
             "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots,
-            "is_required": is_recommended,
-            "is_priority_ge": is_priority_ge
+            "is_required": is_recommended
         }
         
         if is_ge:
-
-            if course_item["is_priority_ge"]:
-                priority_ge_pool.append(course_item)
-
-            else:
-                normal_ge_pool.append(course_item)
-
+            ge_pool.append(course_item)
         else:
             major_pool.append(course_item)
 
-    if len(normal_ge_pool) > 30:
+    #무한 루프(오랜 멈춤)를 방지하기 위해 교양 과목 풀을 최대 30개로 제한합니다.
+    if len(ge_pool) > 30:
+        ge_pool = random.sample(ge_pool, 30)
 
-        normal_ge_pool = random.sample(
-            normal_ge_pool,
-            30
-        )
-
-    course_pool = (
-    major_pool
-    + priority_ge_pool
-    + normal_ge_pool
-    )
-    #디버깅을 위한 출력
-    print("\n===== 전공 과목 수 =====")
-    print(len(major_pool))
-
-    print("\n===== 부족 교양 과목 수 =====")
-    print(len(priority_ge_pool))
-
-    print("\n===== 일반 교양 과목 수 =====")
-    print(len(normal_ge_pool))
+    # 전공 필수/추천 과목과 제한된 교양 과목을 합쳐서 최종 과목 풀을 만듭니다.
+    course_pool = major_pool + ge_pool
 
     all_combinations = []
     
@@ -251,9 +171,7 @@ def generate_timetable_combinations(recommended_major_courses,
     else:
         start_r = 4
     # 조합 탐색 시작 
-    max_r = min(start_r + 2, len(course_pool) + 1)
-
-    for r in range(start_r, max_r):
+    for r in range(start_r, len(course_pool) + 1):
         for combo in combinations(course_pool, r):
             iteration_count += 1
             
@@ -265,48 +183,10 @@ def generate_timetable_combinations(recommended_major_courses,
                 return []
 
             combo_list = list(combo)
-
-            # -----------------------------
-            # 부족 교양 학점 충족 여부 검사
-            # -----------------------------
-            ge_credit_progress = {
-                area: 0
-                for area in required_ge_areas_cleaned
-            }
-
-            for course in combo_list:
-
-                if not course.get("is_priority_ge"):
-                    continue
-
-                course_name = course["name"]
-
-                row = course_row_map.get(course_name)
-
-                if row is None:
-                   continue
-
-                sub_category = str(
-                    row.get("교양소분류", "")
-                ).strip()
-
-                ge_credit_progress[sub_category] += course["credit"]
-
-             # 부족 학점 충족 여부 확인
-            is_ge_requirement_satisfied = True
-
-            for area, required_credit in required_ge_areas_cleaned.items():
-
-                 if ge_credit_progress.get(area, 0) < required_credit:
-                     is_ge_requirement_satisfied = False
-                     break
-
-            if not is_ge_requirement_satisfied:
-                continue
             
             # 학점 총합 계산
             total_credits = sum(course["credit"] for course in combo_list)
-            if total_credits != target_credits:
+            if abs(total_credits - target_credits)>1:
                 continue
 
             # 시간표 충돌 및 공강 요일 검사
@@ -346,44 +226,28 @@ def generate_timetable_combinations(recommended_major_courses,
                                 avoid_penalty += 1
 
             # 5. 필수 과목 개수 카운트
-            required_count = sum(
-                1 for course in combo_list
-                if course["is_required"]
-            )
+            required_count = sum(1 for course in combo_list if course["is_required"])
 
-            priority_ge_count = sum(
-                 1 for course in combo_list
-                 if course.get("is_priority_ge", False)
-            )
             # 6. 유효한 시간표 조합 안전하게 딱 한 번만 저장 (페널티 포함)
             all_combinations.append({
                 "schedule": combo_list,
                 "required_count": required_count,
-                "priority_ge_count": priority_ge_count,
                 "avoid_penalty": avoid_penalty
             })
 
             # 7. 최적의 시간표 300개를 찾았다면 즉시 루프 종료 후 반환
             if len(all_combinations) >= 300:
-                all_combinations.sort( key=lambda x: (
-                    -x["required_count"],
-                    -x["priority_ge_count"],
-                     x["avoid_penalty"]
-                ))
+                all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
                 return [item["schedule"] for item in all_combinations[:3]]
 
     # 8. 5만 번 탐색을 마쳤거나 전체 루프가 끝났을 때의 최종 정렬 반환
     if all_combinations:
-        all_combinations.sort(key=lambda x: (
-            -x["required_count"],
-            -x["priority_ge_count"],
-            x["avoid_penalty"]
-        ))
+        all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
         return [item["schedule"] for item in all_combinations[:3]]
         
     return []
 
-user_sentence = "과제 적은 시간표 추천해줘"
+user_sentence = "금요일 공강인 18학점 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -426,7 +290,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20240001"
+login_student_id = "20250001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
@@ -436,41 +300,15 @@ graduation_analysis = get_final_recommendations(
     students_json_data=students_list
 )
 
-recommended_major_courses = graduation_analysis.get(
-    "recommended_major_courses",
-    []
-)
-
-required_ge_areas = graduation_analysis.get(
-    "needed_general_areas",
-    {}
-)
-
-print("추천 전공 과목:")
-print(recommended_major_courses)
-
-print("부족 교양 영역:")
-print(required_ge_areas)
+# 최종 추천 과목 리스트 추출
+recommended_courses = graduation_analysis.get("recommended_courses", [])
 
 # 1. 파일 경로에서 데이터를 읽어와 하나로 합쳐줍니다.
 all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_PATH)], ignore_index=True)
-all_lectures_df.columns = (
-    all_lectures_df.columns
-    .str.strip()
-)
-print(all_lectures_df.columns.tolist())
-print("===== 이수구분 종류 =====")
-print(all_lectures_df["이수구분"].unique())
-lecture_row_map = {
-    row["교과목명"]: row
-    for _, row in all_lectures_df.iterrows()
- }
 
 user_preferences_input = {
     "assignment_preference": parsed_data.get("assignment_preference"),
-    "team_project_preference": parsed_data.get("team_project_preference"),
     "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선")
-
 }
 
 import re
@@ -483,8 +321,7 @@ else:
 
 # 2. 딕셔너리에 뭉쳐있던 인자들을 하나씩 풀어서 정확한 매개변수 이름으로 전달합니다.
 timetable_results = generate_timetable_combinations(
-    recommended_major_courses=recommended_major_courses,
-    required_ge_areas=required_ge_areas,
+    recommended_courses_df=recommended_courses,
     filtered_df=all_lectures_df,
     target_credits=target_credit_int,
     empty_days=slots_input["exclude_days"],
@@ -529,7 +366,6 @@ if timetable_results:
         clean_result.append(clean_course)
 
 assign_pref = parsed_data.get("assignment_preference")
-team_pref = parsed_data.get("team_project_preference")
 
 if timetable_results:
     print("\n-------- [시각화 팀 전달용 최종 JSON 출력] --------")
@@ -566,23 +402,14 @@ if timetable_results:
                 if slot["start_period"] < 5:
                     morning_course_count += 1
 
-           
-
-            course_row = lecture_row_map.get(course["name"])
-
-            if course_row is not None:
-                load_status = evaluate_load(course_row)
-                raw_ratio = pd.to_numeric(
-                    course_row.get('평가_과제(%)'),
-                    errors='coerce'
-                ) or 0
-
-                team_status = evaluate_team_project(course_row)
-
+            matched_rows = all_lectures_df[all_lectures_df['교과목명'] == course["name"]]
+            if not matched_rows.empty:
+                course_row = matched_rows.iloc[0]
+                load_status = evaluate_load(course_row)  # "많다", "보통이다", "적다"
+                raw_ratio = pd.to_numeric(course_row.get('평가_과제(%)'), errors='coerce') or 0
             else:
                 load_status = "정보 없음"
                 raw_ratio = 0
-                team_status = "정보 없음"
 
             course_color = course_color_map[course["name"]]
             
@@ -594,7 +421,6 @@ if timetable_results:
                 # 임시 출력
                 "assignment_load_test": load_status,         # "적다", "보통이다", "많다"
                 "assignment_percentage_test": f"{raw_ratio}%", # "15.0%" 형태
-                "team_project_status": team_status,
 
                 "background_color": course_color["background"],
                 "text_color": course_color["text"],
@@ -621,18 +447,7 @@ if timetable_results:
                     reason_segments.append("과제 부담이 적은 교양 과목 위주로 구성된 시간표입니다.")
                 elif assign_pref == "과제많음":
                     reason_segments.append("과제 비중이 있는 과목들로 구성되었습니다.")
-       
-        if team_pref:
-
-            if team_pref == "팀플없음":
-                reason_segments.append(
-                    "팀 프로젝트 부담이 적은 과목 위주로 구성되었습니다."
-                )
-
-            elif team_pref == "팀플많음":
-                reason_segments.append(
-                    "협업 중심의 팀 프로젝트 과목이 포함되어 있습니다."
-                )
+        
 
         # 요일별 오전/오후 회피 성공 여부 체크
         avoid_success_days = []
