@@ -537,23 +537,19 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
     liberal_catalog = prepare_liberal_catalog(liberal_arts)
     required = graduation_requirements(graduation, scenario["curriculum_year"])
 
-    completed_semesters = calculate_max_completed_semesters(
-        scenario["curriculum_year"],
-        TARGET_YEAR,
-        TARGET_SEMESTER,
-    )
+    completed_semesters = effective_completed_semesters(scenario)
 
     if completed_semesters == 0:
         history = pd.DataFrame(columns=COURSE_HISTORY_COLUMNS)
         validate_history(history, lectures, liberal_arts, scenario)
         return history
 
-    target_min, target_max = scenario["target_completed_credits"]
+    target_min, target_max = effective_target_credit_range(scenario, completed_semesters)
     target_total = random.randint(target_min, target_max)
     semesters = semester_sequence(scenario["curriculum_year"], completed_semesters)
     semester_targets = distribute_credit_targets(target_total, len(semesters), scenario)
 
-    selected_course_numbers = set()
+    selected_course_names = set()
     rows = []
 
     for semester, semester_target in zip(semesters, semester_targets):
@@ -571,7 +567,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             standard_room = min(semester_target, 18)
             liberal_standard = select_liberal_courses(
                 liberal_catalog,
-                selected_course_numbers,
+                selected_course_names,
                 academic_grade,
                 standard_room,
                 standard_names,
@@ -583,7 +579,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             remaining_room = max(0, standard_room - sum(row["학점"] for row in term_rows))
             major_standard = select_major_courses(
                 major_catalog,
-                selected_course_numbers,
+                selected_course_names,
                 academic_grade,
                 remaining_room,
                 standard_names,
@@ -599,7 +595,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
                 break
             courses = select_liberal_courses(
                 liberal_catalog,
-                selected_course_numbers,
+                selected_course_names,
                 academic_grade,
                 semester_target - term_credits,
                 [],
@@ -621,7 +617,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             if category == "major_required":
                 courses = select_major_courses(
                     major_catalog,
-                    selected_course_numbers,
+                    selected_course_names,
                     academic_grade,
                     remaining,
                     [],
@@ -632,7 +628,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             elif category == "major_elective":
                 courses = select_major_courses(
                     major_catalog,
-                    selected_course_numbers,
+                    selected_course_names,
                     academic_grade,
                     remaining,
                     [],
@@ -643,7 +639,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             elif category == "basic_liberal":
                 courses = select_liberal_courses(
                     liberal_catalog,
-                    selected_course_numbers,
+                    selected_course_names,
                     academic_grade,
                     remaining,
                     [],
@@ -654,7 +650,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             elif category == "science_liberal":
                 courses = select_liberal_courses(
                     liberal_catalog,
-                    selected_course_numbers,
+                    selected_course_names,
                     academic_grade,
                     remaining,
                     [],
@@ -665,7 +661,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             elif category == "general_liberal":
                 courses = select_liberal_courses(
                     liberal_catalog,
-                    selected_course_numbers,
+                    selected_course_names,
                     academic_grade,
                     remaining,
                     [],
@@ -676,7 +672,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             else:
                 courses = select_liberal_courses(
                     liberal_catalog,
-                    selected_course_numbers,
+                    selected_course_names,
                     academic_grade,
                     remaining,
                     [],
@@ -690,7 +686,9 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             add_courses_to_term(term_rows, courses, scenario, semester)
            
             # 목표 학점 조합이 1~2학점 차이로 맞지 않아도 학기 최소 학점은 지키도록 보충
-        low, high = scenario.get("semester_credit_range", [12, 18])
+        raw_low, raw_high = scenario.get("semester_credit_range", [MIN_SEMESTER_CREDITS, MAX_SEMESTER_CREDITS])
+        low = max(raw_low, MIN_SEMESTER_CREDITS)
+        high = max(raw_high, MAX_SEMESTER_CREDITS, low)
         top_up_attempts = 0
         while sum(row["학점"] for row in term_rows) < low and top_up_attempts < 40:
             top_up_attempts += 1
@@ -701,7 +699,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             if random.random() < 0.55:
                 courses = select_liberal_courses(
                     liberal_catalog,
-                    selected_course_numbers,
+                    selected_course_names,
                     academic_grade,
                     room,
                     [],
@@ -711,7 +709,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
             else:
                 courses = select_major_courses(
                     major_catalog,
-                    selected_course_numbers,
+                    selected_course_names,
                     academic_grade,
                     room,
                     [],
@@ -730,7 +728,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
 def validate_history(history, lectures, liberal_arts, scenario):
     """생성된 이력이 실제 과목만 사용했고 중복 수강이 없는지 검사한다."""
     if history.empty:
-        if calculate_max_completed_semesters(scenario["curriculum_year"], TARGET_YEAR, TARGET_SEMESTER) == 0:
+        if effective_completed_semesters(scenario) == 0:
             return
         
         raise ValueError(f"{scenario['student_id']} 수강이력이 생성되지 않았습니다.")
@@ -740,12 +738,16 @@ def validate_history(history, lectures, liberal_arts, scenario):
     if missing_courses:
         raise ValueError(f"원본 CSV에 없는 과목이 포함되었습니다: {missing_courses}")
 
-    duplicated = history[history.duplicated(["student_id", "교과목번호"], keep=False)]
+    duplicated = history[history.duplicated(["student_id", "교과목명"], keep=False)]
     if not duplicated.empty:
         raise ValueError(
             "중복 수강 과목이 있습니다:\n"
             + duplicated[["student_id", "교과목번호", "교과목명"]].to_string(index=False)
         )
+
+    raw_low, raw_high = scenario.get("semester_credit_range", [MIN_SEMESTER_CREDITS, MAX_SEMESTER_CREDITS])
+    low = max(raw_low, MIN_SEMESTER_CREDITS)
+    high = max(raw_high, MAX_SEMESTER_CREDITS, low)
 
     low, high = scenario.get("semester_credit_range", [12, 18])
     semester_credits = history.groupby(["수강년도", "수강학기"])["학점"].sum()
@@ -765,7 +767,7 @@ def validate_history(history, lectures, liberal_arts, scenario):
             + future_or_target[["student_id", "수강년도", "수강학기", "교과목명"]].to_string(index=False)
         )
     
-    target_min, target_max = scenario["target_completed_credits"]
+    target_min, target_max = effective_target_credit_range(scenario, effective_completed_semesters(scenario))
     total = int(history["학점"].sum())
     if not target_min <= total <= target_max:
         raise ValueError(
@@ -806,16 +808,8 @@ def generate_student(scenario, history, graduation):
     """한 학생의 students.json 엔트리를 생성한다."""
     required = graduation_requirements(graduation, scenario["curriculum_year"])
     completed = calculate_completed_credits(history)
-    completed_semesters = calculate_max_completed_semesters(
-        scenario["curriculum_year"],
-        TARGET_YEAR,
-        TARGET_SEMESTER,
-    )
-    grade = calculate_current_grade(
-        scenario["curriculum_year"],
-        TARGET_YEAR,
-        TARGET_SEMESTER,
-    )
+    completed_semesters = effective_completed_semesters(scenario)
+    grade = effective_grade(scenario)
 
     return {
         "student_id": scenario["student_id"],
