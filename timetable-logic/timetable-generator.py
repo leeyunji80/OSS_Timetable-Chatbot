@@ -102,152 +102,200 @@ def evaluate_team_project(row):
 
     return "없음"
 
-def generate_timetable_combinations(recommended_courses_df, filtered_df, target_credits, empty_days, avoid_time_slots, user_preferences):
-    # 추천 과목 이름 추출
-    recommended_course_names = set(recommended_courses_df)
-    
+def generate_timetable_combinations(
+    recommended_major_courses,  # 1순위: 전공 추천 리스트
+    needed_general_areas,       # 2순위: 부족 교양 분석 결과
+    filtered_df,                # 전체 개설 강좌 데이터프레임
+    target_credits,             # 목표 학점 (예: 18)
+    empty_days,                 # 공강 요일 리스트
+    avoid_time_slots,           # 피하고 싶은 시간대
+    user_preferences            # 사용자 성향
+):
     major_pool = []
     ge_pool = []
-
-    assign_pref = user_preferences.get("assignment_preference")     # "과제적음", "과제많음" 또는 None
+    assign_pref = user_preferences.get("assignment_preference")
+    team_pref = user_preferences.get("team_preference")
     
+    # 데이터 검증 안전장치 마련
+    if not isinstance(empty_days, list): empty_days = []
+    if not isinstance(avoid_time_slots, list): avoid_time_slots = []
+    if not isinstance(needed_general_areas, dict): needed_general_areas = {}
+    recommended_major_set = set(recommended_major_courses) if recommended_major_courses else set()
 
-    # 전체 데이터 프레임을 돌면서 전공(추천과목)과 교양을 분류하여 담습니다.
+    # -------------------------------------------------------------
+    # [A] 1차 풀 구성 단계 (선제적 하드 탈락 최소화)
+    # -------------------------------------------------------------
     for _, row in filtered_df.iterrows():
         course_name = row['교과목명']
-        is_ge = '교양' in row['이수구분']
-        is_recommended = course_name in recommended_course_names
+        is_ge = '교양' in str(row['이수구분'])
+        is_recommended_major = (not is_ge) and (course_name in recommended_major_set)
         
-        # 전공 과목인데 추천 리스트에 없거나, 교양 과목이 아니면 건너뜁니다.
-        if not is_ge and not is_recommended:
+        # 추천된 전공도 아니고 교양도 아니면 제외
+        if not is_ge and not is_recommended_major:
             continue
-
-        if not is_recommended: # 필수/추천 전공 과목은 졸업을 위해 필터링 면제
             
-            # 1. 기존에 만든 evaluate_load 함수 활용하기
-            if assign_pref:
-                # 현재 과목의 과제 양 판단 ("많다", "보통이다", "적다" 중 하나 반환)
-                current_load = evaluate_load(row) 
-                
-                # 사용자가 과제 적은 걸 원하는데, "많다" 또는 "보통이다"가 나오면 패스
-                if assign_pref == "과제적음" and current_load in ["많다", "보통이다"]:
-                    continue
-                
-                # 사용자가 과제 많은 걸 원하는데, "적다"가 나오면 패스 (취향에 따라 보통이다도 패스 가능)
-                if assign_pref == "과제많음" and current_load == "적다":
-                    continue
-
         time_slots = parse_day_and_period(row['요일'], row['교시'])
-        course_item = {
+        if not time_slots:  # 시간 정보가 없는 비정상 데이터 스킵
+            continue
+            
+        current_course = {
             "name": course_name,
-            # 원본 코드의 '강의室' 혹은 '강의실' 컬럼 대응
-            "room": row['강의室'].split('(')[0] if '강의室' in row and pd.notna(row['강의室']) else (row['강의실'].split('(')[0] if '강의실' in row and pd.notna(row['강의실']) else ""),
-            "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
-            "time_slots": time_slots,
-            "is_required": is_recommended
+            "time_slots": time_slots
         }
         
+        # 1. 공강 요일 조건 검사
+        has_empty_day_conflict = False
+        if empty_days:
+            empty_slots = [{"day": d, "start_period": 1, "end_period": 9} for d in empty_days]
+            has_empty_day_conflict = is_conflict(current_course, {"time_slots": empty_slots})
+            
+        # 2. 피하고 싶은 시간대 조건 검사
+        has_avoid_time_conflict = False
+        if avoid_time_slots:
+            avoid_slots = []
+            for avoid in avoid_time_slots:
+                start, end = (1, 4) if avoid["time_range"] == "오전" else (5, 9)
+                avoid_slots.append({"day": avoid["day"], "start_period": start, "end_period": end})
+            has_avoid_time_conflict = is_conflict(current_course, {"time_slots": avoid_slots})
+
+        # 교양 과목 필터링 로직 조건 완화 및 하드 탈락 방지
+        # 공강 요일은 칼같이 거르되, 오전/오후 피하기는 1차 탈락이 아닌 점수 차감(소프트 패널티)용으로 넘김
         if is_ge:
-            ge_pool.append(course_item)
-        else:
-            major_pool.append(course_item)
+            if has_empty_day_conflict: 
+                continue
+            if assign_pref:
+                current_load = evaluate_load(row)
+                if assign_pref == "과제적음" and current_load in ["많다", "보통이다"]: continue
+                if assign_pref == "과제많음" and current_load == "적다": continue
 
-    #무한 루프(오랜 멈춤)를 방지하기 위해 교양 과목 풀을 최대 30개로 제한합니다.
-    if len(ge_pool) > 30:
-        ge_pool = random.sample(ge_pool, 30)
+            if team_pref == "팀플없음":
+                current_team = evaluate_team_project(row)
+                if current_team == "많음": 
+                    continue
 
-    # 전공 필수/추천 과목과 제한된 교양 과목을 합쳐서 최종 과목 풀을 만듭니다.
-    course_pool = major_pool + ge_pool
+        # 영역 및 가산점 점수 계산
+        area_name = row.get('영역', '') if pd.notna(row.get('영역')) else ''
+        subarea_name = row.get('세부영역', '') if pd.notna(row.get('세부영역')) else ''
+        base_score = 0
+        priority_group = "3순위(기타교양)"
+        
+        if is_recommended_major:
+            base_score += 10000
+            priority_group = "1순위(전공)"
+            if has_empty_day_conflict or has_avoid_time_conflict:
+                base_score -= 100  # 전공은 조건이 겹쳐도 일단 포함시키되 점수 감점
+        elif is_ge:
+            is_needed_ge = False
+            if area_name in needed_general_areas:
+                sub_info = needed_general_areas[area_name]
+                if "총필요학점" in sub_info:
+                    if subarea_name in sub_info.get("선택가능영역", []): is_needed_ge = True
+                elif subarea_name in sub_info:
+                    is_needed_ge = True
+            
+            if is_needed_ge:
+                base_score += 1000
+                priority_group = "2순위(부족교양)"
+            else:
+                base_score += 10
+                priority_group = "3순위(기타교양)"
 
+        # 피하고 싶은 시간대에 들어간 교양 과목은 패널티 감점
+        if is_ge and has_avoid_time_conflict:
+            base_score -= 300
+
+        room_info = ""
+        room_info = str(row['강의실']).split('(')[0]
+
+        course_item = {
+            "name": course_name, "room": room_info, "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
+            "time_slots": time_slots, "is_required": is_recommended_major, "priority_group": priority_group,
+            "area": area_name, "subarea": subarea_name, "base_score": base_score
+        }
+        
+        if is_ge: ge_pool.append(course_item)
+        else: major_pool.append(course_item)
+
+    # 정체 현상 해결을 위한 교양 풀 최적 사이즈 샘플링 & 섞기
+    ge_pool.sort(key=lambda x: x["base_score"], reverse=True)
+    
+    # 상위 우수 교양 60개 중에서 유연성을 확보하기 위해 무작위로 30개를 샘플링
+    top_ge_candidates = ge_pool[:60]
+    sampled_ge = random.sample(top_ge_candidates, min(len(top_ge_candidates), 30)) if top_ge_candidates else []
+    
+    raw_pool = major_pool + sampled_ge
+    random.seed(42)
+    # 이름 중복 과목이 조합 생성 초반에 뭉치지 않도록 골고루 분산 정렬
+    course_pool = sorted(raw_pool, key=lambda x: (x["priority_group"] != "1순위(전공)", random.random()))
+    
     all_combinations = []
-    
-    MAX_ITERATIONS = 300000
+
+    print("\n================ [필터링 결과 데이터 체크] ================")
+    print(f"▶ 최종 통과한 전공 풀(major_pool): {len(major_pool)}개 과목")
+    print(f"▶ 최종 통과한 교양 풀(ge_pool): {len(ge_pool)}개 과목")
+    print(f"▶ 조합에 사용될 최종 풀(course_pool): {len(course_pool)}개 과목")
+    print("============================================================\n")
+
+    # 과목 탐색 범위 고정 및 오차 마진 적용으로 실패 확률 제로화
+    start_r = 4
+    end_r = min(len(course_pool) + 1, 9)
+    MAX_ITERATIONS = 400000
     iteration_count = 0
-    
-    if target_credits >= 21:
-        start_r = 6
-    elif target_credits >= 18:
-        start_r = 5
-    else:
-        start_r = 4
-    # 조합 탐색 시작 
-    for r in range(start_r, len(course_pool) + 1):
+    found_enough = False
+
+    # [B] 조합 탐색 구간
+    for r in range(start_r, end_r):
+        if found_enough: break
+            
         for combo in combinations(course_pool, r):
             iteration_count += 1
-            
-            # 탐색 횟수가 5만 번을 넘어가면 컴퓨터를 쉬게 하고 지금까지 찾은 최선의 조합을 반환합니다.
-            if iteration_count > MAX_ITERATIONS:
-                if all_combinations:
-                    all_combinations.sort(key=lambda x: x["required_count"], reverse=True)
-                    return [item["schedule"] for item in all_combinations[:3]]
-                return []
+            if iteration_count > MAX_ITERATIONS: break
 
             combo_list = list(combo)
-            
-            # 학점 총합 계산
             total_credits = sum(course["credit"] for course in combo_list)
-            if abs(total_credits - target_credits)>1:
+            
+            # 학점 매칭 마진 허용 (±1학점 유연성 부여)
+            if abs(total_credits - target_credits) > 1:
                 continue
 
-            # 시간표 충돌 및 공강 요일 검사
             if not is_valid_combination(combo_list):
                 continue
 
-            # 공강 요일 검사를 위해 이 조합에 포함된 요일들만 모읍니다.
-            actual_days = {slot["day"] for course in combo_list for slot in course["time_slots"]}
-
-            violates_empty_day = False
-            for day in empty_days:
-                if day in actual_days:
-                    violates_empty_day = True
-                    break
-            
-            if violates_empty_day:
-                continue
-           
-            avoid_penalty = 0
+            # 점수 산정
+            final_score = sum(course["base_score"] for course in combo_list)
+            achieved_tracker = {}
             for course in combo_list:
-                # 필수 과목은 오전에 듣든 오후에 듣든 페널티를 면제해 줍니다.
-                if course.get("is_required", False):
-                    continue
+                if course["priority_group"] == "2순위(부족교양)":
+                    a_name, s_name = course["area"], course["subarea"]
+                    if a_name not in achieved_tracker:
+                        achieved_tracker[a_name] = {"total": 0, "subareas": {}}
+                    achieved_tracker[a_name]["total"] += course["credit"]
+                    achieved_tracker[a_name]["subareas"][s_name] = achieved_tracker[a_name]["subareas"].get(s_name, 0) + course["credit"]
 
-                for slot in course["time_slots"]:
-                    for avoid in avoid_time_slots:
-                        # 1단계: 사용자가 지정한 '요일'과 현재 수업의 '요일'이 일치하는지 확인
-                        if slot["day"] == avoid["day"]:
-                            
-                            # 조건 A: 해당 요일에 '오전'을 피하고 싶을 때 (1~4교시 걸리면 페널티)
-                            if avoid["time_range"] == "오전" and slot["start_period"] < 5:
-                                avoid_penalty += 1
-                            
-                            # 조건 B: 해당 요일에 '오후'를 피하고 싶을 때 (5교시/13:00 이후 걸리면 페널티)
-                            # 보통 5교시(13시)부터 대다수 오후 수업이 시작됩니다.
-                            if avoid["time_range"] == "오후" and slot["start_period"] >= 5:
-                                avoid_penalty += 1
+            ge_bonus = 0
+            for a_name, req_info in needed_general_areas.items():
+                if a_name in achieved_tracker:
+                    if "총필요학점" in req_info:
+                        ge_bonus += min(achieved_tracker[a_name]["total"], req_info["총필요학점"]) * 150
+                    else:
+                        for s_name, needed_sub_credit in req_info.items():
+                            ge_bonus += min(achieved_tracker[a_name]["subareas"].get(s_name, 0), needed_sub_credit) * 150
+            
+            final_score += ge_bonus
+            all_combinations.append({"schedule": combo_list, "final_score": final_score})
+            
+            if len(all_combinations) >= 10:  # 안정적인 TOP 3 추출을 위해 10개 수집 시 조기종료
+                found_enough = True
+                break
 
-            # 5. 필수 과목 개수 카운트
-            required_count = sum(1 for course in combo_list if course["is_required"])
+    print(f"[조합 연산 최종 디버깅] 총 탐색 조합 수: {iteration_count}번 | 유효 조합 발견 개수: {len(all_combinations)}개")
 
-            # 6. 유효한 시간표 조합 안전하게 딱 한 번만 저장 (페널티 포함)
-            all_combinations.append({
-                "schedule": combo_list,
-                "required_count": required_count,
-                "avoid_penalty": avoid_penalty
-            })
-
-            # 7. 최적의 시간표 300개를 찾았다면 즉시 루프 종료 후 반환
-            if len(all_combinations) >= 300:
-                all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
-                return [item["schedule"] for item in all_combinations[:3]]
-
-    # 8. 5만 번 탐색을 마쳤거나 전체 루프가 끝났을 때의 최종 정렬 반환
     if all_combinations:
-        all_combinations.sort(key=lambda x: (-x["required_count"], x["avoid_penalty"]))
+        all_combinations.sort(key=lambda x: x["final_score"], reverse=True)
         return [item["schedule"] for item in all_combinations[:3]]
-        
     return []
 
-user_sentence = "금요일 공강인 18학점 시간표 추천해줘"
+user_sentence = "시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -290,7 +338,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20250001"
+login_student_id = "20210005"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
@@ -301,7 +349,8 @@ graduation_analysis = get_final_recommendations(
 )
 
 # 최종 추천 과목 리스트 추출
-recommended_courses = graduation_analysis.get("recommended_courses", [])
+recommended_majors = graduation_analysis.get("recommended_major_courses", [])
+needed_general_areas = graduation_analysis.get("needed_general_areas", {})
 
 # 1. 파일 경로에서 데이터를 읽어와 하나로 합쳐줍니다.
 all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_PATH)], ignore_index=True)
@@ -312,7 +361,7 @@ user_preferences_input = {
 }
 
 import re
-raw_credit = slots_input.get("target_credit") # 단수형 키로 정확하게 매핑
+raw_credit = slots_input.get("target_credit") 
 if raw_credit:
     digit_match = re.search(r'\d+', str(raw_credit))
     target_credit_int = int(digit_match.group()) if digit_match else 18
@@ -321,7 +370,8 @@ else:
 
 # 2. 딕셔너리에 뭉쳐있던 인자들을 하나씩 풀어서 정확한 매개변수 이름으로 전달합니다.
 timetable_results = generate_timetable_combinations(
-    recommended_courses_df=recommended_courses,
+    recommended_major_courses=recommended_majors,  # 1순위 전공 리스트 넘기기
+    needed_general_areas=needed_general_areas,      # 2순위 부족 교양 딕셔너리 넘기기
     filtered_df=all_lectures_df,
     target_credits=target_credit_int,
     empty_days=slots_input["exclude_days"],
@@ -376,11 +426,11 @@ if timetable_results:
         "alternatives": []
     }
 
-    # 최대 3개의 시간표 대안을 순회하며 JSON 구조를 생성합니다.
+    # 최대 3개의 시간표 대안을 순회하며 JSON 구조를 생성
     for index, selected_schedule in enumerate(timetable_results):
         course_color_map = assign_course_colors(selected_schedule)
         
-        # 1. 이 시간표의 특징을 분석하여 추천 사유(Reason)를 동적으로 생성합니다.
+        # 1. 이 시간표의 특징을 분석하여 추천 사유(Reason)를 동적으로 생성
         
         morning_course_count = 0
         total_credits_sum = 0
@@ -428,7 +478,7 @@ if timetable_results:
             })
 
         
-        # 2. 요일별 오전/오후 회피 성공 여부 분석 및 추천 사유(Reason) 생성
+        # 2. 요일별 오전/오후 회피 성공 여부 분석 및 추천 사유 생성
         reason_segments = []
         
         # [공강 요일 반영 여부 체크]
