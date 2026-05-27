@@ -251,40 +251,62 @@ def calculate_remaining_requirements(
         "requirements"
     ]["general_education"]["areas"]
 
-    for _, area_data in areas.items():
+    for area_key, area_data in areas.items():
+        area_name = area_data["name"]       # 예: "개신기초교양", "일반교양"
+        area_min_credit = area_data.get("min_credits")
+        subareas_data = area_data.get("subareas", {})
 
-        subareas = area_data.get(
-            "subareas",
-            {}
-        )
+        # 1. 학생이 이 대영역 내에서 이수한 총 학점 계산
+        completed_area_credit = 0
+        for sub_key, sub_data in subareas_data.items():
+            sub_name = sub_data["name"]
+            completed_area_credit += graduation_status["subareas"].get(sub_name, 0)
 
-        for _, subarea_data in subareas.items():
+        # 2. 초기 딕셔너리 생성 여부 준비
+        if area_name not in remaining["areas"]:
+            remaining["areas"][area_name] = {}
 
-            subarea_name = subarea_data["name"]
+        # ---------------------------------------------------------
+        # 분류 1: 세부 영역별 최소 필수 학점 조건이 있는 경우 (예: 개신기초교양, 자연이공계기초과학)
+        # sub_data에 'min_credits'가 명시되어 있다면 그 기준에 맞게 부족 학점을 계산합니다.
+        # ---------------------------------------------------------
+        has_subarea_min = any(s.get("min_credits") is not None for s in subareas_data.values())
+        
+        if has_subarea_min:
+            for sub_key, sub_data in subareas_data.items():
+                sub_name = sub_data["name"]
+                required_sub_credit = sub_data.get("min_credits", 0)
+                
+                completed_sub_credit = graduation_status["subareas"].get(sub_name, 0)
+                sub_shortage = max(0, required_sub_credit - completed_sub_credit)
+                
+                # 실제 부족한 학점이 있을 때만 쏙 골라 담음
+                if sub_shortage > 0:
+                    remaining["areas"][area_name][sub_name] = sub_shortage
 
-            required_credit = subarea_data.get(
-                "min_credits"
-            )
+        # ---------------------------------------------------------
+        # 분류 2: 대분류 총점 기준만 채우면 되는 경우 (예: 일반교양, 확대교양 등)
+        # 세부 영역별 최소 학점 제한이 없고, 대분류 자체에 min_credits가 있을 때만 작동
+        # ---------------------------------------------------------
+        elif area_min_credit is not None:
+            area_shortage = max(0, area_min_credit - completed_area_credit)
+            
+            if area_shortage > 0:
+                # 이 대영역 내에서 학생의 이수 학점이 0점인 '진짜 안 들은' 소분류만 추출
+                uncompleted_subareas = [
+                    sub_data["name"] for sub_data in subareas_data.values()
+                    if graduation_status["subareas"].get(sub_data["name"], 0) == 0
+                ]
+                
+                final_targets = uncompleted_subareas if uncompleted_subareas else [s["name"] for s in subareas_data.values()]
+                
+                # 부족한 학점을 채울 수 있는 타겟 소분류 영역에 동적 할당
+                for sub_target in final_targets:
+                    remaining["areas"][area_name][sub_target] = area_shortage
 
-            if required_credit is None:
-                continue
-
-            completed_credit = (
-                graduation_status["subareas"].get(
-                    subarea_name,
-                    0
-                )
-            )
-
-            remaining_credit = max(
-                0,
-                required_credit
-                - completed_credit
-            )
-
-            remaining["areas"][
-                subarea_name
-            ] = remaining_credit
+        # 만약 계산 후에 아무것도 담기지 않은 대분류가 있다면 key 삭제 (깔끔한 결과 보장)
+        if not remaining["areas"][area_name]:
+            del remaining["areas"][area_name]
 
     return remaining
 
@@ -296,16 +318,26 @@ def get_recommended_courses(
     current_grade,
     current_semester
 ):
-
+    # 해당 학년/학기 데이터 필터링
     recommended_df = curriculum_df[
         (curriculum_df["년도"] == curriculum_year)
-        &
-        (curriculum_df["학년"] == current_grade)
-        &
-        (curriculum_df["학기"] == current_semester)
+        & (curriculum_df["학년"] == current_grade)
+        & (curriculum_df["학기"] == current_semester)
     ].drop_duplicates(subset=["과목명"])
 
-    return recommended_df["과목명"].tolist()
+    all_courses = recommended_df["과목명"].tolist()
+    
+    major_courses = []
+    general_courses = []
+    
+    for course in all_courses:
+        # 과목명에 '택1', '교양', '영역' 등이 포함되어 있으면 교양으로 분류
+        if "택1" in course or "교양" in course or "영역" in course:
+            general_courses.append(course)
+        else:
+            major_courses.append(course)
+            
+    return {"major": major_courses, "general": general_courses}
 
 
 
@@ -317,7 +349,7 @@ def filter_completed_courses(recommended_courses, completed_set):
     ]
 
 # ---------------------------------
-# [수정] 로그인 팀원에게 학번을 받아 처리하는 통합 함수
+# 로그인 팀원에게 학번을 받아 처리하는 통합 함수
 # ---------------------------------
 def get_final_recommendations(student_id, target_semester, students_json_data):
     # 1. 넘겨받은 student_id로 JSON에서 학생 정보 찾기
@@ -346,50 +378,33 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
     # 5. 부족한 요건 분석
     remaining_reqs = calculate_remaining_requirements(graduation_rule, graduation_status)
     
+    
+    
     # 6. 표준이수모형에서 과목 가져오기
-    # (주의: curriculum_df의 '년도'가 교육과정 지정 년도인지 확인 필요)
-    recommended_courses = get_recommended_courses(
+    rec_dict = get_recommended_courses(
         curriculum_df, 
         curriculum_year=admission_year, 
         current_grade=current_grade, 
         current_semester=target_semester
     )
     
-    # 7. 이미 이수한 과목 필터링
+    # 7. 이미 이수한 과목 필터링 (전공 / 교양 각각 진행)
     completed_set = graduation_status["completed_course_names"]
-    filtered_courses = filter_completed_courses(recommended_courses, completed_set)
+    filtered_major = filter_completed_courses(rec_dict["major"], completed_set)
+    filtered_general = filter_completed_courses(rec_dict["general"], completed_set)
     
-    # ---------------------------------
-    # 부족한 교양 세부영역 추출
-    # ---------------------------------
-
-    needed_general_areas = {
-        area_name: remain_credit
-        for area_name, remain_credit
-        in remaining_reqs["areas"].items()
-        if remain_credit > 0
-}
+    needed_general_areas = {}
+    for area_name, sub_dict in remaining_reqs["areas"].items():
+        # 각 대분류 내에서 '실제 부족 학점이 0보다 큰' 소분류만 솎아내기
+        filtered_sub = {sub_name: credit for sub_name, credit in sub_dict.items() if credit > 0}
+        
+        # 솎아낸 결과가 존재하는 대분류만 최종 시간표 생성 가이드에 포함
+        if filtered_sub:
+            needed_general_areas[area_name] = filtered_sub
 
     return {
-        "student_name": student_info["name"],
-
-        # 학생 정보
-        "student_context": {
-            "grade": current_grade,
-            "curriculum_year": admission_year
-        },
-
-        # 부족 전공 학점
-        "remaining_major": {
-            "major_required": remaining_reqs["major_required"],
-            "major_elective": remaining_reqs["major_elective"]
-        },
-
-        # 부족 교양 세부영역
         "needed_general_areas": needed_general_areas,
- 
-        # 현재 학년 추천 전공 과목
-        "recommended_major_courses": filtered_courses
+        "recommended_major_courses": filtered_major
     }
 
 # ---------------------------------
@@ -405,7 +420,7 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
 if __name__ == "__main__":
     
     # 1. 로그인 담당 팀원이 넘겨준 "학번"과 "추천받을 학기" 예시
-    login_student_id = "20260001"
+    login_student_id = "20250001"
     target_semester = 1
 
     # 2. 파일에서 불러온 students_list를 그대로 인자에 주입!
