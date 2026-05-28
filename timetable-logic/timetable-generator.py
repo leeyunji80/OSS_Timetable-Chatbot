@@ -109,6 +109,7 @@ def generate_timetable_combinations(
     target_credits,             # 목표 학점
     empty_days,                 # 공강 요일 리스트
     avoid_time_slots,           # 피하고 싶은 시간대
+    preferred_time_slots,
     user_preferences            # 사용자 성향
 ):
     major_pool = []
@@ -205,6 +206,28 @@ def generate_timetable_combinations(
         # 소프트 패널티 적용
         if is_ge and has_avoid_time_conflict:
             course_item["base_score"] -= 300
+
+        # 선호 시간대 가산점
+        if preferred_time_slots:
+
+           for pref in preferred_time_slots:
+
+               for slot in time_slots:
+
+                   if slot["day"] != pref["day"]:
+                      continue
+
+                   if (
+                        pref["time_range"] == "오전"
+                        and slot["start_period"] < 5
+                    ):
+                        course_item["base_score"] += 500
+
+                   if (
+                        pref["time_range"] == "오후"
+                        and slot["start_period"] >= 5
+                    ):
+                        course_item["base_score"] += 500
 
         # 그룹별로 명확하게 바구니 쪼갬
         if is_recommended_major:
@@ -377,6 +400,7 @@ print(json.dumps(parsed_data, ensure_ascii=False, indent=2))
 
 exclude_days = []
 avoid_time_slots = []
+preferred_time_slots = []
 
 for slot in parsed_data["slots"]:
 
@@ -399,12 +423,20 @@ for slot in parsed_data["slots"]:
             "day": day,
             "time_range": slot["time_range"]
         })
+        
+    if slot["condition"] == "선호":
+
+        preferred_time_slots.append({
+            "day": day,
+            "time_range": slot["time_range"]
+        })
 
 slots_input = {
     "target_grade": parsed_data.get("target_grade"),
     "exclude_days": exclude_days,
     "target_credit": parsed_data.get("target_credit"),
-    "avoid_time_slots": avoid_time_slots
+    "avoid_time_slots": avoid_time_slots,
+    "preferred_time_slots": preferred_time_slots
 }
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
@@ -451,6 +483,7 @@ timetable_results = generate_timetable_combinations(
     target_credits=target_credit_int,
     empty_days=slots_input["exclude_days"],
     avoid_time_slots=slots_input["avoid_time_slots"],
+    preferred_time_slots=slots_input["preferred_time_slots"],
     user_preferences=user_preferences_input
 )
 
