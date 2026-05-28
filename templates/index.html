@@ -1089,18 +1089,21 @@
             loadStudentCreditData();
 
             function createNewSession() {
-
                 currentSessionId = Date.now();
                 chatSessions.push({
                     id: currentSessionId,
-                    title: '',
+                    title: '새로운 대화', // 타이틀 기본값 지정
                     preview: '',
                     messages: []
                 });
 
+                // 화면 초기화 및 웰컴 스크린 배치 완료
                 chatArea.innerHTML = '';
                 welcomeScreen.style.display = 'block';
                 chatArea.appendChild(welcomeScreen);
+                
+                // 세션 저장소에 즉시 반영
+                saveSessionStorage();
             }
 
             newChatBtn.addEventListener('click', function () {
