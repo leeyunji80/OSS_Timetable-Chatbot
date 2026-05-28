@@ -1304,10 +1304,20 @@
             });     
             
             logoutBtn.addEventListener('click', function () {
-
+                // 1. 현재 사용자 정보 로그아웃 전에 상태 임시 저장 보장 후 비우기
                 currentStudent = null;
                 studentModal.style.display = 'none';
+                
+                // 2. 다른 계정 정보 유출 방지를 위해 메모리 및 세션 정보 초기화
+                chatSessions = [];
+                currentSessionId = null;
+                
+                // 3. 비로그인(Guest) 세션으로 새로 만들기
+                createNewSession();
+                
+                // 4. UI 요소 리셋
                 updateProfileUI();
+                renderHistory();
                 saveSessionStorage();
             });
 
