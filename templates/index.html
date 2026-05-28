@@ -988,10 +988,10 @@
             let studentCreditData = [];
 
             function saveSessionStorage() {
-
+                // 현재 로그인된 사용자 정보 우선 저장
                 sessionStorage.setItem(
-                    'chatSessions',
-                    JSON.stringify(chatSessions)
+                    'currentStudent',
+                    JSON.stringify(currentStudent)
                 );
 
                 sessionStorage.setItem(
@@ -999,10 +999,20 @@
                     currentSessionId
                 );
 
-                sessionStorage.setItem(
-                    'currentStudent',
-                    JSON.stringify(currentStudent)
-                );
+                // 로그인 상태라면 학번을 키에 조합하여 독립적인 공간에 저장
+                if (currentStudent && currentStudent.student_id) {
+                    const userKey = `chatSessions_${currentStudent.student_id}`;
+                    sessionStorage.setItem(
+                        userKey,
+                        JSON.stringify(chatSessions)
+                    );
+                } else {
+                    // 비로그인 상태일 때의 임시 공간
+                    sessionStorage.setItem(
+                        'chatSessions_guest',
+                        JSON.stringify(chatSessions)
+                    );
+                }
             }
 
             textarea.addEventListener('input', function() {
