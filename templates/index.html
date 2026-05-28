@@ -21,34 +21,24 @@
         .sidebar {
             width: 260px;
             height: 100vh;
-
             background-color: #fff5f5;
             border-right: 1px solid #f0dede;
-
             display: flex;
             flex-direction: column;
-
             padding: 20px;
-
             position: fixed;
-
             top: 0;
             left: -260px;
-
             transition: left 0.3s ease;
-
             z-index: 1000;
 
         }
 
         .main-container {
             flex: 1;
-
             display: flex;
             flex-direction: column;
-
             overflow: hidden;
-
             height: 100vh;
         }
 
@@ -224,12 +214,9 @@
             width: 100%;
             max-width: 650px;
             margin: 0 auto;
-
             padding: 20px;
             padding-bottom: 140px;
-
             overflow-y: auto;
-
             display: flex;
             flex-direction: column;
         }
@@ -261,32 +248,22 @@
         .timetable-image {
             width: 100%;
             max-width: 500px;
-
             border-radius: 15px;
-
             margin-top: 10px;
             margin-bottom: 20px;
-
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
         .new-chat-btn {
             width: 100%;
-
             padding: 14px;
-
             border: none;
             border-radius: 14px;
-
             background-color: white;
-
             font-size: 15px;
             font-weight: 600;
-
             cursor: pointer;
-
             margin-bottom: 25px;
-
             transition: 0.2s;
         }
 
@@ -297,7 +274,6 @@
         .sidebar-title {
             font-size: 18px;
             font-weight: 700;
-
             margin-bottom: 15px;
         }
 
@@ -307,21 +283,15 @@
 
         .timetable-history {
             flex: 1;
-
             overflow-y: auto;
         }
 
         .history-card {
             background-color: white;
-
             border-radius: 18px;
-
             padding: 12px;
-
             margin-bottom: 15px;
-
             cursor: pointer;
-
             transition: 0.2s;
         }
 
@@ -331,16 +301,13 @@
 
         .history-card img {
             width: 100%;
-
             border-radius: 12px;
-
             margin-bottom: 10px;
         }
 
         .history-info p {
             font-size: 14px;
             font-weight: 600;
-
             margin-bottom: 4px;
         }
 
@@ -352,32 +319,22 @@
         .profile-section {
             display: flex;
             align-items: center;
-
             gap: 12px;
-
             padding-top: 15px;
-
             border-top: 1px solid #f0dede;
         }
 
         .profile-avatar {
-
             width: 45px;
             height: 45px;
-
             border-radius: 50%;
-
             background-color: #ffe3e3;
-
             display: flex;
             justify-content: center;
             align-items: center;
-
             font-size: 18px;
             font-weight: bold;
-
             color: #d65a5a;
-
             overflow: hidden;
         }
 
@@ -394,397 +351,351 @@
         .menu-btn {
             border: none;
             background: none;
-
             font-size: 24px;
-
             cursor: pointer;
-
             margin-right: 15px;
-
             color: #d67f7f;
         }
 
         .main-container.shift {
             margin-left: 260px;
-
             transition: margin-left 0.3s ease;
         }
 
         .login-modal {
-
             position: fixed;
-
             top: 0;
             left: 0;
-
             width: 100%;
             height: 100%;
-
             background-color: rgba(0,0,0,0.4);
-
             display: none;
-
             justify-content: center;
             align-items: center;
-
             z-index: 2000;
         }
 
         .login-box {
-
             width: 350px;
-
             background-color: white;
-
             border-radius: 20px;
-
             padding: 30px;
-
             display: flex;
             flex-direction: column;
-
             gap: 15px;
         }
 
         .login-box input {
-
             padding: 14px;
-
             border: 1px solid #ddd;
-
             border-radius: 12px;
-
             font-size: 15px;
         }
 
         .login-box button {
-
             padding: 14px;
-
             border: none;
-
             border-radius: 12px;
-
             background-color: #ff6b6b;
-
             color: white;
-
             cursor: pointer;
         }
 
         #login-close-btn {
-
             border: none;
             background: none;
-
             font-size: 18px;
-
             cursor: pointer;
-
             color: #999;
         }
 
         .student-modal {
-
             position: fixed;
-
             top: 0;
             left: 0;
-
             width: 100%;
             height: 100%;
-
             background-color: rgba(0,0,0,0.4);
-
             display: none;
-
             justify-content: center;
             align-items: center;
-
             z-index: 2000;
         }
 
         .student-box {
-
             width: 700px;
-
             height: 85vh;
-
             background-color: white;
-
             border-radius: 20px;
-
             padding: 30px;
-
             display: flex;
-
             flex-direction: column;
-
             overflow: hidden;
         }
 
         .student-fixed-section {
-
             flex-shrink: 0;
-
             padding-bottom: 20px;
-
             border-bottom: 1px solid #f0f0f0;
         }
 
         .student-scroll-section {
-
             flex: 1;
-
             overflow-y: auto;
-
             padding-top: 20px;
         }
 
         .student-header {
-
             display: flex;
-
             justify-content: space-between;
-
             align-items: center;
-
             margin-bottom: 20px;
         }
 
         .student-basic-info {
-
             margin-bottom: 20px;
         }
 
         .student-row {
-
             display: flex;
-
             gap: 24px;
-
             margin-bottom: 14px;
         }
 
         .student-item {
-
             flex: 1;
         }
 
         .student-item label {
-
             display: block;
-
             font-size: 12px;
-
             color: #d67f7f;
-
             margin-bottom: 4px;
-
             font-weight: 600;
         }
 
         .student-item p {
-
             font-size: 16px;
-
             font-weight: 700;
-
             color: #222;
-
             line-height: 1.3;
         }
 
         .student-scroll-section::-webkit-scrollbar {
-
             width: 6px;
         }
 
         .student-scroll-section::-webkit-scrollbar-thumb {
-
             background-color: rgba(255, 107, 107, 0.3);
-
             border-radius: 10px;
         }
 
         .student-scroll-section::-webkit-scrollbar-track {
-
             background: transparent;
         }
 
         .student-scroll-section {
-
             scrollbar-width: thin;
-
             scrollbar-color: #ff6b6b transparent;
         }
 
         .credit-section,
         .graduation-section,
         .history-section {
-
             margin-top: 40px;
         }
 
         .credit-header {
-
             display: flex;
-
             justify-content: space-between;
-
             align-items: center;
-
             margin-bottom: 12px;
         }
 
         .progress-bar {
-
             width: 100%;
-
             height: 10px;
-
             background-color: #f5dede;
-
             border-radius: 999px;
-
             overflow: hidden;
-
             margin-bottom: 10px;
         }
 
         .progress-fill {
-
             height: 100%;
-
             width: 0%;
-
             background-color: #ff4d4d;
         }
 
         .history-table-wrapper {
-
             margin-top: 20px;
-
             max-height: 300px;
-
             overflow-y: auto;
         }
 
         .history-table {
-
             width: 100%;
-
             border-collapse: collapse;
         }
 
         .history-table th,
         .history-table td {
-
             padding: 12px;
-
             text-align: center;
-
             border-bottom: 1px solid #eee;
-
             font-size: 14px;
         }
 
         .history-table th {
-
             padding: 12px;
-
             background-color: #fff3f3;
         }
 
         .history-table thead {
-
             position: sticky;
-
             top: 0;
-
             background-color: white;
-
             z-index: 10;
         }
 
         .requirement-item {
-
             display: flex;
-
             justify-content: space-between;
-
             align-items: center;
-
             padding: 14px 0;
-
             border-bottom: 1px solid #f1f1f1;
         }
 
         .requirement-item p {
-
             font-weight: 600;
         }
 
         .requirement-item span {
-
             color: #ff6b6b;
-
             font-weight: 700;
         }
 
         .student-header-left {
-
             display: flex;
-
             align-items: center;
-
             gap: 12px;
         }
 
         #logout-btn {
-
             border: none;
-
             background-color: #ff6b6b;
-
             color: white;
-
             padding: 8px 14px;
-
             border-radius: 999px;
-
             font-size: 13px;
-
             font-weight: 600;
-
             cursor: pointer;
-
             transition: 0.2s;
         }
 
         #logout-btn:hover {
-
             background-color: #fa5252;
         }
 
         #student-close-btn {
-
             border: none;
-
             background: none;
-
             font-size: 18px;
-
             color: #999;
-
             cursor: pointer;
-
             transition: 0.2s;
         }
 
         #student-close-btn:hover {
-
             color: #ff6b6b;
+        }
+
+        /* 아코디언 그룹 스타일 */
+        .accordion-group {
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 10px;
+        }
+
+        /* 상위 항목 헤더 스타일 */
+        .accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 5px;
+            cursor: pointer;
+            background-color: #fff;
+            user-select: none;
+        }
+
+        .category-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+
+        /* 토글 화살표 애니메이션 */
+        .toggle-icon {
+            font-size: 14px;
+            color: #999;
+            transition: transform 0.2s ease;
+        }
+
+        .toggle-icon.rotated {
+            transform: rotate(180deg);
+            color: #ff4d4d; /* 활성화 시 포인트 컬러 */
+        }
+
+        /* 하위 항목 컨테이너 */
+        .accordion-content {
+            padding: 5px 10px 15px 10px;
+            background-color: #fafafa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* 세부 항목 내부 레이아웃 (스크린샷 참고 스타일) */
+        .sub-requirement-item {
+            margin-bottom: 15px;
+        }
+
+        .sub-requirement-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .sub-item-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .sub-item-info p {
+            margin: 0;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .credit-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* 하위 항목 전용 게이지 막대기 바 */
+        .sub-progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: #ffe3e3;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .sub-progress-bar {
+            height: 100%;
+            background-color: #ff4d4d; /* 스크린샷과 유사한 레드/진분홍 계열 */
+            border-radius: 4px;
+            transition: width 0.3s ease;
         }
 
     </style>
@@ -1063,8 +974,7 @@
 
             textarea.addEventListener('input', function() {
                 // 1. 높이 계산을 위해 임시로 'auto' 초기화
-                this.style.height = '75px'; 
-                
+                this.style.height = '75px';                 
             const calculatedHeight = this.scrollHeight + 5;
             
                 // 계산된 값이 55px보다 클 때만 높이를 늘려줍니다.
@@ -1083,9 +993,7 @@
             sendBtn.addEventListener('click', async function () {
 
                 const message = textarea.value.trim();
-
                 if (!message) return;
-
                 welcomeScreen.style.display = 'none';
 
                 // 사용자 메시지 출력
@@ -1101,11 +1009,9 @@
                     const response = await fetch('/chat', {
 
                         method: 'POST',
-
                         headers: {
                             'Content-Type': 'application/json'
                         },
-
                         body: JSON.stringify({
                             message: message
                         })
@@ -1121,11 +1027,8 @@
                     saveImageMessage(data.image);
 
                 } catch (error) {
-
                     console.error(error);
-
                     addMessage('서버 오류가 발생했습니다.', 'ai');
-
                 }
 
             });
@@ -1133,7 +1036,6 @@
             function addMessage(message, type) {
 
                 const div = document.createElement('div');
-
                 div.classList.add('message');
 
                 if (type === 'user') {
@@ -1143,20 +1045,14 @@
                 }
 
                 div.innerText = message;
-
                 chatArea.appendChild(div);
-
                 chatArea.scrollTop = chatArea.scrollHeight;
             }
 
             function addImageMessage(imageUrl) {
-
                 const img = document.createElement('img');
-
                 img.src = imageUrl;
-
                 img.classList.add('timetable-image');
-
                 chatArea.appendChild(img);
             }
 
@@ -1164,40 +1060,27 @@
 
                 sidebar.classList.toggle('active');
                 mainContainer.classList.toggle('shift');
-
             });
 
             const savedStudent =
                 sessionStorage.getItem('currentStudent');
-
             const savedSessions =
                 sessionStorage.getItem('chatSessions');
-
             const savedSessionId =
                 sessionStorage.getItem('currentSessionId');
 
             if (savedStudent) {
-
                 currentStudent = JSON.parse(savedStudent);
-
                 updateProfileUI();
-
             }
 
             if (savedSessions) {
-
                 chatSessions = JSON.parse(savedSessions);
-
                 currentSessionId = Number(savedSessionId);
-
                 renderHistory();
-
                 loadSession(currentSessionId);
-
             } else {
-
                 createNewSession();
-
             }
 
             loadCourseHistoryData();
@@ -1206,7 +1089,6 @@
             function createNewSession() {
 
                 currentSessionId = Date.now();
-
                 chatSessions.push({
                     id: currentSessionId,
                     title: '',
@@ -1215,16 +1097,12 @@
                 });
 
                 chatArea.innerHTML = '';
-
                 welcomeScreen.style.display = 'block';
                 chatArea.appendChild(welcomeScreen);
-
             }
 
             newChatBtn.addEventListener('click', function () {
-
                 createNewSession();
-
             });
 
             function saveMessage(message, type) {
@@ -1241,16 +1119,12 @@
                 });
 
                 if (session.messages.length === 1) {
-
                     session.title = message.trim().substring(0, 10);
-
                     session.preview = '(예비)';
-
                 }
 
                 renderHistory();
                 saveSessionStorage();
-
             }
 
             function saveImageMessage(imageUrl) {
@@ -1268,7 +1142,6 @@
 
                 renderHistory();
                 saveSessionStorage();
-
             }
 
             function renderHistory() {
@@ -1278,11 +1151,8 @@
                 chatSessions.forEach(session => {
 
                     if (session.messages.length === 0) return;
-
                     const card = document.createElement('div');
-
                     card.classList.add('history-card');
-
                     card.innerHTML = `
                         <div class="history-info">
                             <p>${session.title}</p>
@@ -1291,9 +1161,7 @@
                     `;
 
                     card.addEventListener('click', function () {
-
                         loadSession(session.id);
-
                     });
                     
                     historyContainer.appendChild(card);
@@ -1305,20 +1173,16 @@
             function loadSession(sessionId) {
 
                 currentSessionId = sessionId;
-
                 chatArea.innerHTML = '';
-
                 const session = chatSessions.find(
                     session => session.id === sessionId
                 );
-
                 if (!session) return;
 
                 session.messages.forEach(message => {
 
                      if (message.type === 'image') 
                         addImageMessage(message.content);
-
                      else 
                         addMessage(message.content, message.type);
 
@@ -1329,14 +1193,9 @@
             profileBtn.addEventListener('click', function () {
 
                 if (currentStudent) {
-
                     openStudentModal();
-
-
                 } else {
-
                     loginModal.style.display = 'flex';
-
                 }
 
             });
@@ -1344,17 +1203,13 @@
             loginSubmitBtn.addEventListener('click', async function () {
 
                 const name = document.getElementById('student-name').value;
-
                 const studentId = document.getElementById('student-id').value;
-
                 const response = await fetch('/login', {
 
                     method: 'POST',
-
                     headers: {
                         'Content-Type': 'application/json'
                     },
-
                     body: JSON.stringify({
                         name: name,
                         student_id: studentId
@@ -1367,19 +1222,13 @@
                 if (data.success) {
 
                     currentStudent = data.student;
-
                     document.getElementById('student-name').value = '';
                     document.getElementById('student-id').value = '';
-
                     loginModal.style.display = 'none';
-
                     updateProfileUI();
                     saveSessionStorage();
-
                 } else {
-
                     alert('로그인 실패');
-
                 }
 
             });     
@@ -1387,26 +1236,19 @@
             logoutBtn.addEventListener('click', function () {
 
                 currentStudent = null;
-
                 studentModal.style.display = 'none';
-
                 updateProfileUI();
                 saveSessionStorage();
-
             });
 
             studentCloseBtn.addEventListener('click', function () {
-
                 studentModal.style.display = 'none';
-
             });
 
             loginModal.addEventListener('click', function (event) {
 
                 if (event.target === loginModal) {
-
                     loginModal.style.display = 'none';
-
                 }
 
             });
@@ -1414,9 +1256,7 @@
             studentModal.addEventListener('click', function (event) {
 
                 if (event.target === studentModal) {
-
                     studentModal.style.display = 'none';
-
                 }
 
             });
@@ -1433,9 +1273,7 @@
                     `;
 
                     profileAvatar.innerHTML = initial;
-
                     profileAvatar.style.backgroundColor = '#ffb3b3';
-
                 } else {
 
                     profileInfo.innerHTML = `
@@ -1444,9 +1282,7 @@
                     `;
 
                     profileAvatar.innerHTML = '👤';
-
                     profileAvatar.style.backgroundColor = '#ffe3e3';
-
                 }
 
             }
@@ -1457,12 +1293,9 @@
 
                     const response =
                         await fetch('/student/course_history.csv');
-
                     const csvText = await response.text();
-
                     const rows =
                         csvText.trim().split('\n');
-
                     const headers =
                         rows[0].split(',');
 
@@ -1567,9 +1400,7 @@
             function renderStudentBasicInfo() {
 
                 if (!currentStudent) return;
-
                 const studentData = getCurrentStudentData();
-
                 if (!studentData) return;
 
                 document.getElementById(
@@ -1593,21 +1424,14 @@
                     studentCreditData.length === 0 ||
                     courseHistoryData.length === 0
                 ) {
-
                     alert('학생 데이터를 불러오는 중입니다.');
-
                     return;
-
                 }
 
                 renderStudentBasicInfo();
-
                 renderCreditProgress();
-
                 renderGraduationRequirements();
-
                 renderCourseHistory();
-
             }
 
             function renderCreditProgress() {
@@ -1620,13 +1444,10 @@
 
                 const graduationCredit =
                     studentData.credits['졸업학점'];
-
                 const completed =
                     graduationCredit.completed;
-
                 const required =
                     graduationCredit.required;
-
                 const percent =
                     Math.floor(
                         (completed / required) * 100
@@ -1650,71 +1471,97 @@
             }
 
             function renderGraduationRequirements() {
-
                 if (!currentStudent) return;
 
                 const studentData = getCurrentStudentData();
-
                 if (!studentData) return;
 
-                const container =
-                    document.getElementById(
-                        'graduation-requirement-list'
-                    );
+                const container = document.getElementById('graduation-requirement-list');
+                container.innerHTML = ''; // 기존 내용 초기화
 
-                container.innerHTML = '';
-
-                const majorRequired =
-                    studentData.credits.전공.필수;
-
-                const majorSelective =
-                    studentData.credits.전공.선택;
-
-                const liberalBasic =
-                    studentData.credits.교양.개신기초;
-
-                const requirementList = [
-
-                    {
-                        title: '전공 필수',
-                        data: majorRequired
-                    },
-
-                    {
-                        title: '전공 선택',
-                        data: majorSelective
-                    },
-
-                    {
-                        title: '개신기초',
-                        data: liberalBasic
-                    }
-
+                // 상위 항목으로 분류할 데이터 매핑 정의
+                const categories = [
+                    { key: '교양', title: '교양' },
+                    { key: '전공', title: '전공' },
+                    { key: '일반선택', title: '일반선택' }
                 ];
 
-                requirementList.forEach(item => {
+                categories.forEach(category => {
+                    const catData = studentData.credits[category.key];
+                    if (!catData) return;
 
-                    const div =
-                        document.createElement('div');
+                    // 1. 상위 그룹 컨테이너 생성
+                    const groupDiv = document.createElement('div');
+                    groupDiv.classList.add('accordion-group');
 
-                    div.classList.add(
-                        'requirement-item'
-                    );
-
-                    div.innerHTML = `
-                        <p>${item.title}</p>
-
-                        <span>
-                            ${item.data.completed}
-                            /
-                            ${item.data.required}
-                        </span>
+                    // 2. 상위 항목 헤더 (클릭 영역) 생성
+                    const headerDiv = document.createElement('div');
+                    headerDiv.classList.add('accordion-header');
+                    headerDiv.innerHTML = `
+                        <p class="category-title">${category.title}</p>
+                        <span class="toggle-icon">∨</span>
                     `;
 
-                    container.appendChild(div);
+                    // 3. 하위 항목들을 담을 컨테이너 생성 (기본 숨김)
+                    const contentDiv = document.createElement('div');
+                    contentDiv.classList.add('accordion-content');
+                    contentDiv.style.display = 'none';
 
+                    // 4. 하위 데이터 파싱 및 렌더링
+                    let subItems = [];
+                    
+                    // 일반선택처럼 하위 객체가 없고 바로 required가 있는 경우 처리
+                    if ('required' in catData) {
+                        subItems.push({ subTitle: category.title, data: catData });
+                    } else {
+                        // 교양, 전공처럼 내부에 하위 세부 항목이 존재하는 경우
+                        Object.keys(catData).forEach(subKey => {
+                            subItems.push({ subTitle: subKey, data: catData[subKey] });
+                        });
+                    }
+
+                    // 하위 항목 HTML 동적 생성
+                    subItems.forEach(item => {
+                        const completed = item.data.completed;
+                        const required = item.data.required;
+                        
+                        // 퍼센트 계산 (막대 바 너비용, 분모가 0일 때 예외 처리)
+                        let percent = required > 0 ? (completed / required) * 100 : (completed > 0 ? 100 : 0);
+                        percent = Math.min(percent, 100); // 100% 초과 방지
+
+                        const itemDiv = document.createElement('div');
+                        itemDiv.classList.add('sub-requirement-item');
+                        itemDiv.innerHTML = `
+                            <div class="sub-item-info">
+                                <p>${item.subTitle}</p>
+                                <span class="credit-text">${completed} / ${required} 학점</span>
+                            </div>
+                            <div class="sub-progress-container">
+                                <div class="sub-progress-bar" style="width: ${percent}%;"></div>
+                            </div>
+                        `;
+                        contentDiv.appendChild(itemDiv);
+                    });
+
+                    // 5. 클릭 시 펼치기/접기 이벤트 리스너 등록
+                    headerDiv.addEventListener('click', function () {
+                        const isHidden = contentDiv.style.display === 'none';
+                        contentDiv.style.display = isHidden ? 'block' : 'none';
+                        
+                        // 화살표 회전 효과용 클래스 토글
+                        const icon = headerDiv.querySelector('.toggle-icon');
+                        if (isHidden) {
+                            icon.classList.add('rotated');
+                        } else {
+                            icon.classList.remove('rotated');
+                        }
+                    });
+
+                    // 컨테이너에 조립
+                    groupDiv.appendChild(headerDiv);
+                    groupDiv.appendChild(contentDiv);
+                    container.appendChild(groupDiv);
                 });
-
             }
 
             function getCurrentStudentData() {
@@ -1729,11 +1576,8 @@
             }
 
             function openStudentModal() {
-
                 renderStudentModal();
-
                 studentModal.style.display = 'flex';
-
             }
 
         </script>
