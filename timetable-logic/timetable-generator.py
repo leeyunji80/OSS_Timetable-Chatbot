@@ -117,6 +117,18 @@ def generate_timetable_combinations(
     
     assign_pref = user_preferences.get("assignment_preference")
     team_pref = user_preferences.get("team_preference") 
+
+    selected_course_set = set(
+        user_preferences.get("selected_courses", [])
+    )
+
+    excluded_course_set = set(
+        user_preferences.get("excluded_courses", [])
+    )
+
+    course_priority = user_preferences.get(
+        "course_priority"
+    )
     
     if not isinstance(empty_days, list): empty_days = []
     if not isinstance(avoid_time_slots, list): avoid_time_slots = []
@@ -128,6 +140,9 @@ def generate_timetable_combinations(
     # -------------------------------------------------------------
     for _, row in filtered_df.iterrows():
         course_name = row['교과목명']
+        # 사용자가 제외 요청한 과목 제거
+        if course_name in excluded_course_set:
+            continue
         is_ge = '교양' in str(row['이수구분'])
         is_recommended_major = (not is_ge) and (course_name in recommended_major_set)
         
@@ -174,6 +189,9 @@ def generate_timetable_combinations(
         area_name = str(row.get('교양대분류', '')).strip() if pd.notna(row.get('교양대분류')) else ''
         subarea_name = str(row.get('교양소분류', '')).strip() if pd.notna(row.get('교양소분류')) else ''
         base_score = 0
+        # 사용자가 직접 선택한 과목이면 매우 높은 가산점
+        if course_name in selected_course_set:
+            base_score += 50000
         
         room_info = ""
         room_info = str(row['강의실']).split('(')[0]
@@ -348,7 +366,7 @@ def generate_timetable_combinations(
         
     return []
 
-user_sentence = "과제 적은 시간표 추천해줘"
+user_sentence = "금요일 공강 12학점 시간표 추천해줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -410,7 +428,11 @@ all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_P
 
 user_preferences_input = {
     "assignment_preference": parsed_data.get("assignment_preference"),
-    "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선")
+    "team_preference": parsed_data.get("team_project_preference"),
+    "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선"),
+     "selected_courses": parsed_data.get("selected_courses", []),
+    "excluded_courses": parsed_data.get("excluded_courses", []),
+    "course_priority": parsed_data.get("course_priority")
 }
 
 import re
