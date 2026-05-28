@@ -240,8 +240,32 @@ def generate_timetable_combinations(
 
         # 그룹별로 명확하게 바구니 쪼갬
         if is_recommended_major:
-            if has_empty_day_conflict or has_avoid_time_conflict:
-                course_item["base_score"] -= 100
+            rule = user_preferences.get(
+                "conflict_resolution_rule",
+                "과목우선"
+            )
+
+            if rule == "공강우선":
+
+                if has_empty_day_conflict:
+                    continue
+
+                if has_avoid_time_conflict:
+                    continue
+
+            elif rule == "균형추천":
+
+                if has_empty_day_conflict:
+                    course_item["base_score"] -= 500
+
+                if has_avoid_time_conflict:
+                    course_item["base_score"] -= 300
+
+            else:
+                # 과목우선
+                if has_empty_day_conflict or has_avoid_time_conflict:
+                    course_item["base_score"] -= 100
+                    
             major_pool.append(course_item)
             
         elif is_ge:
