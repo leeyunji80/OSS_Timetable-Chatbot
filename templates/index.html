@@ -1585,6 +1585,32 @@
                 studentModal.style.display = 'flex';
             }
 
+            function deleteSession(sessionId) {
+                if (!confirm('해당 시간표 기록과 대화 내용을 삭제하시겠습니까?')) return;
+
+                // 1. 메모리(배열)에서 해당 세션 제거
+                chatSessions = chatSessions.filter(session => session.id !== sessionId);
+
+                // 2. 세션 저장소(sessionStorage) 상태 업데이트
+                saveSessionStorage();
+
+                // 3. 삭제한 세션이 현재 사용자가 보고 있던 세션인 경우 처리
+                if (currentSessionId === sessionId) {
+                    if (chatSessions.length > 0) {
+                        // 다른 세션이 남아있다면 가장 최근 세션을 로드
+                        currentSessionId = chatSessions[chatSessions.length - 1].id;
+                        sessionStorage.setItem('currentSessionId', currentSessionId);
+                        loadSession(currentSessionId);
+                    } else {
+                        // 모든 세션이 지워졌다면 완전히 새로운 기본 웰컴 화면 상태로 세팅
+                        createNewSession();
+                    }
+                }
+
+                // 4. 사이드바 목록 즉시 새로고침
+                renderHistory();
+            }
+
         </script>
     </div>
 
