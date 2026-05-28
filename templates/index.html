@@ -1105,17 +1105,18 @@
                 mainContainer.classList.toggle('shift');
             });
 
-            const savedStudent =
-                sessionStorage.getItem('currentStudent');
-            const savedSessions =
-                sessionStorage.getItem('chatSessions');
-            const savedSessionId =
-                sessionStorage.getItem('currentSessionId');
+            // 스크립트 하단 기존 로드부 대체
+            const savedStudent = sessionStorage.getItem('currentStudent');
+            const savedSessionId = sessionStorage.getItem('currentSessionId');
 
             if (savedStudent) {
                 currentStudent = JSON.parse(savedStudent);
                 updateProfileUI();
             }
+
+            // [수정] 로그인 여부에 따라 맞는 세션 저장소 키를 동적으로 바라봄
+            const userKey = currentStudent ? `chatSessions_${currentStudent.student_id}` : 'chatSessions_guest';
+            const savedSessions = sessionStorage.getItem(userKey);
 
             if (savedSessions) {
                 chatSessions = JSON.parse(savedSessions);
