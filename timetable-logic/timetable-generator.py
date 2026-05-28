@@ -110,7 +110,8 @@ def generate_timetable_combinations(
     empty_days,                 # 공강 요일 리스트
     avoid_time_slots,           # 피하고 싶은 시간대
     preferred_time_slots,
-    user_preferences            # 사용자 성향
+    user_preferences,            # 사용자 성향
+    mode="user_priority"
 ):
     major_pool = []
     ge_needed_pool = []  # 2순위 부족 교양만 따로 모음
@@ -145,11 +146,37 @@ def generate_timetable_combinations(
         if course_name in excluded_course_set:
             continue
         is_ge = '교양' in str(row['이수구분'])
-        is_recommended_major = (not is_ge) and (course_name in recommended_major_set)
-        
+        is_selected_course = (
+            course_name in selected_course_set
+        )
+
+        # 졸업 우선 모드에서는
+        # 사용자 선택 과목을 추천 전공으로 승격시키지 않음
+        if mode == "user_priority":
+
+            is_recommended_major = (
+                (not is_ge)
+                and
+                (
+                    course_name in recommended_major_set
+                    or is_selected_course
+                )
+            )
+
+        else:
+
+            is_recommended_major = (
+                (not is_ge)
+                and
+                (
+                    course_name in recommended_major_set
+                )
+            )
+
         if not is_ge and not is_recommended_major:
             continue
-            
+        if course_name in selected_course_set:
+            print(f"[선택과목 발견] {course_name}")
         time_slots = parse_day_and_period(row['요일'], row['교시'])
         if not time_slots: 
             continue
@@ -199,9 +226,15 @@ def generate_timetable_combinations(
         area_name = str(row.get('교양대분류', '')).strip() if pd.notna(row.get('교양대분류')) else ''
         subarea_name = str(row.get('교양소분류', '')).strip() if pd.notna(row.get('교양소분류')) else ''
         base_score = 0
-        # 사용자가 직접 선택한 과목이면 매우 높은 가산점
+        
+        # 사용자가 직접 선택한 과목 우선 반영
         if course_name in selected_course_set:
-            base_score += 50000
+
+            if mode == "user_priority":
+                base_score += 200000
+
+            else:  # graduation_priority
+                base_score += 1000
         
         room_info = ""
         room_info = str(row['강의실']).split('(')[0]
@@ -240,33 +273,48 @@ def generate_timetable_combinations(
 
         # 그룹별로 명확하게 바구니 쪼갬
         if is_recommended_major:
-            rule = user_preferences.get(
-                "conflict_resolution_rule",
-                "과목우선"
-            )
 
-            if rule == "공강우선":
+            # -------------------------------------------------
+            # graduation_priority:
+            # 추천 전공은 공강/시간회피 조건 무시
+            # -------------------------------------------------
+            if mode == "graduation_priority":
 
-                if has_empty_day_conflict:
-                    continue
+                major_pool.append(course_item)
 
-                if has_avoid_time_conflict:
-                    continue
-
-            elif rule == "균형추천":
-
-                if has_empty_day_conflict:
-                    course_item["base_score"] -= 500
-
-                if has_avoid_time_conflict:
-                    course_item["base_score"] -= 300
-
+            # -------------------------------------------------
+            # user_priority:
+            # 사용자 조건 적극 반영
+            # -------------------------------------------------
             else:
-                # 과목우선
-                if has_empty_day_conflict or has_avoid_time_conflict:
-                    course_item["base_score"] -= 100
-                    
-            major_pool.append(course_item)
+
+                rule = user_preferences.get(
+                    "conflict_resolution_rule",
+                    "과목우선"
+                )
+
+                if rule == "공강우선":
+
+                    if has_empty_day_conflict:
+                        continue
+
+                    if has_avoid_time_conflict:
+                        continue
+
+                elif rule == "균형추천":
+
+                    if has_empty_day_conflict:
+                        course_item["base_score"] -= 500
+
+                    if has_avoid_time_conflict:
+                        course_item["base_score"] -= 300
+
+                else:
+                    # 과목우선
+                    if has_empty_day_conflict or has_avoid_time_conflict:
+                        course_item["base_score"] -= 100
+
+                major_pool.append(course_item)
             
         elif is_ge:
             # 부족 교양 검사 (데이터 구조에 구애받지 않는 안전한 유효성 체크)
@@ -349,9 +397,17 @@ def generate_timetable_combinations(
                 
             major_credits = sum(m["credit"] for m in major_combo_list)
             
+            if mode == "graduation_priority":
+                major_weight = 60000
+            else:
+                major_weight = 8000
+            
             # 케이스 1: 전공만으로 이미 목표 학점을 채운 경우
             if abs(major_credits - target_credits) <= 1:
-                final_score = sum(m["base_score"] for m in major_combo_list) + (major_r * 20000)
+                final_score = (
+                    sum(c["base_score"] for c in major_combo_list)
+                    + (major_r * major_weight)
+                )
                 all_combinations.append({"schedule": major_combo_list, "final_score": final_score})
                 continue
             
@@ -371,10 +427,58 @@ def generate_timetable_combinations(
                     full_combo = major_combo_list + ge_combo_list
                     if not is_valid_combination(full_combo):
                         continue
+
+                    # 사용자가 직접 선택한 과목은 반드시 포함
+                    selected_courses = set(
+                    user_preferences.get("selected_courses", [])
+                    )
+
+                    full_course_names = {
+                        c["name"] for c in full_combo
+                    }
+                    if mode == "user_priority":
+                        if not selected_courses.issubset(full_course_names):
+                            continue
                         
-                    # 점수 계산: 전공 개수 가중치 + 기본 과목 점수
-                    final_score = sum(c["base_score"] for c in full_combo) + (major_r * 15000)
+                    if mode == "graduation_priority":
+                        major_weight = 60000
+                        needed_ge_weight = 15000
+
+
+                    else:  # user_priority
+                        major_weight = 8000
+                        needed_ge_weight = 5000
+
+                    if mode == "user_priority":
+
+                        final_score = (
+                            sum(c["base_score"] for c in full_combo)
+                            + (major_r * major_weight)
+                        )
+
+                        # 사용자가 선택한 과목 매우 강하게 우대
+                        selected_count = sum(
+                            1 for c in full_combo
+                            if c["name"] in selected_course_set
+                        )
+
+                        final_score += selected_count * 500000
                     
+
+                    else:  # graduation_priority
+                        needed_ge_count = sum(
+                            1 for c in ge_combo_list
+                            if c.get("is_needed_ge", False)
+                        )
+
+                        final_score = (
+                            sum(c["base_score"] for c in full_combo)
+                            + (major_r * major_weight)
+                            + (needed_ge_count * needed_ge_weight)
+                        )
+
+
+
                     # 부족 교양 영역 만족도 보너스 연산 (플래그 기반으로 정확하게 수정)
                     achieved_tracker = {}
                     for course in ge_combo_list:
@@ -387,13 +491,41 @@ def generate_timetable_combinations(
 
                     ge_bonus = 0
                     for a_name, req_info in needed_general_areas.items():
-                        if a_name in achieved_tracker:
-                            if "총필요학점" in req_info:
-                                # 가산점 배율을 대폭 상향하여 일반 교양 조합을 압도하도록 설정
-                                ge_bonus += min(achieved_tracker[a_name]["total"], req_info["총필요학점"]) * 3000
-                            else:
-                                for s_name, needed_sub_credit in req_info.items():
-                                    ge_bonus += min(achieved_tracker[a_name]["subareas"].get(s_name, 0), needed_sub_credit) * 3000
+
+                        if a_name not in achieved_tracker:
+                            continue
+
+                        # -----------------------------
+                        # 모드별 가산점 배율
+                        # -----------------------------
+                        if mode == "graduation_priority":
+                            bonus_multiplier = 4000
+
+
+                        else:  # user_priority
+                            bonus_multiplier = 1000
+
+                        # -----------------------------
+                        # 트랙 2 구조
+                        # -----------------------------
+                        if "총필요학점" in req_info:
+
+                            ge_bonus += min(
+                                achieved_tracker[a_name]["total"],
+                                req_info["총필요학점"]
+                            ) * bonus_multiplier
+
+                        # -----------------------------
+                        # 트랙 1 구조
+                        # -----------------------------
+                        else:
+
+                            for s_name, needed_sub_credit in req_info.items():
+
+                                ge_bonus += min(
+                                achieved_tracker[a_name]["subareas"].get(s_name, 0),
+                                needed_sub_credit
+                                ) * bonus_multiplier
                     
                     final_score += ge_bonus
                     all_combinations.append({"schedule": full_combo, "final_score": final_score})
@@ -418,11 +550,17 @@ def generate_timetable_combinations(
                 unique_schedules.append(item["schedule"])
             if len(unique_schedules) == 3:
                 break
-        return unique_schedules
-        
+        if all_combinations:
+            all_combinations.sort(
+            key=lambda x: x["final_score"],
+            reverse=True
+        )
+
+        return [all_combinations[0]["schedule"]]
+
     return []
 
-user_sentence = "금요일 공강 12학점 시간표 추천해줘"
+user_sentence = "운영체제 꼭 넣고 금요일 공강으로 18학점 맞춰줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -510,16 +648,52 @@ else:
     target_credit_int = 18
 
 # 2. 딕셔너리에 뭉쳐있던 인자들을 하나씩 풀어서 정확한 매개변수 이름으로 전달합니다.
-timetable_results = generate_timetable_combinations(
-    recommended_major_courses=recommended_majors,  # 1순위 전공 리스트 넘기기
-    needed_general_areas=needed_general_areas,      # 2순위 부족 교양 딕셔너리 넘기기
+user_priority_results = generate_timetable_combinations(
+    recommended_major_courses=recommended_majors,
+    needed_general_areas=needed_general_areas,
     filtered_df=all_lectures_df,
     target_credits=target_credit_int,
     empty_days=slots_input["exclude_days"],
     avoid_time_slots=slots_input["avoid_time_slots"],
     preferred_time_slots=slots_input["preferred_time_slots"],
-    user_preferences=user_preferences_input
+    user_preferences=user_preferences_input,
+    mode="user_priority"
 )
+
+graduation_priority_results = generate_timetable_combinations(
+    recommended_major_courses=recommended_majors,
+    needed_general_areas=needed_general_areas,
+    filtered_df=all_lectures_df,
+    target_credits=target_credit_int,
+    empty_days=slots_input["exclude_days"],
+    avoid_time_slots=slots_input["avoid_time_slots"],
+    preferred_time_slots=slots_input["preferred_time_slots"],
+    user_preferences=user_preferences_input,
+    mode="graduation_priority"
+)
+
+
+timetable_results = []
+
+if user_priority_results:
+    timetable_results.append(user_priority_results[0])
+
+if graduation_priority_results:
+    timetable_results.append(graduation_priority_results[0])
+
+
+unique_results = []
+seen = set()
+
+for schedule in timetable_results:
+
+    names = tuple(sorted(c["name"] for c in schedule))
+
+    if names not in seen:
+        seen.add(names)
+        unique_results.append(schedule)
+
+timetable_results = unique_results
 
 if timetable_results:
     print("-------- 예시 출력 --------")
@@ -558,6 +732,9 @@ if timetable_results:
         clean_result.append(clean_course)
 
 assign_pref = parsed_data.get("assignment_preference")
+selected_course_set = set(
+    parsed_data.get("selected_courses", [])
+)
 
 if timetable_results:
     print("\n-------- [시각화 팀 전달용 최종 JSON 출력] --------")
@@ -604,11 +781,49 @@ if timetable_results:
                 raw_ratio = 0
 
             course_color = course_color_map[course["name"]]
+
+            course_reason = []
+
+            # 사용자가 직접 선택한 과목
+            if course["name"] in selected_course_set:
+                course_reason.append(
+                    "사용자가 직접 선택한 필수 반영 과목"
+            )
+
+            # 추천 전공 여부
+            if course.get("is_required"):
+                course_reason.append(
+                    "졸업 추천 전공 과목"
+            )
+
+            # 부족 교양 여부
+            if course.get("is_needed_ge", False):
+                course_reason.append(
+                    "부족 교양 영역 충족 목적"
+            )
+
+            # 공강 유지 기여 여부
+            course_days = {
+                slot["day"] for slot in course["time_slots"]
+            }
+
+            if not any(day in exclude_days for day in course_days):
+                if exclude_days:
+                    course_reason.append(
+                        "공강 조건 유지에 유리한 배치"
+                    )
+
+            # 이유가 하나도 없을 경우
+            if not course_reason:
+                course_reason.append(
+                    "시간 충돌 최소화 및 학점 균형을 고려하여 선택"
+                )
             
             cleaned_courses.append({
                 "name": course["name"],
                 "room": course["room"],
                 "credit": course["credit"],
+                "selection_reason": course_reason,
                 "is_required": course.get("is_required", False),
                 # 임시 출력
                 "assignment_load_test": load_status,         # "적다", "보통이다", "많다"
@@ -622,6 +837,23 @@ if timetable_results:
         
         # 2. 요일별 오전/오후 회피 성공 여부 분석 및 추천 사유 생성
         reason_segments = []
+
+        if index == 0:
+            mode_description = (
+                "사용자 요청 과목 및 선호 조건을 최우선으로 반영한 시간표입니다."
+            )
+
+        elif index == 1:
+            mode_description = (
+                "졸업 요건 충족과 부족 교양 보완을 우선적으로 고려한 시간표입니다."
+            )
+
+        else:
+            mode_description = (
+                "전공, 공강, 시간대 선호를 균형 있게 반영한 시간표입니다."
+            )
+
+        reason_segments.append(mode_description)
         
         # 현재 이 대안 시간표에 포함된 부족 교양(Needed GE)들을 추적
         included_needed_ge_areas = []
@@ -691,6 +923,7 @@ if timetable_results:
             "alternative_id": index + 1,
             "total_credits": total_credits_sum,
             "recommendation_reason": recommendation_reason,
+            "recommendation_reasons": reason_segments,
             "courses": cleaned_courses
         }
         
