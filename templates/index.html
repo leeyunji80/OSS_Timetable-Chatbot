@@ -648,7 +648,7 @@
 
         /* 하위 항목 컨테이너 */
         .accordion-content {
-            padding: 5px 10px 15px 10px;
+            padding: 7px 10px 15px 10px;
             background-color: #fafafa;
             border-radius: 8px;
             margin-bottom: 10px;
@@ -680,6 +680,12 @@
             font-size: 14px;
             font-weight: 600;
             color: #333;
+        }
+
+        /* ★ 필요 학점 이상 이수 완료 시: 채도 낮은 초록색 스타일 적용 */
+        .credit-text.completed-active {
+            color: #4a8a5f !important; /* 눈이 편안한 채도 낮은 초록색 */
+            font-weight: 700;
         }
 
         /* 하위 항목 전용 게이지 막대기 바 */
@@ -876,10 +882,6 @@
                         <div class="progress-bar">
                             <div class="progress-fill" id="total-progress-bar"></div>
                         </div>
-
-                        <p id="credit-percent-text">
-                            0% 완료
-                        </p>
 
                     </div>
 
@@ -1459,11 +1461,6 @@
                     `${completed} / ${required} 학점`;
 
                 document.getElementById(
-                    'credit-percent-text'
-                ).innerText =
-                    `${percent}% 완료`;
-
-                document.getElementById(
                     'total-progress-bar'
                 ).style.width =
                     `${percent}%`;
@@ -1477,9 +1474,9 @@
                 if (!studentData) return;
 
                 const container = document.getElementById('graduation-requirement-list');
-                container.innerHTML = ''; // 기존 내용 초기화
+                container.innerHTML = ''; // 기존 리스트 리셋
 
-                // 상위 항목으로 분류할 데이터 매핑 정의
+                // 상위 대분류 구조 설정
                 const categories = [
                     { key: '교양', title: '교양' },
                     { key: '전공', title: '전공' },
@@ -1490,11 +1487,11 @@
                     const catData = studentData.credits[category.key];
                     if (!catData) return;
 
-                    // 1. 상위 그룹 컨테이너 생성
+                    // 1. 아코디언 감싸는 그룹 생성
                     const groupDiv = document.createElement('div');
                     groupDiv.classList.add('accordion-group');
 
-                    // 2. 상위 항목 헤더 (클릭 영역) 생성
+                    // 2. 대분류 타이틀 및 화살표(v) 헤더 생성
                     const headerDiv = document.createElement('div');
                     headerDiv.classList.add('accordion-header');
                     headerDiv.innerHTML = `
@@ -1502,39 +1499,39 @@
                         <span class="toggle-icon">∨</span>
                     `;
 
-                    // 3. 하위 항목들을 담을 컨테이너 생성 (기본 숨김)
+                    // 3. 펼쳐질 하위 항목 컨테이너 (기본은 숨김 처리)
                     const contentDiv = document.createElement('div');
                     contentDiv.classList.add('accordion-content');
                     contentDiv.style.display = 'none';
 
-                    // 4. 하위 데이터 파싱 및 렌더링
+                    // 4. 하위 데이터 추출 (일반선택 예외 분기 포함)
                     let subItems = [];
-                    
-                    // 일반선택처럼 하위 객체가 없고 바로 required가 있는 경우 처리
                     if ('required' in catData) {
                         subItems.push({ subTitle: category.title, data: catData });
                     } else {
-                        // 교양, 전공처럼 내부에 하위 세부 항목이 존재하는 경우
                         Object.keys(catData).forEach(subKey => {
                             subItems.push({ subTitle: subKey, data: catData[subKey] });
                         });
                     }
 
-                    // 하위 항목 HTML 동적 생성
+                    // 하위 항목별 바인딩 및 변환
                     subItems.forEach(item => {
-                        const completed = item.data.completed;
-                        const required = item.data.required;
+                        const completed = Number(item.data.completed);
+                        const required = Number(item.data.required);
                         
-                        // 퍼센트 계산 (막대 바 너비용, 분모가 0일 때 예외 처리)
                         let percent = required > 0 ? (completed / required) * 100 : (completed > 0 ? 100 : 0);
-                        percent = Math.min(percent, 100); // 100% 초과 방지
+                        percent = Math.min(percent, 100);
+
+                        // 필요 학점 이상 이수 시 초록색 색상 클래스 분기 기준 마련
+                        const isCompleted = completed >= required && required > 0;
+                        const statusClass = isCompleted ? 'completed-active' : '';
 
                         const itemDiv = document.createElement('div');
                         itemDiv.classList.add('sub-requirement-item');
                         itemDiv.innerHTML = `
                             <div class="sub-item-info">
                                 <p>${item.subTitle}</p>
-                                <span class="credit-text">${completed} / ${required} 학점</span>
+                                <span class="credit-text ${statusClass}">${completed} / ${required} 학점</span>
                             </div>
                             <div class="sub-progress-container">
                                 <div class="sub-progress-bar" style="width: ${percent}%;"></div>
@@ -1543,12 +1540,11 @@
                         contentDiv.appendChild(itemDiv);
                     });
 
-                    // 5. 클릭 시 펼치기/접기 이벤트 리스너 등록
+                    // 5. 헤더 클릭 시 토글 이벤트 리스너 연동
                     headerDiv.addEventListener('click', function () {
                         const isHidden = contentDiv.style.display === 'none';
                         contentDiv.style.display = isHidden ? 'block' : 'none';
                         
-                        // 화살표 회전 효과용 클래스 토글
                         const icon = headerDiv.querySelector('.toggle-icon');
                         if (isHidden) {
                             icon.classList.add('rotated');
@@ -1557,7 +1553,7 @@
                         }
                     });
 
-                    // 컨테이너에 조립
+                    // 요소 결합 후 화면 부착
                     groupDiv.appendChild(headerDiv);
                     groupDiv.appendChild(contentDiv);
                     container.appendChild(groupDiv);
