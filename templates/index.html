@@ -1147,29 +1147,38 @@
             }
 
             function renderHistory() {
-
                 historyContainer.innerHTML = '';
 
                 chatSessions.forEach(session => {
-
                     if (session.messages.length === 0) return;
+                    
                     const card = document.createElement('div');
                     card.classList.add('history-card');
+                    
+                    // [수정] (예비) 텍스트 대신 삭제 버튼(delete-btn)을 배치합니다.
                     card.innerHTML = `
                         <div class="history-info">
                             <p>${session.title}</p>
-                            <span>${session.preview}</span>
+                            <button class="delete-btn" data-id="${session.id}">삭제</button>
                         </div>
                     `;
 
-                    card.addEventListener('click', function () {
+                    // 카드 자체를 클릭하면 해당 대화 세션을 로드 (단, 삭제 버튼 클릭 시엔 제외)
+                    card.addEventListener('click', function (event) {
+                        if (event.target.classList.contains('delete-btn')) return;
                         loadSession(session.id);
                     });
                     
+                    // [추가] 삭제 버튼 클릭 이벤트 리스너 연동
+                    const deleteBtn = card.querySelector('.delete-btn');
+                    deleteBtn.addEventListener('click', function (event) {
+                        event.stopPropagation(); // 카드 클릭 이벤트로 전파되는 것을 방지
+                        const sessionIdToDelete = Number(this.getAttribute('data-id'));
+                        deleteSession(sessionIdToDelete);
+                    });
+                    
                     historyContainer.appendChild(card);
-
                 });
-
             }
 
             function loadSession(sessionId) {
