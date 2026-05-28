@@ -170,8 +170,17 @@ def generate_timetable_combinations(
         if avoid_time_slots:
             avoid_slots = []
             for avoid in avoid_time_slots:
-                start, end = (1, 4) if avoid["time_range"] == "오전" else (5, 9)
-                avoid_slots.append({"day": avoid["day"], "start_period": start, "end_period": end})
+                specific_slots = avoid.get("specific_time_slot")
+                if specific_slots:
+
+                    for period in specific_slots:
+
+                        avoid_slots.append({
+                            "day": avoid["day"],
+                            "start_period": period,
+                            "end_period": period
+                        })
+                
             has_avoid_time_conflict = is_conflict(current_course, {"time_slots": avoid_slots})
 
         # 교양 과목 성향 필터링 (과제/팀플)
@@ -421,7 +430,8 @@ for slot in parsed_data["slots"]:
 
         avoid_time_slots.append({
             "day": day,
-            "time_range": slot["time_range"]
+            "time_range": slot["time_range"],
+            "specific_time_slot": slot.get("specific_time_slot")
         })
         
     if slot["condition"] == "선호":
