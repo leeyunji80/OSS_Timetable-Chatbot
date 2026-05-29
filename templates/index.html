@@ -1287,16 +1287,10 @@
                     document.getElementById('student-id').value = '';
                     loginModal.style.display = 'none';
                     
-                    // [추가] 로그인한 사용자의 독립된 채팅 데이터 불러오기
-                    const userKey = `chatSessions_${currentStudent.student_id}`;
-                    const savedSessions = sessionStorage.getItem(userKey);
-                    
-                    if (savedSessions) {
-                        chatSessions = JSON.parse(savedSessions);
-                        // 마지막으로 활성화되었던 세션이 있다면 로드, 없으면 가장 최근 세션
-                        const lastSessionId = sessionStorage.getItem('currentSessionId');
-                        const hasSession = chatSessions.some(s => s.id === Number(lastSessionId));
-                        currentSessionId = hasSession ? Number(lastSessionId) : chatSessions[chatSessions.length - 1].id;
+                    // [수정] 서버에서 보내준 영구 저장 대화 기록 데이터 매핑
+                    if (data.chat_sessions && data.chat_sessions.length > 0) {
+                        chatSessions = data.chat_sessions;
+                        currentSessionId = chatSessions[chatSessions.length - 1].id;
                         loadSession(currentSessionId);
                     } else {
                         // 해당 계정의 첫 방문일 경우 새로운 세션 생성
@@ -1306,7 +1300,12 @@
 
                     updateProfileUI();
                     renderHistory(); // 사이드바 목록 즉시 갱신
-                    saveSessionStorage();
+                    
+                    // 로컬 브라우저 세션 동기화
+                    const userKey = `chatSessions_${currentStudent.student_id}`;
+                    sessionStorage.setItem(userKey, JSON.stringify(chatSessions));
+                    sessionStorage.setItem('currentSessionId', currentSessionId);
+
                 } else {
                     alert('로그인 실패');
                 }
