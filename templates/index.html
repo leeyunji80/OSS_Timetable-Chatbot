@@ -1315,28 +1315,26 @@
             });     
             
             logoutBtn.addEventListener('click', function () {
-                
-                // 1. 로그인 상태 해제
-                currentStudent = null;
+                // 1. 상태 완전 격리 진행을 위해 로컬 클리어 처리
                 sessionStorage.removeItem('currentStudent');
-                
-                // 2. 현재 계정의 대화 상태 및 활성화된 세션 ID 초기화
+                sessionStorage.removeItem('currentSessionId');
+                if (currentStudent) {
+                    sessionStorage.removeItem(`chatSessions_${currentStudent.student_id}`);
+                }
+
+                currentStudent = null;
                 chatSessions = [];
                 currentSessionId = null;
-                sessionStorage.removeItem('currentSessionId');
-                
-                // 3. 학생 정보 모달창이 열려있다면 닫기
                 studentModal.style.display = 'none';
                 
-                // 4. 비로그인(Guest) 청정 세션으로 새로 만들기 (웰컴 스크린 복원)
+                // 2. 게스트 환경 가동
                 createNewSession();
-                
-                // 5. 로그인 상태 기반 UI 및 사이드바 목록 즉시 갱신 (회원 목록이 화면에서 완전히 제거됨)
                 updateProfileUI();
                 renderHistory();
                 
-                // 6. 비로그인 상태의 기본 임시 저장소 상태 동기화
-                saveSessionStorage();
+                // 3. 서버 전송 없는 안전한 로컬 세션 동기화
+                sessionStorage.setItem('chatSessions_guest', JSON.stringify(chatSessions));
+                sessionStorage.setItem('currentSessionId', currentSessionId);
             });
 
             studentCloseBtn.addEventListener('click', function () {
