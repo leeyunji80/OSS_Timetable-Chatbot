@@ -19,8 +19,17 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
     "platforms"
 )
 
-# 1. Flask 서버 설정 (웹 화면 담당)
+# Flask 서버 설정 (웹 화면 담당)
 app = Flask(__name__)
+
+# 데이터 영구 저장을 위한 서버 로컬 디렉토리 환경 구성
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'chat_data')
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
+# 학번별 독립적인 파일 경로 반환 도우미 함수
+def get_user_data_path(student_id):
+    return os.path.join(DATA_DIR, f"chat_sessions_{student_id}.json")
 
 @app.route('/')
 def index():
@@ -40,6 +49,24 @@ def chat():
         'image': '/static/timetable.png'
     })
 
+# 실시간 데이터 파일 저장을 위한 영구화 API 엔드포인트 구현
+@app.route('/save_chat', methods=['POST'])
+def save_chat():
+    data = request.get_json()
+    student_id = data.get('student_id')
+    chat_sessions = data.get('chat_sessions')
+    
+    if not student_id:
+        return jsonify({"success": False, "message": "학번 정보가 누락되었습니다."}), 400
+        
+    file_path = get_user_data_path(student_id)
+    
+    # 텍스트, 인코딩, 이미지 경로 포맷을 깨뜨리지 않고 안전하게 파일 시스템 백업
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(chat_sessions, f, ensure_ascii=False, indent=2)
+        
+    return jsonify({"success": True, "message": "서버에 영구 백업 완료"})
+
 @app.route('/login', methods=['POST'])
 def login():
 
@@ -54,10 +81,19 @@ def login():
             student['student_id'] == student_id
             and student['name'] == student_name
         ):
+            
+            # 해당 사용자의 파일 시스템 백업 기록 확인 후 자동 로드
+            file_path = get_user_data_path(student_id)
+            saved_sessions = []
+            
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    saved_sessions = json.load(f)
 
             return jsonify({
                 'success': True,
-                'student': student
+                'student': student,
+                'chat_session': saved_sessions
             })
 
     return jsonify({
