@@ -67,6 +67,31 @@ def save_chat():
         
     return jsonify({"success": True, "message": "서버에 영구 백업 완료"})
 
+@app.route('/get_chats', methods=['GET'])
+def get_chats():
+    """이전 시간표 조회 API"""
+    student_id = request.args.get('student_id')
+    
+    if not student_id:
+        return jsonify({"success": False, "message": "학번 정보가 필요합니다."}), 400
+        
+    file_path = get_user_data_path(student_id)
+    
+    # 파일이 존재하면 읽어오고, 없으면 빈 배열 반환
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            try:
+                saved_sessions = json.load(f)
+            except json.JSONDecodeError:
+                saved_sessions = []
+    else:
+        saved_sessions = []
+        
+    return jsonify({
+        "success": True,
+        "chat_sessions": saved_sessions
+    })
+
 @app.route('/login', methods=['POST'])
 def login():
 
