@@ -92,6 +92,7 @@ def get_chats():
         "chat_sessions": saved_sessions
     })
 
+@app.route('/delete_chat', methods=['POST'])
 def delete_chat():
     """채팅 삭제 API (특정 세션 ID만 JSON 파일에서 파기)"""
     data = request.get_json()
@@ -146,7 +147,7 @@ def login():
             return jsonify({
                 'success': True,
                 'student': student,
-                'chat_session': saved_sessions
+                'chat_sessions': saved_sessions
             })
 
     return jsonify({
