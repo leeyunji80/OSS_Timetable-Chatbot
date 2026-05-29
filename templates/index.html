@@ -1282,12 +1282,16 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // 로그인 성공 직후, 기존 비로그인(Guest) 임시 데이터 완전 파기
+                    sessionStorage.removeItem('chatSessions_guest');
+                    chatSessions = []; // 메모리 배열 비우기
+                    
                     currentStudent = data.student;
                     document.getElementById('student-name').value = '';
                     document.getElementById('student-id').value = '';
                     loginModal.style.display = 'none';
                     
-                    // [수정] 서버에서 보내준 영구 저장 대화 기록 데이터 매핑
+                    //  서버에서 보내준 영구 저장 대화 기록 데이터 매핑
                     if (data.chat_sessions && data.chat_sessions.length > 0) {
                         chatSessions = data.chat_sessions;
                         currentSessionId = chatSessions[chatSessions.length - 1].id;
