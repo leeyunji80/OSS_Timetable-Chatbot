@@ -59,6 +59,13 @@ def is_valid_combination(schedule):
     for i in range(len(schedule)):
         for j in range(i + 1, len(schedule)):
             
+            if (
+                schedule[i]["course_code"]
+                and
+                schedule[i]["course_code"] == schedule[j]["course_code"]
+            ):
+                return False
+
             if schedule[i]["name"] == schedule[j]["name"]:
                 return False
 
@@ -240,6 +247,8 @@ def generate_timetable_combinations(
         room_info = str(row['강의실']).split('(')[0]
 
         course_item = {
+            "course_code": str(row.get("교과목 번호", "")),
+            "class_no": str(row.get("분반 번호", "")),
             "name": course_name, "room": room_info, "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots, "is_required": is_recommended_major,
             "area": area_name, "subarea": subarea_name, "base_score": base_score
@@ -538,6 +547,18 @@ def generate_timetable_combinations(
 
     if all_combinations:
         # 점수 높은 순(전공 가득 + 부족교양 포함 + 성향 만족)으로 정렬하여 탑 3 반환
+        validated_combinations = []
+
+        for item in all_combinations:
+
+            total_credit = sum(
+                c["credit"] for c in item["schedule"]
+            )
+
+            if total_credit <= target_credits + 2:
+                validated_combinations.append(item)
+
+        all_combinations = validated_combinations
         all_combinations.sort(key=lambda x: x["final_score"], reverse=True)
         
         # 중복 결과 방지를 위해 과목 이름 셋으로 필터링하여 고유 대안 3개 추출
@@ -560,7 +581,7 @@ def generate_timetable_combinations(
 
     return []
 
-user_sentence = "운영체제 꼭 넣고 금요일 공강으로 18학점 맞춰줘"
+user_sentence = "캡스톤디자인 꼭 넣고 금요일 공강으로 18학점 맞춰줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -613,7 +634,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20250001"
+login_student_id = "20260001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
