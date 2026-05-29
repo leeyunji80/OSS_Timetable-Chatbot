@@ -75,6 +75,28 @@ def get_graduation_rule(
     return None
 
 
+def normalize_subarea(subarea_name):
+
+    mapping = {
+
+        "확대교양영역택1": "확대교양",
+        "확대": "확대교양",
+
+        "일반교양인간과문화분야택1": "인간과문화",
+
+        "공업법규와창업": "사회와역사",
+
+        "대학글쓰기": "의사소통",
+
+        "ActionEnglish": "영어",
+
+        "빅데이터의이해와활용": "정보문해",
+
+        "역사와비판적사고": "인성과비판적사고"
+    }
+
+    return mapping.get(subarea_name, subarea_name)
+
 # ---------------------------------
 # 학생 이수 현황 분석
 # ---------------------------------
@@ -124,9 +146,13 @@ def analyze_graduation_status(
 
             status["major_elective"] += credit
 
-        area = course.get("area")
+        area = normalize_subarea(
+            course.get("area", "")
+        )
 
-        subarea = course.get("subarea")
+        subarea = normalize_subarea(
+            course.get("subarea", "")
+        )
 
         if subarea:
 
@@ -143,6 +169,8 @@ def analyze_graduation_status(
                 status["areas"][area] = 0
 
             status["areas"][area] += credit
+            print(status["areas"])
+            print(status["subareas"])
 
     return status
 
@@ -259,7 +287,13 @@ def calculate_remaining_requirements(
         completed_area_credit = 0
         for sub_key, sub_data in subareas_data.items():
             sub_name = sub_data["name"]
-            completed_area_credit += graduation_status["subareas"].get(sub_name, 0)
+            if area_name == "확대교양":
+
+                completed_area_credit = graduation_status["areas"].get(area_name, 0)
+
+            else:
+
+                completed_area_credit += graduation_status["subareas"].get(sub_name, 0)
 
         if area_name not in remaining["areas"]:
             remaining["areas"][area_name] = {}
@@ -417,7 +451,7 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
 if __name__ == "__main__":
     
     # 1. 로그인 담당 팀원이 넘겨준 "학번"과 "추천받을 학기" 예시
-    login_student_id = "20210005"
+    login_student_id = "20260001"
     target_semester = 1
 
     # 2. 파일에서 불러온 students_list를 그대로 인자에 주입!
