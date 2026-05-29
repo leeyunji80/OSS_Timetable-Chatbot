@@ -1673,13 +1673,29 @@
                 studentModal.style.display = 'flex';
             }
 
-            function deleteSession(sessionId) {
+            async function deleteSession(sessionId) {
                 if (!confirm('해당 시간표 기록과 대화 내용을 삭제하시겠습니까?')) return;
 
                 // 1. 메모리(배열)에서 해당 세션 제거
                 chatSessions = chatSessions.filter(session => session.id !== sessionId);
 
-                // 2. 세션 저장소(sessionStorage) 상태 업데이트
+                // 2. 로그인 상태라면 Flask 백엔드 서버에 영구 파일 내 세션 삭제 요청
+                if (currentStudent && currentStudent.student_id) {
+                    try {
+                        await fetch('/delete_chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                student_id: currentStudent.student_id,
+                                session_id: sessionId
+                            })
+                        });
+                    } catch (error) {
+                        console.error("서버 데이터 삭제 연동 실패:", error);
+                    }
+                }
+
+                // 3. 세션 저장소(sessionStorage) 상태 업데이트
                 saveSessionStorage();
 
                 // 3. 삭제한 세션이 현재 사용자가 보고 있던 세션인 경우 처리
