@@ -1298,7 +1298,6 @@
                         loadSession(currentSessionId);
                     } else {
                         // 해당 계정의 첫 방문일 경우 새로운 세션 생성
-                        chatSessions = [];
                         createNewSession();
                     }
 
@@ -1309,7 +1308,7 @@
                     const userKey = `chatSessions_${currentStudent.student_id}`;
                     sessionStorage.setItem(userKey, JSON.stringify(chatSessions));
                     sessionStorage.setItem('currentSessionId', currentSessionId);
-
+                    sessionStorage.setItem('currentStudent', JSON.stringify(currentStudent));
                 } else {
                     alert('로그인 실패');
                 }
