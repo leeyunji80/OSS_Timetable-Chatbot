@@ -435,7 +435,8 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
 
     return {
         "needed_general_areas": needed_general_areas,
-        "recommended_major_courses": filtered_major
+        "recommended_major_courses": filtered_major,
+        "recommended_general_courses": filtered_general
     }
 
 # ---------------------------------
