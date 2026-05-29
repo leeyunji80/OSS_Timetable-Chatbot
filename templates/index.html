@@ -987,7 +987,7 @@
             let courseHistoryData = [];
             let studentCreditData = [];
 
-            function saveSessionStorage() {
+            async function saveSessionStorage() {
                 // 현재 로그인된 사용자 정보 우선 저장
                 sessionStorage.setItem(
                     'currentStudent',
@@ -1004,14 +1004,22 @@
                     const userKey = `chatSessions_${currentStudent.student_id}`;
                     sessionStorage.setItem(
                         userKey,
-                        JSON.stringify(chatSessions)
-                    );
+                        JSON.stringify(chatSessions));
+                    try {
+                        await fetch('/save_chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                student_id: currentStudent.student_id,
+                                chat_sessions: chatSessions
+                            })
+                        });
+                    } catch (error) {
+                        console.error("서버 데이터 백업 실패:", error);
+                    }
                 } else {
-                    // 비로그인 상태일 때의 임시 공간
-                    sessionStorage.setItem(
-                        'chatSessions_guest',
-                        JSON.stringify(chatSessions)
-                    );
+                    // [비로그인 상태] 서버로 fetch를 보내지 않고, 오직 브라우저 임시 공간(guest)에만 기록 유지
+                    sessionStorage.setItem('chatSessions_guest', JSON.stringify(chatSessions));
                 }
             }
 
@@ -1683,6 +1691,5 @@
 
         </script>
     </div>
-
 </body>
 </html>
