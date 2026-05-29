@@ -92,6 +92,34 @@ def get_chats():
         "chat_sessions": saved_sessions
     })
 
+def delete_chat():
+    """채팅 삭제 API (특정 세션 ID만 JSON 파일에서 파기)"""
+    data = request.get_json()
+    student_id = data.get('student_id')
+    session_id = data.get('session_id')  # 삭제 타겟 세션 고유 ID
+    
+    if not student_id or not session_id:
+        return jsonify({"success": False, "message": "필수 파라미터가 누락되었습니다."}), 400
+        
+    file_path = get_user_data_path(student_id)
+    
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            try:
+                chat_sessions = json.load(f)
+            except json.JSONDecodeError:
+                chat_sessions = []
+                
+        # 전달받은 session_id와 일치하지 않는 데이터만 걸러내어 파일 업데이트
+        filtered_sessions = [s for s in chat_sessions if s.get('id') != int(session_id)]
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(filtered_sessions, f, ensure_ascii=False, indent=2)
+            
+        return jsonify({"success": True, "message": "서버 파일에서 세션 삭제 성공"})
+        
+    return jsonify({"success": False, "message": "삭제할 데이터 파일이 존재하지 않습니다."}), 404
+
 @app.route('/login', methods=['POST'])
 def login():
 
