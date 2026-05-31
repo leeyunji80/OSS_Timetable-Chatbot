@@ -59,13 +59,6 @@ def is_valid_combination(schedule):
     for i in range(len(schedule)):
         for j in range(i + 1, len(schedule)):
             
-            if (
-                schedule[i]["course_code"]
-                and
-                schedule[i]["course_code"] == schedule[j]["course_code"]
-            ):
-                return False
-
             if schedule[i]["name"] == schedule[j]["name"]:
                 return False
 
@@ -149,10 +142,20 @@ def generate_timetable_combinations(
     # -------------------------------------------------------------
     for _, row in filtered_df.iterrows():
         course_name = row['교과목명']
-        # 사용자가 제외 요청한 과목 제거
-        if course_name in excluded_course_set:
-            continue
         is_ge = '교양' in str(row['이수구분'])
+        if course_name in excluded_course_set:
+
+            # user_priority에서는 제거
+            if mode == "user_priority":
+                continue
+
+            # graduation_priority에서는
+            # 추천 전공이면 살림
+            if mode == "graduation_priority":
+
+                if course_name not in recommended_major_set:
+                    continue
+
         is_selected_course = (
             course_name in selected_course_set
         )
@@ -247,8 +250,6 @@ def generate_timetable_combinations(
         room_info = str(row['강의실']).split('(')[0]
 
         course_item = {
-            "course_code": str(row.get("교과목 번호", "")),
-            "class_no": str(row.get("분반 번호", "")),
             "name": course_name, "room": room_info, "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots, "is_required": is_recommended_major,
             "area": area_name, "subarea": subarea_name, "base_score": base_score
@@ -376,8 +377,29 @@ def generate_timetable_combinations(
     random.shuffle(ge_normal_pool)
     
     # 부족 교양은 유실되면 안 되므로 최대한 넉넉히 담고, 일반 교양은 빈자리 메우기용으로만 제한합니다.
-    sampled_ge_needed = ge_needed_pool[:15]  
-    sampled_ge_normal = ge_normal_pool[:10]
+    sampled_ge_needed = ge_needed_pool[:25]  
+    forced_ge_courses = []
+
+    for course in ge_normal_pool:
+        if course["name"] in selected_course_set:
+            forced_ge_courses.append(course)
+
+    sampled_ge_normal = []
+
+    added = set()
+
+    for course in forced_ge_courses:
+        sampled_ge_normal.append(course)
+        added.add(course["name"])
+
+    for course in ge_normal_pool:
+        if course["name"] in added:
+            continue
+
+        sampled_ge_normal.append(course)
+
+        if len(sampled_ge_normal) >= 5:
+            break
     
     # 최종 교양 풀 구성
     ge_pool = sampled_ge_needed + sampled_ge_normal
@@ -413,6 +435,15 @@ def generate_timetable_combinations(
             
             # 케이스 1: 전공만으로 이미 목표 학점을 채운 경우
             if abs(major_credits - target_credits) <= 1:
+
+                if mode == "user_priority":
+                    full_course_names = {c["name"] for c in major_combo_list}
+                    selected_courses = set(user_preferences.get("selected_courses", []))
+
+                    if not selected_courses.issubset(full_course_names):
+                        continue
+
+
                 final_score = (
                     sum(c["base_score"] for c in major_combo_list)
                     + (major_r * major_weight)
@@ -545,20 +576,31 @@ def generate_timetable_combinations(
             all_combinations.sort(key=lambda x: x["final_score"], reverse=True)
             all_combinations = all_combinations[:300]
 
-    if all_combinations:
-        # 점수 높은 순(전공 가득 + 부족교양 포함 + 성향 만족)으로 정렬하여 탑 3 반환
-        validated_combinations = []
+    selected_courses = set(user_preferences.get("selected_courses", []))
+
+    if mode == "user_priority" and selected_courses:
+
+        valid_combinations = []
 
         for item in all_combinations:
 
-            total_credit = sum(
-                c["credit"] for c in item["schedule"]
-            )
+            names = {
+                c["name"]
+                for c in item["schedule"]
+            }
 
-            if total_credit <= target_credits + 2:
-                validated_combinations.append(item)
+            if selected_courses.issubset(names):
+                valid_combinations.append(item)
 
-        all_combinations = validated_combinations
+        all_combinations = valid_combinations
+
+    if not all_combinations:
+        return []
+
+
+
+    if all_combinations:
+        # 점수 높은 순(전공 가득 + 부족교양 포함 + 성향 만족)으로 정렬하여 탑 3 반환
         all_combinations.sort(key=lambda x: x["final_score"], reverse=True)
         
         # 중복 결과 방지를 위해 과목 이름 셋으로 필터링하여 고유 대안 3개 추출
@@ -576,12 +618,17 @@ def generate_timetable_combinations(
             key=lambda x: x["final_score"],
             reverse=True
         )
+            print("===== 최종 후보 =====")
+
+            for item in all_combinations[:5]:
+                names = [c["name"] for c in item["schedule"]]
+                print(names)
 
         return [all_combinations[0]["schedule"]]
 
     return []
 
-user_sentence = "캡스톤디자인 꼭 넣고 금요일 공강으로 18학점 맞춰줘"
+user_sentence = "데이터통신과 오픈소스기초프로젝트 제외하고 월요일 공강으로 20학점 맞춰줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
 
@@ -634,7 +681,7 @@ slots_input = {
 
 # ... (LLM 분석 및 slots_input 정제 완료 후) ...
 
-login_student_id = "20260001"
+login_student_id = "20250001"
 target_semester = 1 
 
 # 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
@@ -693,6 +740,18 @@ graduation_priority_results = generate_timetable_combinations(
     mode="graduation_priority"
 )
 
+
+selected_courses = set(
+    parsed_data.get("selected_courses", [])
+)
+if selected_courses and not user_priority_results:
+
+    print(json.dumps({
+        "status": "error",
+        "message": "조건을 만족하는 시간표 조합을 찾지 못했습니다. 조건을 완화해 주세요."
+    }, ensure_ascii=False, indent=2))
+
+    exit()
 
 timetable_results = []
 
