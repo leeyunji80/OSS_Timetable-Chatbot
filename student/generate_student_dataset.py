@@ -486,6 +486,8 @@ def select_liberal_courses(
     max_credits,
     standard_names,
     scenario,
+    existing_rows,
+    required,
     preferred_area=None,
     preferred_subarea=None,
     standard_only=False,
@@ -505,10 +507,36 @@ def select_liberal_courses(
             continue
         if not scenario_allows_course(course, scenario, standard_phase=standard_only):
             continue
+        if not can_add_liberal_course(course, existing_rows, required):
+            continue
         candidates.append((standard_match, course))
 
     candidates.sort(key=lambda item: item[0], reverse=True)
-    return take_courses(candidates, selected_course_names, max_credits, max_courses=max_courses)
+    selected = []
+    total = 0
+    simulated_rows = list(existing_rows)
+    random.shuffle(candidates)
+    candidates.sort(key=lambda item: item[0], reverse=True)
+
+    for _, course in candidates:
+        credits = int(course["학점"])
+        if total + credits > max_credits:
+            continue
+        if not can_add_liberal_course(course, simulated_rows, required):
+            continue
+        selected.append(course)
+        selected_course_names.add(course["교과목명"])
+        simulated_rows.append(
+            {
+                "영역": course["영역"],
+                "세부영역": course["세부영역"],
+                "학점": credits,
+            }
+        )
+        total += credits
+        if max_courses is not None and len(selected) >= max_courses:
+            break
+    return selected
 
 def distribute_credit_targets(total_credits, completed_semesters, scenario):
     """총 목표학점을 현실적인 학기별 목표학점으로 나눈다."""
