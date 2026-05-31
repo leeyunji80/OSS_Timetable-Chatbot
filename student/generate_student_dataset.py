@@ -312,10 +312,11 @@ def effective_target_credit_range(scenario, completed_semesters):
     minimum_total = completed_semesters * MIN_SEMESTER_CREDITS
     maximum_total = completed_semesters * MAX_SEMESTER_CREDITS
     target_min = min(max(scenario_min, minimum_total), maximum_total)
+    target_max = min(maximum_total, max(scenario_max, target_min + min(12, maximum_total - target_min)))
     if target_max < target_min:
         target_max = target_min
-    target_max = min(maximum_total, max(scenario_max, target_min + min(12, maximum_total - target_min)))
     return target_min, target_max
+
 
 def standard_items_for_term(standard_curriculum, curriculum_year, grade, semester):
     """해당 학년/학기의 표준이수모형 과목명과 '택1' 형태의 영역 힌트를 분리한다."""
@@ -461,6 +462,7 @@ def select_major_courses(
     preferred_subarea=None,
     standard_only=False,
     max_courses=None,
+    enforce_scenario=True,
 ):
     """전공필수/전공선택 과목을 실제 lectures_database.csv 카탈로그에서 선택한다."""
     candidates = []
@@ -472,7 +474,7 @@ def select_major_courses(
         standard_match = is_standard_match(course["교과목명"], standard_names)
         if standard_only and not standard_match:
             continue
-        if not scenario_allows_course(course, scenario, standard_phase=standard_only):
+        if enforce_scenario and not scenario_allows_course(course, scenario, standard_phase=standard_only):
             continue
         candidates.append((standard_match, course))
 
@@ -492,6 +494,7 @@ def select_liberal_courses(
     preferred_subarea=None,
     standard_only=False,
     max_courses=None,
+    enforce_scenario=True,
 ):
     """교양 과목을 실제 liberal_arts.csv 카탈로그에서 선택한다."""
     candidates = []
@@ -505,7 +508,7 @@ def select_liberal_courses(
         standard_match = is_standard_match(course["교과목명"], standard_names)
         if standard_only and not standard_match:
             continue
-        if not scenario_allows_course(course, scenario, standard_phase=standard_only):
+        if enforce_scenario and not scenario_allows_course(course, scenario, standard_phase=standard_only):
             continue
         if not can_add_liberal_course(course, existing_rows, required):
             continue
@@ -814,6 +817,7 @@ def build_course_history(lectures, major_fall, liberal_arts, standard_curriculum
                     [],
                     scenario,
                     max_courses=1,
+                    enforce_scenario=False,
                 )
             if courses:
                 add_courses_to_term(term_rows, courses, scenario, semester)
@@ -862,7 +866,6 @@ def validate_history(history, lectures, major_fall, liberal_arts, scenario, requ
     low = max(raw_low, MIN_SEMESTER_CREDITS)
     high = max(raw_high, MAX_SEMESTER_CREDITS, low)
 
-    low, high = scenario.get("semester_credit_range", [12, 18])
     semester_credits = history.groupby(["수강년도", "수강학기"])["학점"].sum()
     if not semester_credits.between(low, high).all():
         raise ValueError(
@@ -969,12 +972,13 @@ def build_students_json(scenarios, all_history, graduation):
 def main():
     random.seed(RANDOM_SEED)
 
-    lectures, liberal_arts, standard_curriculum, graduation = read_source_files()
+    lectures, major_fall, liberal_arts, standard_curriculum, graduation = read_source_files()
 
     histories = []
     for scenario in student_scenarios:
         history = build_course_history(
             lectures,
+            major_fall,
             liberal_arts,
             standard_curriculum,
             graduation,
