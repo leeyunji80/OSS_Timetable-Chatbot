@@ -20,6 +20,8 @@ COURSE_HISTORY_PATH = (
 
 STUDENT_DATA_PATH = "student/students.json"
 
+MAJOR_COURSE_PATH = "data_processor/lectures_database.csv"
+
 def load_students_data(json_path):
     with open(json_path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -50,6 +52,16 @@ def load_curriculum_model(csv_path):
         encoding="utf-8-sig"
     )
 
+# ---------------------------------
+# 전공과목 CSV 로드
+# ---------------------------------
+
+def load_major_courses(csv_path):
+
+    return pd.read_csv(
+        csv_path,
+        encoding="utf-8-sig"
+    )
 
 # ---------------------------------
 # 입학년도에 맞는 졸업요건 선택
@@ -169,8 +181,6 @@ def analyze_graduation_status(
                 status["areas"][area] = 0
 
             status["areas"][area] += credit
-            print(status["areas"])
-            print(status["subareas"])
 
     return status
 
@@ -224,6 +234,8 @@ curriculum_df = load_curriculum_model(
 )
 
 students_list = load_students_data(STUDENT_DATA_PATH)
+
+major_df = load_major_courses(MAJOR_COURSE_PATH)
 # ---------------------------------
 # 테스트
 # ---------------------------------
@@ -376,6 +388,40 @@ def filter_completed_courses(recommended_courses, completed_set):
         if course not in completed_set
     ]
 
+def get_missing_previous_required_courses(
+    major_df,
+    current_grade,
+    completed_set
+):
+
+    required_df = major_df[
+        major_df["이수구분"] == "전공필수"
+    ].copy()
+
+    required_df["학년"] = (
+        required_df["수강 대상"]
+        .str.extract(r'(\d)학년')
+        .astype(float)
+    )
+
+    required_df = required_df[
+        required_df["학년"] < current_grade
+    ]
+
+    required_df = required_df.drop_duplicates(
+        subset=["교과목명"]
+    )
+
+    missing_courses = []
+
+    for course in required_df["교과목명"]:
+
+        if course not in completed_set:
+
+            missing_courses.append(course)
+
+    return missing_courses
+
 # ---------------------------------
 # 로그인 팀원에게 학번을 받아 처리하는 통합 함수
 # ---------------------------------
@@ -420,6 +466,13 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
     completed_set = graduation_status["completed_course_names"]
     filtered_major = filter_completed_courses(rec_dict["major"], completed_set)
     filtered_general = filter_completed_courses(rec_dict["general"], completed_set)
+    missing_required_courses = (
+        get_missing_previous_required_courses(
+            major_df,
+            current_grade,
+            completed_set
+        )
+    )
     
     needed_general_areas = {}
     for area_name, sub_dict in remaining_reqs["areas"].items():
@@ -436,7 +489,8 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
     return {
         "needed_general_areas": needed_general_areas,
         "recommended_major_courses": filtered_major,
-        "recommended_general_courses": filtered_general
+        "recommended_general_courses": filtered_general,
+        "missing_required_major_courses": missing_required_courses
     }
 
 # ---------------------------------
@@ -452,7 +506,7 @@ def get_final_recommendations(student_id, target_semester, students_json_data):
 if __name__ == "__main__":
     
     # 1. 로그인 담당 팀원이 넘겨준 "학번"과 "추천받을 학기" 예시
-    login_student_id = "20260001"
+    login_student_id = "20210003"
     target_semester = 1
 
     # 2. 파일에서 불러온 students_list를 그대로 인자에 주입!
