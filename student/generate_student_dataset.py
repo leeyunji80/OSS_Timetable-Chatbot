@@ -609,12 +609,13 @@ def add_courses_to_term(term_rows, courses, scenario, semester):
         term_rows.append(row_to_history(course, scenario, semester))
 
 
-def build_course_history(lectures, liberal_arts, standard_curriculum, graduation, scenario):
+def build_course_history(lectures, major_fall, liberal_arts, standard_curriculum, graduation, scenario):
     """
     하나의 학생 시나리오를 기반으로 수강이력을 자동 생성한다.
     과목 선택은 항상 실제 lectures_database.csv / liberal_arts.csv 카탈로그에서만 수행한다.
     """
-    major_catalog = prepare_major_catalog(lectures)
+    major_spring_catalog = prepare_major_catalog(lectures)
+    major_fall_catalog = prepare_major_catalog(major_fall)
     liberal_catalog = prepare_liberal_catalog(liberal_arts)
     required = graduation_requirements(graduation, scenario["curriculum_year"])
 
@@ -622,7 +623,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
 
     if completed_semesters == 0:
         history = pd.DataFrame(columns=COURSE_HISTORY_COLUMNS)
-        validate_history(history, lectures, liberal_arts, scenario)
+        validate_history(history, lectures, major_fall, liberal_arts, scenario, required)
         return history
 
     target_min, target_max = effective_target_credit_range(scenario, completed_semesters)
@@ -635,6 +636,7 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
 
     for semester, semester_target in zip(semesters, semester_targets):
         term_rows = []
+        major_catalog = major_spring_catalog if semester["term_index"] % 2 == 1 else major_fall_catalog
         standard_names, area_hints = standard_items_for_term(
             standard_curriculum,
             scenario["curriculum_year"],
@@ -651,8 +653,11 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
                 selected_course_names,
                 academic_grade,
                 standard_room,
+               standard_room,
                 standard_names,
                 scenario,
+                rows + term_rows,
+                required,
                 standard_only=True,
             )
             add_courses_to_term(term_rows, liberal_standard, scenario, semester)
@@ -676,11 +681,13 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
                 break
             courses = select_liberal_courses(
                 liberal_catalog,
-                selected_course_names,
-                academic_grade,
                 semester_target - term_credits,
                 [],
                 scenario,
+                rows + term_rows,
+                required,
+                preferred_area=hint["영역"],
+                preferred_subarea=hint["세부영역"],
                 preferred_area=hint["영역"],
                 preferred_subarea=hint["세부영역"],
                 max_courses=1,
@@ -722,9 +729,11 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
                     liberal_catalog,
                     selected_course_names,
                     academic_grade,
-                    remaining,
+                     remaining,
                     [],
                     scenario,
+                    rows + term_rows,
+                    required,
                     preferred_area="개신기초",
                     max_courses=1,
                 )
@@ -733,9 +742,11 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
                     liberal_catalog,
                     selected_course_names,
                     academic_grade,
-                    remaining,
+                   remaining,
                     [],
                     scenario,
+                    rows + term_rows,
+                    required,
                     preferred_area="자연이공계기초",
                     max_courses=1,
                 )
@@ -747,6 +758,8 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
                     remaining,
                     [],
                     scenario,
+                    rows + term_rows,
+                    required,
                     preferred_area="일반",
                     max_courses=1,
                 )
@@ -755,12 +768,15 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
                     liberal_catalog,
                     selected_course_names,
                     academic_grade,
-                    remaining,
+                     remaining,
                     [],
                     scenario,
+                    rows + term_rows,
+                    required,
                     preferred_area="확대",
                     max_courses=1,
                 )
+
 
             if not courses:
                 continue
@@ -782,9 +798,11 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
                     liberal_catalog,
                     selected_course_names,
                     academic_grade,
-                    room,
+                   room,
                     [],
                     scenario,
+                    rows + term_rows,
+                    required,
                     max_courses=1,
                 )
             else:
@@ -803,10 +821,10 @@ def build_course_history(lectures, liberal_arts, standard_curriculum, graduation
         rows.extend(term_rows)
 
     history = pd.DataFrame(rows, columns=COURSE_HISTORY_COLUMNS)
-    validate_history(history, lectures, liberal_arts, scenario)
+    validate_history(history, lectures, major_fall, liberal_arts, scenario, required)
     return history
 
-def validate_history(history, lectures, liberal_arts, scenario):
+def validate_history(history, lectures, major_fall, liberal_arts, scenario, required):
     """생성된 이력이 실제 과목만 사용했고 중복 수강이 없는지 검사한다."""
     if history.empty:
         if effective_completed_semesters(scenario) == 0:
@@ -814,7 +832,7 @@ def validate_history(history, lectures, liberal_arts, scenario):
         
         raise ValueError(f"{scenario['student_id']} 수강이력이 생성되지 않았습니다.")
 
-    actual_courses = set(lectures["교과목명"]).union(set(liberal_arts["교과목명"]))
+    actual_courses = set(lectures["교과목명"]).union(set(major_fall["교과목명"])).union(set(liberal_arts["교과목명"]))
     missing_courses = sorted(set(history["교과목명"]) - actual_courses)
     if missing_courses:
         raise ValueError(f"원본 CSV에 없는 과목이 포함되었습니다: {missing_courses}")
@@ -824,6 +842,20 @@ def validate_history(history, lectures, liberal_arts, scenario):
         raise ValueError(
             "중복 수강 과목이 있습니다:\n"
             + duplicated[["student_id", "교과목번호", "교과목명"]].to_string(index=False)
+        )
+
+    history_rows = history.to_dict("records")
+    liberal_total = sum(liberal_credits_by_area(history_rows).values())
+    remaining_liberal_required = remaining_required_liberal_credits(history_rows, required)
+    if liberal_total > MAX_LIBERAL_CREDITS:
+        raise ValueError(
+            f"{scenario['student_id']} 교양 학점 {liberal_total}이 상한 "
+            f"{MAX_LIBERAL_CREDITS}학점을 초과했습니다."
+        )
+    if liberal_total + remaining_liberal_required > MAX_LIBERAL_CREDITS:
+        raise ValueError(
+            f"{scenario['student_id']} 교양 학점 {liberal_total} + 남은 필수 교양 "
+            f"{remaining_liberal_required}이 상한 {MAX_LIBERAL_CREDITS}학점을 초과합니다."
         )
 
     raw_low, raw_high = scenario.get("semester_credit_range", [MIN_SEMESTER_CREDITS, MAX_SEMESTER_CREDITS])
