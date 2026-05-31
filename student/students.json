@@ -11,19 +11,19 @@
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 15
+          "completed": 18
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 15
+          "completed": 9
         },
         "일반": {
           "required": 9,
-          "completed": 6
+          "completed": 9
         },
         "확대": {
           "required": 3,
-          "completed": 10
+          "completed": 2
         },
         "OCU_기타": {
           "required": 0,
@@ -37,7 +37,7 @@
       "전공": {
         "필수": {
           "required": 28,
-          "completed": 17
+          "completed": 25
         },
         "선택": {
           "required": 38,
@@ -62,15 +62,15 @@
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 21
+          "completed": 15
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 25
+          "completed": 10
         },
         "일반": {
           "required": 9,
-          "completed": 21
+          "completed": 12
         },
         "확대": {
           "required": 3,
@@ -88,16 +88,16 @@
       "전공": {
         "필수": {
           "required": 28,
-          "completed": 7
+          "completed": 12
         },
         "선택": {
           "required": 38,
-          "completed": 30
+          "completed": 60
         }
       },
       "졸업학점": {
         "required": 140,
-        "completed": 109
+        "completed": 114
       }
     }
   },
@@ -113,11 +113,11 @@
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 24
+          "completed": 12
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 15
+          "completed": 13
         },
         "일반": {
           "required": 9,
@@ -125,7 +125,7 @@
         },
         "확대": {
           "required": 3,
-          "completed": 8
+          "completed": 5
         },
         "OCU_기타": {
           "required": 0,
@@ -139,16 +139,16 @@
       "전공": {
         "필수": {
           "required": 28,
-          "completed": 17
+          "completed": 25
         },
         "선택": {
           "required": 38,
-          "completed": 27
+          "completed": 39
         }
       },
       "졸업학점": {
         "required": 140,
-        "completed": 91
+        "completed": 94
       }
     }
   },
@@ -164,15 +164,66 @@
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 18
+          "completed": 15
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 18
+          "completed": 3
         },
         "일반": {
           "required": 9,
-          "completed": 9
+          "completed": 6
+        },
+        "확대": {
+          "required": 3,
+          "completed": 10
+        },
+        "OCU_기타": {
+          "required": 0,
+          "completed": 0
+        }
+      },
+      "일반선택": {
+        "required": 0,
+        "completed": 0
+      },
+      "전공": {
+        "필수": {
+          "required": 28,
+          "completed": 25
+        },
+        "선택": {
+          "required": 38,
+          "completed": 36
+        }
+      },
+      "졸업학점": {
+        "required": 140,
+        "completed": 95
+      }
+    }
+  },
+  {
+    "student_id": "20210005",
+    "name": "정위험",
+    "grade": 4,
+    "college": "전자정보대학",
+    "department": "컴퓨터공학과",
+    "completed_semesters": 7,
+    "curriculum_year": 2021,
+    "credits": {
+      "교양": {
+        "개신기초": {
+          "required": 15,
+          "completed": 15
+        },
+        "자연이공계기초": {
+          "required": 6,
+          "completed": 6
+        },
+        "일반": {
+          "required": 9,
+          "completed": 12
         },
         "확대": {
           "required": 3,
@@ -190,67 +241,16 @@
       "전공": {
         "필수": {
           "required": 28,
-          "completed": 17
+          "completed": 28
         },
         "선택": {
           "required": 38,
-          "completed": 30
+          "completed": 69
         }
       },
       "졸업학점": {
         "required": 140,
-        "completed": 100
-      }
-    }
-  },
-  {
-    "student_id": "20210005",
-    "name": "정위험",
-    "grade": 4,
-    "college": "전자정보대학",
-    "department": "컴퓨터공학과",
-    "completed_semesters": 7,
-    "curriculum_year": 2021,
-    "credits": {
-      "교양": {
-        "개신기초": {
-          "required": 15,
-          "completed": 24
-        },
-        "자연이공계기초": {
-          "required": 6,
-          "completed": 33
-        },
-        "일반": {
-          "required": 9,
-          "completed": 30
-        },
-        "확대": {
-          "required": 3,
-          "completed": 31
-        },
-        "OCU_기타": {
-          "required": 0,
-          "completed": 0
-        }
-      },
-      "일반선택": {
-        "required": 0,
-        "completed": 0
-      },
-      "전공": {
-        "필수": {
-          "required": 28,
-          "completed": 11
-        },
-        "선택": {
-          "required": 38,
-          "completed": 12
-        }
-      },
-      "졸업학점": {
-        "required": 140,
-        "completed": 141
+        "completed": 138
       }
     }
   },
@@ -317,62 +317,11 @@
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 15
+          "completed": 9
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 12
-        },
-        "일반": {
-          "required": 9,
-          "completed": 3
-        },
-        "확대": {
-          "required": 3,
-          "completed": 4
-        },
-        "OCU_기타": {
-          "required": 0,
-          "completed": 0
-        }
-      },
-      "일반선택": {
-        "required": 0,
-        "completed": 0
-      },
-      "전공": {
-        "필수": {
-          "required": 31,
-          "completed": 3
-        },
-        "선택": {
-          "required": 35,
-          "completed": 0
-        }
-      },
-      "졸업학점": {
-        "required": 140,
-        "completed": 37
-      }
-    }
-  },
-  {
-    "student_id": "20240001",
-    "name": "서주니",
-    "grade": 3,
-    "college": "전자정보대학",
-    "department": "컴퓨터공학과",
-    "completed_semesters": 4,
-    "curriculum_year": 2024,
-    "credits": {
-      "교양": {
-        "개신기초": {
-          "required": 15,
-          "completed": 12
-        },
-        "자연이공계기초": {
-          "required": 6,
-          "completed": 16
+          "completed": 6
         },
         "일반": {
           "required": 9,
@@ -393,17 +342,68 @@
       },
       "전공": {
         "필수": {
-          "required": 28,
-          "completed": 7
+          "required": 31,
+          "completed": 4
         },
         "선택": {
-          "required": 38,
-          "completed": 18
+          "required": 35,
+          "completed": 3
         }
       },
       "졸업학점": {
         "required": 140,
-        "completed": 73
+        "completed": 42
+      }
+    }
+  },
+  {
+    "student_id": "20240001",
+    "name": "서주니",
+    "grade": 3,
+    "college": "전자정보대학",
+    "department": "컴퓨터공학과",
+    "completed_semesters": 4,
+    "curriculum_year": 2024,
+    "credits": {
+      "교양": {
+        "개신기초": {
+          "required": 15,
+          "completed": 12
+        },
+        "자연이공계기초": {
+          "required": 6,
+          "completed": 8
+        },
+        "일반": {
+          "required": 9,
+          "completed": 12
+        },
+        "확대": {
+          "required": 3,
+          "completed": 6
+        },
+        "OCU_기타": {
+          "required": 0,
+          "completed": 0
+        }
+      },
+      "일반선택": {
+        "required": 0,
+        "completed": 0
+      },
+      "전공": {
+        "필수": {
+          "required": 28,
+          "completed": 15
+        },
+        "선택": {
+          "required": 38,
+          "completed": 27
+        }
+      },
+      "졸업학점": {
+        "required": 140,
+        "completed": 80
       }
     }
   },
@@ -419,19 +419,19 @@
       "교양": {
         "개신기초": {
           "required": 15,
-          "completed": 24
+          "completed": 15
         },
         "자연이공계기초": {
           "required": 6,
-          "completed": 16
+          "completed": 7
         },
         "일반": {
           "required": 9,
-          "completed": 24
+          "completed": 9
         },
         "확대": {
           "required": 3,
-          "completed": 7
+          "completed": 11
         },
         "OCU_기타": {
           "required": 0,
@@ -445,16 +445,16 @@
       "전공": {
         "필수": {
           "required": 28,
-          "completed": 17
+          "completed": 29
         },
         "선택": {
           "required": 38,
-          "completed": 30
+          "completed": 42
         }
       },
       "졸업학점": {
         "required": 140,
-        "completed": 118
+        "completed": 113
       }
     }
   }
