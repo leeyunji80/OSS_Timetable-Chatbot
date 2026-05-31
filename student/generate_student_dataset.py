@@ -684,13 +684,13 @@ def build_course_history(lectures, major_fall, liberal_arts, standard_curriculum
                 break
             courses = select_liberal_courses(
                 liberal_catalog,
+                selected_course_names,
+                academic_grade,
                 semester_target - term_credits,
                 [],
                 scenario,
                 rows + term_rows,
                 required,
-                preferred_area=hint["영역"],
-                preferred_subarea=hint["세부영역"],
                 preferred_area=hint["영역"],
                 preferred_subarea=hint["세부영역"],
                 max_courses=1,
