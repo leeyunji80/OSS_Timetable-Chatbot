@@ -14,6 +14,8 @@ TARGET_YEAR = 2026
 TARGET_SEMESTER = 1
 MIN_SEMESTER_CREDITS = 18
 MAX_SEMESTER_CREDITS = 21
+MAX_LIBERAL_CREDITS = 42
+LIBERAL_AREAS = {"개신기초", "자연이공계기초", "일반", "확대", "OCU_기타"}
 # 휴학/복학 이력 등으로 기준시점까지 실제 이수 가능 학기가 단순 산식보다 작은 학번 보정값.
 # 2021학번은 2026-1 직전 기준 최대 8학기까지만 이수한 상태로 생성한다.
 MAX_COMPLETED_SEMESTERS_BY_YEAR = {
@@ -23,6 +25,7 @@ OUTPUT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = OUTPUT_DIR.parent
 
 LECTURES_PATH = PROJECT_ROOT / "data_processor" / "lectures_database.csv"
+MAJOR_FALL_PATH = PROJECT_ROOT / "data_processor" / "major1.csv"
 LIBERAL_ARTS_PATH = PROJECT_ROOT / "data_processor" / "liberal_arts.csv"
 STANDARD_CURRICULUM_PATH = PROJECT_ROOT / "graduation_rule" / "standard_curriculum.csv"
 GRADUATION_PATH = PROJECT_ROOT / "graduation_rule" / "graduation.json"
@@ -174,10 +177,11 @@ student_scenarios = [
 def read_source_files():
     """원본 CSV/JSON을 읽는다. 교과목 번호는 앞자리 0 보존을 위해 문자열로 읽는다."""
     lectures = pd.read_csv(LECTURES_PATH, encoding="utf-8-sig", dtype={"교과목 번호": str})
+    major_fall = pd.read_csv(MAJOR_FALL_PATH, encoding="utf-8-sig", dtype={"교과목 번호": str})
     liberal_arts = pd.read_csv(LIBERAL_ARTS_PATH, encoding="utf-8-sig", dtype={"교과목 번호": str})
     standard_curriculum = pd.read_csv(STANDARD_CURRICULUM_PATH, encoding="utf-8-sig")
     graduation = json.loads(GRADUATION_PATH.read_text(encoding="utf-8"))
-    return lectures, liberal_arts, standard_curriculum, graduation
+    return lectures, major_fall, liberal_arts, standard_curriculum, graduation
 
 def normalize_course_name(name):
     """표준이수모형과 실제 CSV의 가벼운 표기 차이를 비교하기 위한 정규화."""
@@ -356,6 +360,41 @@ def can_take_course(course, selected_course_names, academic_grade):
         and int(course["학점"]) > 0
         and int(course["권장학년"]) <= academic_grade
     )
+def liberal_credits_by_area(rows):
+    """현재까지 선택된 수강이력 행을 교양 영역별 학점으로 집계한다."""
+    totals = {area: 0 for area in LIBERAL_AREAS}
+    for row in rows:
+        if row["영역"] in totals:
+            totals[row["영역"]] += int(row["학점"])
+    return totals
+
+def remaining_required_liberal_credits(rows, required):
+    """현재 이력 기준으로 앞으로 반드시 들어야 하는 최소 교양 학점을 계산한다."""
+    completed = liberal_credits_by_area(rows)
+    remaining = 0
+    for area, required_credits in required["교양"].items():
+        if area not in LIBERAL_AREAS:
+            continue
+        remaining += max(0, int(required_credits) - completed.get(area, 0))
+    return remaining
+
+def can_add_liberal_course(course, existing_rows, required):
+    """
+    교양을 하나 추가해도 총 교양 상한 안에서 남은 필수 교양을 끝까지 채울 수 있는지 검사한다.
+    """
+    if course["영역"] not in LIBERAL_AREAS:
+        return True
+
+    simulated_rows = list(existing_rows) + [
+        {
+            "영역": course["영역"],
+            "세부영역": course["세부영역"],
+            "학점": int(course["학점"]),
+        }
+    ]
+    liberal_total = sum(liberal_credits_by_area(simulated_rows).values())
+    remaining_required = remaining_required_liberal_credits(simulated_rows, required)
+    return liberal_total + remaining_required <= MAX_LIBERAL_CREDITS
 
 def scenario_allows_course(course, scenario, standard_phase=False):
     """
