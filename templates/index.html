@@ -993,6 +993,9 @@
             const studentCloseBtn = document.getElementById('student-close-btn');
             const loginCloseBtn = document.getElementById('login-close-btn');
             const logoutBtn = document.getElementById('logout-btn');
+            const authAlertModal = document.getElementById('auth-alert-modal');
+            const authAlertCloseBtn = document.getElementById('auth-alert-close-btn');
+            const authAlertRedirectBtn = document.getElementById('auth-alert-redirect-btn');
 
             let currentStudent = null;
             let chatSessions = [];
@@ -1055,6 +1058,13 @@
             });
 
             sendBtn.addEventListener('click', async function () {
+
+                if (!currentStudent) {
+                    authAlertModal.style.display = 'flex';
+                    textarea.value = '';
+                    textarea.style.height = '75px';
+                    return;
+                }
 
                 const message = textarea.value.trim();
                 if (!message) return;
@@ -1135,8 +1145,9 @@
                 updateProfileUI();
             }
 
-            // [수정] 로그인 여부에 따라 맞는 세션 저장소 키를 동적으로 바라봄
-            const userKey = currentStudent ? `chatSessions_${currentStudent.student_id}` : 'chatSessions_guest';
+            if(currentStudent){
+            // 로그인 여부에 따라 맞는 세션 저장소 키를 동적으로 바라봄
+            const userKey = `chatSessions_${currentStudent.student_id}`;
             const savedSessions = sessionStorage.getItem(userKey);
 
             if (savedSessions) {
@@ -1147,6 +1158,11 @@
             } else {
                 createNewSession();
             }
+        } else {
+            chatArea.innerHTML=' ';
+            welcomeScreen.style.display='block';
+            chatArea.appendChild(welcomeScreen);
+        }
 
             loadCourseHistoryData();
             loadStudentCreditData();
@@ -1170,7 +1186,26 @@
             }
 
             newChatBtn.addEventListener('click', function () {
+                if(!curentStudent){
+                    authAlertModal.style.display='flex';
+                    return;
+                }
                 createNewSession();
+            });
+            
+            authAlertCloseBtn.addEventListener('click', function () {
+                authAlertModal.style.display = 'none';
+            });
+
+            authAlertModal.addEventListener('click', function (event) {
+                if (event.target === authAlertModal) {
+                    authAlertModal.style.display = 'none';
+                }
+            });
+
+            authAlertRedirectBtn.addEventListener('click', function () {
+                authAlertModal.style.display = 'none'; // 경고창 닫기
+                loginModal.style.display = 'flex';     // 로그인창 열기
             });
 
             function saveMessage(message, type) {
