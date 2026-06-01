@@ -810,15 +810,11 @@
         <div class="login-modal" id="login-modal">
 
         <div class="login-box">
-
             <div class="student-header">
-
                 <h2>로그인</h2>
-
                 <button id="login-close-btn">
                     ✕
                 </button>
-
             </div>
 
             <input
@@ -839,6 +835,24 @@
 
         </div>
 
+    </div>
+
+    <div class="login-modal" id="auth-alert-modal" style="display: none;">
+        <div class="login-box" style="text-align: center;">
+            <div class="student-header">
+                <h2 style="color: #ff6b6b;">로그인이 필요합니다</h2>
+                <button id="auth-alert-close-btn">✕</button>
+            </div>
+            
+            <p style="margin: 20px 0; color: #666; line-height: 1.6; font-size: 15px;">
+                개인화된 시간표 생성 및 대화 서비스는<br>
+                로그인 후 이용하실 수 있습니다.
+            </p>
+            
+            <button id="auth-alert-redirect-btn" style="background-color: #ffb3b3; color: #333; font-weight: bold;">
+                로그인하러 가기
+            </button>
+        </div>
     </div>
 
     <div class="student-modal" id="student-modal">
@@ -956,10 +970,9 @@
                 </div>
 
             </div>
-
         </div>
-
     </div>
+</body>
 
     <script>
             const textarea = document.getElementById('user-input');
