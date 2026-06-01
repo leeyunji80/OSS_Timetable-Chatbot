@@ -838,18 +838,19 @@
     </div>
 
     <div class="login-modal" id="auth-alert-modal" style="display: none;">
-        <div class="login-box" style="text-align: center;">
-            <div class="student-header">
-                <h2 style="color: #ff6b6b;">로그인이 필요합니다</h2>
-                <button id="auth-alert-close-btn">✕</button>
+        <div class="login-box" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 25px;">
+            
+            <div class="student-header" style="width: 100%; display: flex; justify-content: center; position: relative; margin-bottom: 10px;">
+                <h2 style="color: #e55a5a; margin: 0; font-size: 22px;">로그인이 필요합니다</h2>
+                <button id="auth-alert-close-btn" style="position: absolute; right: -10px; top: -5px; transform: translateY(-50%); background: none; border: none; font-size: 20px; cursor: pointer; color: #8f8b8b; padding: 5px;">✕</button>
             </div>
             
-            <p style="margin: 20px 0; color: #666; line-height: 1.6; font-size: 15px;">
+            <p style="margin: 20px 0 30px 0; color: #666; line-height: 1.6; font-size: 16px; text-align: center;">
                 개인화된 시간표 생성 및 대화 서비스는<br>
                 로그인 후 이용하실 수 있습니다.
             </p>
             
-            <button id="auth-alert-redirect-btn" style="background-color: #ffb3b3; color: #333; font-weight: bold;">
+            <button id="auth-alert-redirect-btn" style="background-color: #ffb8b8; color: #333; font-weight: bold; width: 200px; padding: 14px 0px; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; letter-spacing: -0.5px; transition: background 0.2s;">
                 로그인하러 가기
             </button>
         </div>
