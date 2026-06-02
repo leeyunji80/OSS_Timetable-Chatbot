@@ -2,7 +2,7 @@
 import os
 from llm_api import parse_schedule_text_with_history
 
-API_KEY = os.environ.get("OPENAI_API_KEY", "본인의_실제_API_키_나_환경변수")
+API_KEY = os.environ.get("OPENAI_API_KEY", "OPENAI_API_KEY")
 SESSION_ID = "test_user_1234"
 
 print("=== [TEST 1] 단발성 입력 환경에서의 이전 버전 호환성 테스트 ===")
