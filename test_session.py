@@ -4,7 +4,6 @@ import os
 from dotenv import load_dotenv
 from llm_api import parse_schedule_text_with_history
 
-# 로컬 개발 환경의 .env 파일에 OPENAI_API_KEY가 반드시 정의되어 있어야 합니다.
 load_dotenv()
 
 API_KEY = os.environ.get("OPENAI_API_KEY")
