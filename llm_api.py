@@ -298,7 +298,7 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
         SESSION_HISTORY[session_id] = [{"role": "system", "content": system_instruction}]
 
     
-    # 유저의 새로운 발화를 해당 세션 이력에 누적
+    
     SESSION_HISTORY[session_id].append({"role": "user", "content": user_text})
     # 단발성 텍스트가 아닌, 누적된 대화 이력 배열을 통째로 LLM에 전달
     response = client.beta.chat.completions.parse(
