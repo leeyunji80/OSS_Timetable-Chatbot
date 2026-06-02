@@ -15,6 +15,7 @@ text_1 = "금요일은 꼭 공강으로 만들고 싶고, 월요일도 가능하
 result_1 = parse_schedule_text_with_history(SESSION_ID, text_1, API_KEY)
 print(result_1)
 
+# 시나리오 2단계: 누적 데이터 검증 구간
 print("\n=== [TEST 2] 연속 입력 시나리오 테스트 (누적 확인) ===")
 # 2차 입력: 수요일 오후 알바 추가 (기존 금요일 공강, 월요일 오후 선호가 유지되어야 함)
 text_2 = "나 수요일은 알바 있어서 일찍 끝내줘"
