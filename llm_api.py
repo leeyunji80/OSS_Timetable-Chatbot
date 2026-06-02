@@ -264,5 +264,11 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
 
     # 해당 세션의 기존 대화 기록이 없으면 시스템 지침 초기화
     if session_id not in SESSION_HISTORY:
-        pass
+        system_instruction = (
+            "너는 대학생들의 시간표 요구사항 문장을 분석하여 정형화된 JSON 제약 조건으로 변환하는 정밀 데이터 파서야.\n"
+            "유저가 던지는 요구사항을 다음 [3단계 파이프라인]에 맞춰서 순서대로만 분석해라.\n\n"
+            "[slots 생성 3단계 파이프라인]\n"
+            "단계 1. 요일 전체 공강 처리:\n"
+            "   - 'X요일 학교 안 갈래', 'X요일 공강/비우기' 성향 감지 -> 해당 요일에 대해 condition='공강' 슬롯 1개만 생성 (나머지 필드는 null).\n\n"
+        )
 
