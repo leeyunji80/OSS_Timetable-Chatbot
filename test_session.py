@@ -21,7 +21,7 @@ print(result_1)
 
 # 시나리오 2단계: 누적 데이터 검증 구간
 print("\n== [TEST 2] 연속 입력 시나리오 테스트 ==")
-# 2차 입력: 수요일 오후 알바 추가 (기존 금요일 공강, 월요일 오후 선호가 유지되어야 함)
+# 2차 입력
 text_2 = "2교시 빼줘"
 print(f">> 유저 입력 문장: {text_2}\n")
 result_2 = parse_schedule_text_with_history(SESSION_ID, text_2, API_KEY)
