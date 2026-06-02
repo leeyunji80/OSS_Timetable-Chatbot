@@ -326,7 +326,7 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
         
         filtered_courses = [
             course for course in parsed_data.selected_courses 
-            if course.replace(" ", "") in clean_history_text # 과거에 한 번이라도 말했으면 유지!
+            if course.replace(" ", "") in clean_history_text 
         ]
         parsed_data.selected_courses = filtered_courses
         
