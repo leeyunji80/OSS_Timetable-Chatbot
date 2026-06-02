@@ -1,8 +1,11 @@
 
 import os
+from dotenv import load_dotenv
 from llm_api import parse_schedule_text_with_history
 
-API_KEY = os.environ.get("OPENAI_API_KEY", "OPENAI_API_KEY")
+load_dotenv()
+
+API_KEY = os.environ.get("OPENAI_API_KEY")
 SESSION_ID = "test_user_1234"
 
 print("=== [TEST 1] 단발성 입력 환경에서의 이전 버전 호환성 테스트 ===")
