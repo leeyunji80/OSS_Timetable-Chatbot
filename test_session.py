@@ -16,3 +16,9 @@ print("\n=== [TEST 2] 연속 입력 시나리오 테스트 (누적 확인) ===")
 text_2 = "나 수요일은 알바 있어서 일찍 끝내줘"
 result_2 = parse_schedule_text_with_history(SESSION_ID, text_2, API_KEY)
 print(result_2)
+
+print("\n=== [TEST 3] 조건 취소 및 수정 시나리오 테스트 ===")
+# 3차 입력: 월요일 1교시 싫다고 한 거 취소
+text_3 = "생각해보니까 월요일은 그냥 1교시 들어도 상관없을 거 같아. 대신 화요일 공강 추가해줘"
+result_3 = parse_schedule_text_with_history(SESSION_ID, text_3, API_KEY)
+print(result_3)
