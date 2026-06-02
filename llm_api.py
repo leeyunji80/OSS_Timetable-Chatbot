@@ -321,6 +321,8 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
     SESSION_HISTORY[session_id].append({"role": "assistant", "content": ai_json_str})
 
     # 과목 필터링 로직 (기존 레거시 코드 유지)
+
+    
     # 현재 단발성 문장이 아니라, 세션 내 모든 유저 발화를 합쳐서 과목명 포함 여부를 검사합니다.
     if parsed_data.selected_courses:
         # 세션에 쌓인 모든 user의 발화를 하나의 텍스트로 병합
