@@ -319,7 +319,6 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
 
     # 과목 필터링 로직 (기존 레거시 코드 유지)
     if parsed_data.selected_courses:
-        # 세션에 쌓인 모든 user의 발화를 하나의 텍스트로 병합
         all_user_texts = "".join([
             msg["content"] for msg in SESSION_HISTORY[session_id] if msg["role"] == "user"
         ])
