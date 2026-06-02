@@ -254,7 +254,6 @@ def parse_schedule_text(user_text: str, api_key: str) -> str:
 
 
 # 대화 이력 누적 관리를 위한 세션 메모리 스토리지
-
 SESSION_HISTORY = {}
 
 def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: str) -> str:
