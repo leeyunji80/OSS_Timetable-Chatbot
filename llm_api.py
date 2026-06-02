@@ -320,3 +320,12 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
     ai_json_str = parsed_data.model_dump_json(indent=2)
     SESSION_HISTORY[session_id].append({"role": "assistant", "content": ai_json_str})
 
+    # 과목 필터링 로직 (기존 레거시 코드 유지)
+    if parsed_data.selected_courses:
+        clean_user_text = user_text.replace(" ", "").lower()
+        filtered_courses = [
+            course for course in parsed_data.selected_courses 
+            if course.replace(" ", "") in clean_user_text
+        ]
+        parsed_data.selected_courses = filtered_courses
+
