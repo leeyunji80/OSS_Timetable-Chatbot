@@ -31,5 +31,3 @@ print(f">> 유저 입력 문장: {text_3}\n")
 result_3 = parse_schedule_text_with_history(SESSION_ID, text_3, API_KEY)
 print(result_3)
 
-
-
