@@ -259,6 +259,7 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
     """유저의 세션 ID를 기반으로 이전 대화를 기억하여 시간표를 누적 수정하는 함수"""
     client = OpenAI(api_key=api_key)
 
+
     # 해당 세션의 기존 대화 기록이 없으면 시스템 지침 초기화
     if session_id not in SESSION_HISTORY:
         system_instruction = (
