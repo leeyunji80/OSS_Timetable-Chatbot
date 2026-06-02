@@ -296,7 +296,6 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
         
         # 생성된 최종 프롬프트를 세션 히스토리에 system 역할로 최초 적재
         SESSION_HISTORY[session_id] = [{"role": "system", "content": system_instruction}]
-
     
     SESSION_HISTORY[session_id].append({"role": "user", "content": user_text})
     # 단발성 텍스트가 아닌, 누적된 대화 이력 배열을 통째로 LLM에 전달
