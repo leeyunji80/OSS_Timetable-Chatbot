@@ -272,3 +272,10 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
             "   - 'X요일 학교 안 갈래', 'X요일 공강/비우기' 성향 감지 -> 해당 요일에 대해 condition='공강' 슬롯 1개만 생성 (나머지 필드는 null).\n\n"
         )
 
+        system_instruction += (
+            "단계 2. 특정 요일 명시 조건 처리 (★핵심: 이 조건은 오직 '해당 요일'에만 적용한다):\n"
+            "   - 'X요일 오후 수업만 선호' -> 오직 X요일에 대해서만 specific_time_slot=[6,7,8,9], time_range='오후', condition='선호' 슬롯 생성.\n"
+            "   - 'X요일 일찍 끝내기/오후 피함' -> 오직 X요일에 대해서만 specific_time_slot=[6,7,8,9], time_range='오후', condition='피함' 슬롯 생성.\n"
+            "   - 이 단계에서 처리된 요일별 특수 성향은 절대로 다른 요일로 복사하거나 확장하지 마라.\n\n"
+        )
+
