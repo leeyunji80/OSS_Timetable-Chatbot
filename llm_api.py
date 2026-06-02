@@ -311,3 +311,8 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
     )
     
     parsed_data = response.choices[0].message.parsed
+
+    # 응답 실패 및 파싱 에러 방어 처리
+    if not parsed_data:
+        return '{"error": "Failed to parse schedule text"}'
+
