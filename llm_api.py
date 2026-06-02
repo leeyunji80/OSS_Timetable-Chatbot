@@ -300,3 +300,6 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
         # 생성된 최종 프롬프트를 세션 히스토리에 system 역할로 최초 적재
         SESSION_HISTORY[session_id] = [{"role": "system", "content": system_instruction}]
 
+    
+    # 유저의 새로운 발화를 해당 세션 이력에 누적
+    SESSION_HISTORY[session_id].append({"role": "user", "content": user_text})
