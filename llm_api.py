@@ -321,14 +321,19 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
     SESSION_HISTORY[session_id].append({"role": "assistant", "content": ai_json_str})
 
     # 과목 필터링 로직 (기존 레거시 코드 유지)
+    # 현재 단발성 문장이 아니라, 세션 내 모든 유저 발화를 합쳐서 과목명 포함 여부를 검사합니다.
     if parsed_data.selected_courses:
-        clean_user_text = user_text.replace(" ", "").lower()
+        # 세션에 쌓인 모든 user의 발화를 하나의 텍스트로 병합
+        all_user_texts = "".join([
+            msg["content"] for msg in SESSION_HISTORY[session_id] if msg["role"] == "user"
+        ])
+        clean_history_text = all_user_texts.replace(" ", "").lower()
+        
         filtered_courses = [
             course for course in parsed_data.selected_courses 
-            if course.replace(" ", "") in clean_user_text
+            if course.replace(" ", "") in clean_history_text # 과거에 한 번이라도 말했으면 유지!
         ]
         parsed_data.selected_courses = filtered_courses
-
         
         # 함수 최종 마무리 반환
     return parsed_data.model_dump_json(indent=2)
