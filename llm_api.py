@@ -289,3 +289,14 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
             "   - [오전 전체 기피 / 아침 수업 패스] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1, 2, 3, 4], time_range='오전', condition='피함' 슬롯 생성.\n\n"
         )
 
+        system_instruction += (
+            "[글로벌 필드 제약]\n"
+            "- `course_priority`: '전공 위주' -> '전공필수' / '교양 위주' -> '교양필수' (단일 문자열 값)\n\n"
+            "- `conflict_resolution_rule`: 기본값은 '과목우선'으로 하되, 유저가 문장에서 '무조건', '꼭', '절대', '필수' 등의 강한 강조 표현을 사용하여 공강이나 특정 조건을 요구한 것이 감지되면 반드시 '공강우선'으로 값을 변경해라.\n\n"
+            "- `special_condition`: 오직 '풀강'만 허용하며, 해당 요일에 '몰아서 듣고 싶다'고 할 때 선호 슬롯에만 부여한다. ★특히 condition이 '공강'인 슬롯에는 절대로 '풀강'을 넣지 말고 무조건 null 처리해라.\n"
+            "- 주의: 단계 2의 '월요일 오후 선호' 같은 조건 때문에 단계 3의 전역 규칙이 오염되어 화, 수, 목요일에 뜬금없는 오후 피함 슬롯이 생성되지 않도록 로직을 철저히 격리해라."
+        )
+        
+        # 생성된 최종 프롬프트를 세션 히스토리에 system 역할로 최초 적재
+        SESSION_HISTORY[session_id] = [{"role": "system", "content": system_instruction}]
+
