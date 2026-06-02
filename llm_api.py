@@ -315,4 +315,8 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
     # 응답 실패 및 파싱 에러 방어 처리
     if not parsed_data:
         return '{"error": "Failed to parse schedule text"}'
+    
+    # 성공한 AI의 예측 결과 JSON을 assistant 메시지로 내역에 역적재
+    ai_json_str = parsed_data.model_dump_json(indent=2)
+    SESSION_HISTORY[session_id].append({"role": "assistant", "content": ai_json_str})
 
