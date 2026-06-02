@@ -279,3 +279,13 @@ def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: s
             "   - 이 단계에서 처리된 요일별 특수 성향은 절대로 다른 요일로 복사하거나 확장하지 마라.\n\n"
         )
 
+
+        system_instruction += (
+            "단계 3. 요일 언급이 없는 '전역 조건' 처리:\n"
+            "   - 문장 맨 뒤나 중간에 요일 언급 없이 독립적으로 던진 제약 조건만 추출한다.\n"
+            "   - 적용 대상 요일: 단계 1에서 '공강'으로 지정된 요일을 제외한 나머지 모든 평일 요일들.\n"
+            "   - [1교시 극혐 / 1교시 절대 싫어] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1], time_range='오전', condition='피함' 슬롯 생성.\n"
+            "   - [아침 기피 / 못 일어남 / 오전 적게] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1, 2], time_range='오전', condition='피함' 슬롯 생성.\n"
+            "   - [오전 전체 기피 / 아침 수업 패스] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1, 2, 3, 4], time_range='오전', condition='피함' 슬롯 생성.\n\n"
+        )
+
