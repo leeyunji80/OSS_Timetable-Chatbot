@@ -252,6 +252,7 @@ def parse_schedule_text(user_text: str, api_key: str) -> str:
         
     return parsed_data.model_dump_json(indent=2)
 
+
 # 대화 이력 누적 관리를 위한 세션 메모리 스토리지
 SESSION_HISTORY = {}
 
