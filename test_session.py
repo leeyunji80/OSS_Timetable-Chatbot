@@ -12,6 +12,7 @@ load_dotenv()
 API_KEY = os.environ.get("OPENAI_API_KEY")
 SESSION_ID = "test_user_1234"
 
+# 시나리오 1단계: 단발성 입력 환경
 print("== [TEST 1] 단발성 입력 환경에서의 이전 버전 호환성 테스트 ==")
 # 1차 입력
 text_1 = "수요일 오후 수업은 빼주고 18학점 맞춰줘"
