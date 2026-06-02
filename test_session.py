@@ -1,4 +1,3 @@
-
 import os
 from dotenv import load_dotenv
 from llm_api import parse_schedule_text_with_history
