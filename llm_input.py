@@ -15,7 +15,7 @@ MY_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 def main():
 # 사용자가 입력할 예시 문장 정의 단계 
-    user_sentence = "일반교양이 부족해서 일반교양 과목을 꼭 포함해야 하는데, 과제 부담이 너무 크지 않은 과목 위주로 추천해줘. 가능하면 금공강도 지켜줘."
+    user_sentence = "이번 학기 진짜 아침형 인간은 포기임.. 1교시 컷하고, 화요일은 그냥 자체 휴강 때릴래. 전공 필수 위주로 짜줘."
     
     print(f"입력된 문장: {user_sentence}")
     print(" LLM 엔진 분석을 시작합니다...")
