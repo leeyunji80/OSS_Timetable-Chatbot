@@ -31,3 +31,5 @@ print("\n=== [TEST 3] 조건 취소 및 수정 시나리오 테스트 ===")
 text_3 = "생각해보니까 월요일은 그냥 1교시 들어도 상관없을 거 같아. 대신 화요일 공강 추가해줘"
 result_3 = parse_schedule_text_with_history(SESSION_ID, text_3, API_KEY)
 print(result_3)
+
+
