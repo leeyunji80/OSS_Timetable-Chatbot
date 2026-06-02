@@ -251,3 +251,85 @@ def parse_schedule_text(user_text: str, api_key: str) -> str:
         parsed_data.selected_courses = filtered_courses
         
     return parsed_data.model_dump_json(indent=2)
+
+# ==========================================
+# 대화 이력 누적 관리를 위한 세션 메모리 스토리지
+# ==========================================
+SESSION_HISTORY = {}
+
+def parse_schedule_text_with_history(session_id: str, user_text: str, api_key: str) -> str:
+    """유저의 세션 ID를 기반으로 이전 대화를 기억하여 시간표를 누적 수정하는 함수"""
+    client = OpenAI(api_key=api_key)
+
+
+    # 해당 세션의 기존 대화 기록이 없으면 시스템 지침 초기화
+    if session_id not in SESSION_HISTORY:
+        system_instruction = (
+            "너는 대학생들의 시간표 요구사항 문장을 분석하여 정형화된 JSON 제약 조건으로 변환하는 정밀 데이터 파서야.\n"
+            "유저가 던지는 요구사항을 다음 [3단계 파이프라인]에 맞춰서 순서대로만 분석해라.\n\n"
+            "[slots 생성 3단계 파이프라인]\n"
+            "단계 1. 요일 전체 공강 처리:\n"
+            "   - 'X요일 학교 안 갈래', 'X요일 공강/비우기' 성향 감지 -> 해당 요일에 대해 condition='공강' 슬롯 1개만 생성 (나머지 필드는 null).\n\n"
+        )
+
+        system_instruction += (
+            "단계 2. 특정 요일 명시 조건 처리 (★핵심: 이 조건은 오직 '해당 요일'에만 적용한다):\n"
+            "   - 'X요일 오후 수업만 선호' -> 오직 X요일에 대해서만 specific_time_slot=[6,7,8,9], time_range='오후', condition='선호' 슬롯 생성.\n"
+            "   - 'X요일 일찍 끝내기/오후 피함' -> 오직 X요일에 대해서만 specific_time_slot=[6,7,8,9], time_range='오후', condition='피함' 슬롯 생성.\n"
+            "   - 이 단계에서 처리된 요일별 특수 성향은 절대로 다른 요일로 복사하거나 확장하지 마라.\n\n"
+        )
+
+
+        system_instruction += (
+            "단계 3. 요일 언급이 없는 '전역 조건' 처리:\n"
+            "   - 문장 맨 뒤나 중간에 요일 언급 없이 독립적으로 던진 제약 조건만 추출한다.\n"
+            "   - 적용 대상 요일: 단계 1에서 '공강'으로 지정된 요일을 제외한 나머지 모든 평일 요일들.\n"
+            "   - [1교시 극혐 / 1교시 절대 싫어] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1], time_range='오전', condition='피함' 슬롯 생성.\n"
+            "   - [아침 기피 / 못 일어남 / 오전 적게] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1, 2], time_range='오전', condition='피함' 슬롯 생성.\n"
+            "   - [오전 전체 기피 / 아침 수업 패스] 감지 시 -> 대상 요일들 각각에 대해 specific_time_slot=[1, 2, 3, 4], time_range='오전', condition='피함' 슬롯 생성.\n\n"
+        )
+
+        system_instruction += (
+            "[글로벌 필드 제약]\n"
+            "- `course_priority`: '전공 위주' -> '전공필수' / '교양 위주' -> '교양필수' (단일 문자열 값)\n\n"
+            "- `conflict_resolution_rule`: 기본값은 '과목우선'으로 하되, 유저가 문장에서 '무조건', '꼭', '절대', '필수' 등의 강한 강조 표현을 사용하여 공강이나 특정 조건을 요구한 것이 감지되면 반드시 '공강우선'으로 값을 변경해라.\n\n"
+            "- `special_condition`: 오직 '풀강'만 허용하며, 해당 요일에 '몰아서 듣고 싶다'고 할 때 선호 슬롯에만 부여한다. ★특히 condition이 '공강'인 슬롯에는 절대로 '풀강'을 넣지 말고 무조건 null 처리해라.\n"
+            "- 주의: 단계 2의 '월요일 오후 선호' 같은 조건 때문에 단계 3의 전역 규칙이 오염되어 화, 수, 목요일에 뜬금없는 오후 피함 슬롯이 생성되지 않도록 로직을 철저히 격리해라."
+        )
+        
+        # 생성된 최종 프롬프트를 세션 히스토리에 system 역할로 최초 적재
+        SESSION_HISTORY[session_id] = [{"role": "system", "content": system_instruction}]
+
+    
+    # 유저의 새로운 발화를 해당 세션 이력에 누적
+    SESSION_HISTORY[session_id].append({"role": "user", "content": user_text})
+    # 단발성 텍스트가 아닌, 누적된 대화 이력 배열을 통째로 LLM에 전달
+    response = client.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        messages=SESSION_HISTORY[session_id], 
+        response_format=ExtractedSchedule,
+    )
+    
+    parsed_data = response.choices[0].message.parsed
+
+    # 응답 실패 및 파싱 에러 방어 처리
+    if not parsed_data:
+        return '{"error": "Failed to parse schedule text"}'
+    
+    # 성공한 AI의 예측 결과 JSON을 assistant 메시지로 내역에 역적재
+    ai_json_str = parsed_data.model_dump_json(indent=2)
+    SESSION_HISTORY[session_id].append({"role": "assistant", "content": ai_json_str})
+
+    # 과목 필터링 로직 (기존 레거시 코드 유지)
+    if parsed_data.selected_courses:
+        clean_user_text = user_text.replace(" ", "").lower()
+        filtered_courses = [
+            course for course in parsed_data.selected_courses 
+            if course.replace(" ", "") in clean_user_text
+        ]
+        parsed_data.selected_courses = filtered_courses
+
+        
+        # 함수 최종 마무리 반환
+    return parsed_data.model_dump_json(indent=2)
+
