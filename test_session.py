@@ -1,5 +1,4 @@
 
-# 연속 대화형 시간표 분석 파서 최종 검증 스크립트 (2026-06-02)
 import os
 from dotenv import load_dotenv
 from llm_api import parse_schedule_text_with_history
