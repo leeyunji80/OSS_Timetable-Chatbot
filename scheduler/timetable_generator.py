@@ -11,9 +11,9 @@ from itertools import combinations
 import random
 
 # from llm.llm_api import parse_schedule_text
-import os
+
 from dotenv import load_dotenv
-import json
+
 from scheduler.course_recommender import get_final_recommendations, students_list
 from scheduler.timetable_colors import assign_course_colors
 from scheduler.timetable_parser import parse_day_and_period
@@ -21,7 +21,7 @@ from scheduler.check_overlap import is_conflict, is_valid_combination
 
 load_dotenv()
 
-MY_API_KEY = os.environ.get("OPENAI_API_KEY")
+
 
 
 MAJOR_DATA_PATH = os.path.join(BASE_DIR, 'data', 'lectures_database.csv')
@@ -221,9 +221,9 @@ def generate_timetable_combinations(
         user_preferences.get("excluded_courses", [])
     )
 
-    course_priority = user_preferences.get(
-        "course_priority"
-    )
+    
+        
+    
     
     if not isinstance(empty_days, list): empty_days = []
     if not isinstance(avoid_time_slots, list): avoid_time_slots = []
@@ -542,10 +542,10 @@ def generate_timetable_combinations(
             # 판정 결과에 따른 바구니 배정
             if is_needed_ge:
                 course_item["base_score"] += 2000  # 우선순위 가산점 대폭 상향
-                ge_needed_pool.append(course_item)  # 2순위 부족 교양 바구니로 정상 분류
+                ge_needed_pool.append(course_item)  # 부족 교양 바구니로 정상 분류
             else:
                 course_item["base_score"] += 10
-                ge_normal_pool.append(course_item)  # 3순위 일반 교양 바구니
+                ge_normal_pool.append(course_item)  # 일반 교양 바구니
 
     # -------------------------------------------------------------
     # [B] 후보 풀 다변화 
@@ -624,7 +624,7 @@ def generate_timetable_combinations(
             else:
                 major_weight = 8000
             
-            # 케이스 1: 전공만으로 이미 목표 학점을 채운 경우
+            # 전공만으로 이미 목표 학점을 채운 경우
             if abs(major_credits - target_credits) <= 1:
 
                 if mode == "user_priority":
@@ -641,9 +641,6 @@ def generate_timetable_combinations(
                 )
                 all_combinations.append({"schedule": major_combo_list, "final_score": final_score})
                 continue
-            
-            # 케이스 2: 전공을 넣고 학점이 모자라 교양을 붙여야 하는 경우
-            needed_credits = target_credits - major_credits
             
             # 전공 고정 후 교양 과목 조합 매칭
             for ge_r in range(1, min(len(ge_pool) + 1, 6)):
