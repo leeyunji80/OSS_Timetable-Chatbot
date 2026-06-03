@@ -6,26 +6,13 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(CURRENT_DIR)
 GRADUATION_RULE_PATH = os.path.join(BASE_DIR, 'data', 'graduation.json')
 
+CURRICULUM_MODEL_PATH = os.path.join(BASE_DIR, 'data', 'standard_curriculum.csv')
 
-# ---------------------------------
-# 파일 경로
-# ---------------------------------
+COURSE_HISTORY_PATH = os.path.join(BASE_DIR, 'data', 'course_history.csv')
 
-GRADUATION_RULE_PATH = (
-    "data/graduation.json"
-)
+STUDENT_DATA_PATH = os.path.join(BASE_DIR, 'data', 'students.json')
 
-CURRICULUM_MODEL_PATH = (
-    "data/standard_curriculum.csv"
-)
-
-COURSE_HISTORY_PATH = (
-    "data/course_history.csv"
-)
-
-STUDENT_DATA_PATH = "data/students.json"
-
-MAJOR_COURSE_PATH = "data/lectures_database.csv"
+MAJOR_COURSE_PATH = os.path.join(BASE_DIR, 'data', 'lectures_database.csv')
 
 def load_students_data(json_path):
     with open(json_path, "r", encoding="utf-8") as f:
