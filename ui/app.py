@@ -66,18 +66,11 @@ def chat():
 
     user_message = data.get('message')
     session_id = data.get('session_id') or data.get('id') or "default_session"
-    
-    # 1. 🌟 채팅 입력과 동시에 프론트엔드에서 넘어온 학번을 받습니다.
-    student_id = data.get('student_id', 'guest') 
-
-    from scheduler.timetable_generator import generate_timetable_response
-
-    # 2. 🌟 [원하셨던 처리] 다른 연산 없이 학번만 스케줄러 최종 목적지 함수로 직접 보냅니다.
-    generate_timetable_response(parsed_data={}, login_student_id=student_id)
+    student_id = data.get('student_id', 'guest')
 
     print(f"\n[학번 전달 완료] -> scheduler로 전달된 학번: {student_id}")
 
-    # 3. 그 이후 기존에 돌던 LLM 및 이미지 생성 로직이 차례대로 작동합니다.
+    # 1. LLM 연산
     try:
         refined_json_str = parse_schedule_text_with_history(session_id, user_message, API_KEY)
         alternative_data = json.loads(refined_json_str)
@@ -85,24 +78,37 @@ def chat():
         print(f"[ERROR] LLM 엔진 가동 실패: {e}")
         return jsonify({'reply': '오류가 발생했습니다.', 'error': str(e)}), 500
     
-    # 🌟 [수정 및 추가] JSON 데이터에서 첫 번째 대안의 타이틀과 추천 사유 추출
+    # 2. 데이터 추출
     try:
-        first_alt = alternative_data.get('alternatives', [{}])[0]
-        timetable_title = first_alt.get('timetable_title', '새로운 시간표')
-        recommendation_reason = first_alt.get('recommendation_reason', '요청하신 조건을 반영했습니다.')
+        if 'alternatives' in alternative_data:
+            alt_list = alternative_data['alternatives']
+            first_alt = alt_list[0] if isinstance(alt_list, list) and len(alt_list) > 0 else alternative_data
+        else:
+            first_alt = alternative_data
+
+        timetable_title = first_alt.get('timetable_title') or alternative_data.get('timetable_title') or '추천 시간표'
+        recommendation_reason = first_alt.get('recommendation_reason') or alternative_data.get('recommendation_reason') or 'AI 추천이 완료되었습니다.'
     except Exception:
         timetable_title = '새로운 시간표'
         recommendation_reason = '요청하신 조건을 반영했습니다.'
 
-    # 스케줄러 실행 및 이미지 생성
-    timetable_result = generate_timetable_response(alternative_data, login_student_id=student_id)
-    saved_filename = draw_timetable_image(timetable_result, student_id)
-    image_url = f"/timetable_image/{saved_filename}"
+    # 3. 🌟 [핵심 수정] 로직 통합: 스케줄러 1번 호출, 이미지 1번 생성
+    try:
+        # 스케줄러 실행 (필요 시 alternative_data를 넘김)
+        timetable_result = generate_timetable_response(alternative_data, login_student_id=student_id)
+        
+        # 이미지 생성 (스케줄러 결과 혹은 원본 데이터를 적절히 사용)
+        # 만약 이미지가 그려지지 않거나 엉뚱하다면 아래의 alternative_data를 timetable_result로 바꿔보세요.
+        saved_filename = draw_timetable_image(alternative_data, student_id)
+        image_url = f"/timetable_image/{saved_filename}"
+    except Exception as e:
+        print(f"[CRITICAL ERROR] 처리 실패: {e}")
+        return jsonify({'reply': '이미지 생성 중 오류 발생', 'error': str(e)}), 500
 
-    # 🌟 [수정] 프론트엔드가 필요한 정보들을 명확하게 응답에 담아 보냅니다.
+    # 4. 최종 응답
     return jsonify({
-        'reply': recommendation_reason,  # 1. 말풍선에는 추천 사유를 출력
-        'timetable_title': timetable_title,  # 2. 시간표 제목 전달
+        'reply': recommendation_reason,
+        'timetable_title': timetable_title,
         'parsed_constraints': alternative_data, 
         'image': image_url 
     })

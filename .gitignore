@@ -9,3 +9,10 @@ __pycache__/
 # 3. 개발 툴 관련 설정 제외
 .vscode/
 .idea/
+
+# 유저 채팅 데이터 폴더 제외
+ui/chat_data/
+**/chat_data/
+*.json
+!students.json
+!graduation.json

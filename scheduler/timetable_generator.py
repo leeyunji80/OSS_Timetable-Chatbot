@@ -24,8 +24,8 @@ load_dotenv()
 MY_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
-MAJOR_DATA_PATH = "data/lectures_database.csv"
-GE_DATA_PATH = "data/liberal_arts.csv"
+MAJOR_DATA_PATH = os.path.join(BASE_DIR, 'data', 'lectures_database.csv')
+GE_DATA_PATH = os.path.join(BASE_DIR, 'data', 'liberal_arts.csv')
 
 
 def matches_specific_period(course_slot, condition_slot):
