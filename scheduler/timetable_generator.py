@@ -735,7 +735,6 @@ def generate_timetable_combinations(
 
 def make_timetable_title(
     selected_schedule,
-    reason_segments,
     selected_course_set,
     exclude_days,
     avoid_time_slots
@@ -840,7 +839,6 @@ def make_timetable_title(
 def build_timetable_json(
     timetable_results,
     parsed_data,
-    all_lectures_df,
     exclude_days,
     avoid_time_slots
 ):
@@ -1051,7 +1049,6 @@ def build_timetable_json(
         # -------------------------------------------------
         timetable_title = make_timetable_title(
             selected_schedule=selected_schedule,
-            reason_segments=reason_segments,
             selected_course_set=selected_course_set,
             exclude_days=exclude_days,
             avoid_time_slots=avoid_time_slots
@@ -1203,7 +1200,6 @@ def generate_timetable_response(parsed_data, login_student_id, target_semester=1
     final_json_output = build_timetable_json(
         timetable_results=timetable_results,
         parsed_data=parsed_data,
-        all_lectures_df=all_lectures_df,
         exclude_days=exclude_days,
         avoid_time_slots=avoid_time_slots
     )
