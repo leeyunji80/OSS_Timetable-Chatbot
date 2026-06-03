@@ -1,7 +1,14 @@
+import os
+import sys
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 import pandas as pd
 from itertools import combinations
 import random
-
 
 from llm.llm_api import parse_schedule_text
 import os
@@ -725,6 +732,248 @@ def generate_timetable_combinations(
 
     return []
 
+
+def build_timetable_json(
+    timetable_results,
+    parsed_data,
+    all_lectures_df,
+    exclude_days,
+    avoid_time_slots
+):
+    assign_pref = parsed_data.get("assignment_preference")
+    selected_course_set = set(
+        parsed_data.get("selected_courses", [])
+    )
+
+    if not timetable_results:
+        return {
+            "status": "error",
+            "message": "조건을 만족하는 시간표 조합을 찾지 못했습니다. 조건을 완화해 주세요."
+        }
+
+    final_json_output = {
+        "status": "success",
+        "total_alternatives": len(timetable_results),
+        "alternatives": []
+    }
+
+    for index, selected_schedule in enumerate(timetable_results):
+        course_color_map = assign_course_colors(selected_schedule)
+
+        morning_course_count = 0
+        total_credits_sum = 0
+        required_course_names = []
+
+        cleaned_courses = []
+
+        for course in selected_schedule:
+            total_credits_sum += course["credit"]
+
+            if course.get("is_required"):
+                required_course_names.append(course["name"])
+
+            cleaned_slots = []
+
+            for slot in course["time_slots"]:
+                cleaned_slots.append({
+                    "day": slot["day"],
+                    "time_range": slot["time_range"],
+                })
+
+                if slot["start_period"] < 5:
+                    morning_course_count += 1
+
+            matched_rows = all_lectures_df[
+                all_lectures_df["교과목명"] == course["name"]
+            ]
+
+            if not matched_rows.empty:
+                course_row = matched_rows.iloc[0]
+                load_status = evaluate_load(course_row)
+                raw_ratio = pd.to_numeric(
+                    course_row.get("평가_과제(%)"),
+                    errors="coerce"
+                ) or 0
+            else:
+                load_status = "정보 없음"
+                raw_ratio = 0
+
+            course_color = course_color_map[course["name"]]
+
+            course_reason = []
+
+            if course["name"] in selected_course_set:
+                course_reason.append(
+                    "사용자가 직접 선택한 필수 반영 과목"
+                )
+
+            if course.get("is_current_grade_major", False):
+                course_reason.append(
+                    "해당 학년 표준이수모형 추천 전공 과목"
+                )
+
+            if course.get("is_missing_required_major", False):
+                course_reason.append(
+                    "이전 학년 미이수 전공필수 보완 과목"
+                )
+
+            if course.get("is_needed_ge", False):
+                course_reason.append(
+                    "부족 교양 영역 충족 목적"
+                )
+
+            course_days = {
+                slot["day"] for slot in course["time_slots"]
+            }
+
+            if not any(day in exclude_days for day in course_days):
+                if exclude_days:
+                    course_reason.append(
+                        "공강 조건 유지에 유리한 배치"
+                    )
+
+            if not course_reason:
+                course_reason.append(
+                    "시간 충돌 최소화 및 학점 균형을 고려하여 선택"
+                )
+
+            cleaned_courses.append({
+                "name": course["name"],
+                "room": course["room"],
+                "credit": course["credit"],
+                "selection_reason": course_reason,
+                "is_required": course.get("is_required", False),
+                "assignment_load_test": load_status,
+                "assignment_percentage_test": f"{raw_ratio}%",
+                "background_color": course_color["background"],
+                "text_color": course_color["text"],
+                "time_slots": cleaned_slots
+            })
+
+        reason_segments = []
+
+        if index == 0:
+            mode_description = (
+                "사용자 요청 과목 및 선호 조건을 최우선으로 반영한 시간표입니다."
+            )
+        elif index == 1:
+            mode_description = (
+                "졸업 요건 충족과 부족 교양 보완을 우선적으로 고려한 시간표입니다."
+            )
+        else:
+            mode_description = (
+                "전공, 공강, 시간대 선호를 균형 있게 반영한 시간표입니다."
+            )
+
+        reason_segments.append(mode_description)
+
+        included_needed_ge_areas = []
+
+        for course in selected_schedule:
+            if course.get("is_needed_ge", False):
+                ge_label = (
+                    f"{course['area']}({course['subarea']})"
+                    if course["subarea"]
+                    else course["area"]
+                )
+
+                if ge_label not in included_needed_ge_areas:
+                    included_needed_ge_areas.append(ge_label)
+
+        if included_needed_ge_areas:
+            reason_segments.append(
+                f"졸업을 위해 이수가 필요한 부족 교양 영역인 "
+                f"**{', '.join(included_needed_ge_areas)}** 과목을 탐색하여 최우선으로 반영했습니다."
+            )
+
+        actual_days = {
+            slot["day"]
+            for c in selected_schedule
+            for slot in c["time_slots"]
+        }
+
+        achieved_empty_days = [
+            day for day in exclude_days
+            if day not in actual_days
+        ]
+
+        if achieved_empty_days:
+            reason_segments.append(
+                f"{', '.join(achieved_empty_days)}요일 공강을 완벽히 확보했습니다."
+            )
+
+        if assign_pref:
+            ge_courses_in_schedule = [
+                c for c in selected_schedule
+                if not c.get("is_required")
+            ]
+
+            if ge_courses_in_schedule:
+                if assign_pref == "과제적음":
+                    reason_segments.append(
+                        "과제 부담이 적은 교양 과목 위주로 구성된 시간표입니다."
+                    )
+                elif assign_pref == "과제많음":
+                    reason_segments.append(
+                        "과제 비중이 있는 과목들로 구성되었습니다."
+                    )
+
+        avoid_success_days = []
+        avoid_fail_details = []
+
+        for avoid in avoid_time_slots:
+            target_day = avoid["day"]
+            target_range = avoid["time_range"]
+
+            is_violated = False
+
+            for course in selected_schedule:
+                for slot in course["time_slots"]:
+                    if slot["day"] == target_day:
+                        if target_range == "오전" and slot["start_period"] < 5:
+                            is_violated = True
+
+                        if target_range == "오후" and slot["start_period"] >= 5:
+                            is_violated = True
+
+            if not is_violated:
+                avoid_success_days.append(
+                    f"{target_day}요일 {target_range}"
+                )
+            else:
+                avoid_fail_details.append(
+                    f"{target_day}요일 {target_range}"
+                )
+
+        if avoid_success_days:
+            reason_segments.append(
+                f"요청하신 {', '.join(avoid_success_days)} 수업을 깔끔하게 피했습니다."
+            )
+
+        if avoid_fail_details:
+            reason_segments.append(
+                f"다만 전체 학점 맞춤을 위해 {', '.join(avoid_fail_details)} 수업이 불가피하게 일부 포함되었습니다."
+            )
+
+        if required_course_names:
+            reason_segments.append(
+                f"우선순위가 높은 추천 전공 과목({', '.join(required_course_names)})이 포함되어 있습니다."
+            )
+
+        recommendation_reason = " ".join(reason_segments)
+
+        alternative_item = {
+            "alternative_id": index + 1,
+            "total_credits": total_credits_sum,
+            "recommendation_reason": recommendation_reason,
+            "recommendation_reasons": reason_segments,
+            "courses": cleaned_courses
+        }
+
+        final_json_output["alternatives"].append(alternative_item)
+
+    return final_json_output
+
 user_sentence = "캡스톤디자인 꼭 넣고 18학점 맞춰줘"
 
 json_result = parse_schedule_text(user_sentence, MY_API_KEY)
@@ -876,249 +1125,12 @@ for schedule in timetable_results:
 
 timetable_results = unique_results
 
-if timetable_results:
-    print("-------- 예시 출력 --------")
-
-    clean_result = []
-
-    selected_schedule = timetable_results[0]
-
-    course_color_map = assign_course_colors(
-        selected_schedule
-    )
-
-
-    for course in selected_schedule:
-
-        cleaned_slots = []
-
-        for slot in course["time_slots"]:
-            cleaned_slots.append({
-                "day": slot["day"],
-                "time_range": slot["time_range"]
-            })
-
-        course_color = course_color_map[
-            course["name"]
-        ]
-
-        clean_course = {
-            "name": course["name"],
-            "room": course["room"],
-            "time_slots": cleaned_slots,
-             "background_color": course_color["background"],
-            "text_color": course_color["text"],
-        }
-
-        clean_result.append(clean_course)
-
-assign_pref = parsed_data.get("assignment_preference")
-selected_course_set = set(
-    parsed_data.get("selected_courses", [])
+final_json_output = build_timetable_json(
+    timetable_results=timetable_results,
+    parsed_data=parsed_data,
+    all_lectures_df=all_lectures_df,
+    exclude_days=exclude_days,
+    avoid_time_slots=avoid_time_slots
 )
 
-if timetable_results:
-    print("\n-------- [시각화 팀 전달용 최종 JSON 출력] --------")
-
-    final_json_output = {
-        "status": "success",
-        "total_alternatives": len(timetable_results),
-        "alternatives": []
-    }
-
-    # 최대 3개의 시간표 대안을 순회하며 JSON 구조를 생성
-    for index, selected_schedule in enumerate(timetable_results):
-        course_color_map = assign_course_colors(selected_schedule)
-        
-        # 1. 이 시간표의 특징을 분석하여 추천 사유(Reason)를 동적으로 생성
-        
-        morning_course_count = 0
-        total_credits_sum = 0
-        required_course_names = []
-
-        cleaned_courses = []
-        for course in selected_schedule:
-            total_credits_sum += course["credit"]
-            if course.get("is_required"):
-                required_course_names.append(course["name"])
-
-            cleaned_slots = []
-            for slot in course["time_slots"]:
-                cleaned_slots.append({
-                    "day": slot["day"],
-                    "time_range": slot["time_range"],
-                })
-                # 오전 수업(5교시/13시 이전 시작) 개수 카운트
-                if slot["start_period"] < 5:
-                    morning_course_count += 1
-
-            matched_rows = all_lectures_df[all_lectures_df['교과목명'] == course["name"]]
-            if not matched_rows.empty:
-                course_row = matched_rows.iloc[0]
-                load_status = evaluate_load(course_row)  # "많다", "적다"
-                raw_ratio = pd.to_numeric(course_row.get('평가_과제(%)'), errors='coerce') or 0
-            else:
-                load_status = "정보 없음"
-                raw_ratio = 0
-
-            course_color = course_color_map[course["name"]]
-
-            course_reason = []
-
-            # 사용자가 직접 선택한 과목
-            if course["name"] in selected_course_set:
-                course_reason.append(
-                    "사용자가 직접 선택한 필수 반영 과목"
-            )
-
-            if course.get("is_current_grade_major", False):
-                course_reason.append(
-                    "해당 학년 표준이수모형 추천 전공 과목"
-                )
-
-            if course.get("is_missing_required_major", False):
-                course_reason.append(
-                    "이전 학년 미이수 전공필수 보완 과목"
-                )
-
-            # 부족 교양 여부
-            if course.get("is_needed_ge", False):
-                course_reason.append(
-                    "부족 교양 영역 충족 목적"
-            )
-
-            # 공강 유지 기여 여부
-            course_days = {
-                slot["day"] for slot in course["time_slots"]
-            }
-
-            if not any(day in exclude_days for day in course_days):
-                if exclude_days:
-                    course_reason.append(
-                        "공강 조건 유지에 유리한 배치"
-                    )
-
-            # 이유가 하나도 없을 경우
-            if not course_reason:
-                course_reason.append(
-                    "시간 충돌 최소화 및 학점 균형을 고려하여 선택"
-                )
-            
-            cleaned_courses.append({
-                "name": course["name"],
-                "room": course["room"],
-                "credit": course["credit"],
-                "selection_reason": course_reason,
-                "is_required": course.get("is_required", False),
-                # 임시 출력
-                "assignment_load_test": load_status,         # "적다", "많다"
-                "assignment_percentage_test": f"{raw_ratio}%", # "15.0%" 형태
-
-                "background_color": course_color["background"],
-                "text_color": course_color["text"],
-                "time_slots": cleaned_slots
-            })
-
-        
-        # 2. 요일별 오전/오후 회피 성공 여부 분석 및 추천 사유 생성
-        reason_segments = []
-
-        if index == 0:
-            mode_description = (
-                "사용자 요청 과목 및 선호 조건을 최우선으로 반영한 시간표입니다."
-            )
-
-        elif index == 1:
-            mode_description = (
-                "졸업 요건 충족과 부족 교양 보완을 우선적으로 고려한 시간표입니다."
-            )
-
-        else:
-            mode_description = (
-                "전공, 공강, 시간대 선호를 균형 있게 반영한 시간표입니다."
-            )
-
-        reason_segments.append(mode_description)
-        
-        # 현재 이 대안 시간표에 포함된 부족 교양(Needed GE)들을 추적
-        included_needed_ge_areas = []
-        for course in selected_schedule:
-            if course.get("is_needed_ge", False):
-                # 대분류와 소분류 명칭을 이쁘게 엮어줌 (예: "개신기초교양[정보문해]")
-                ge_label = f"{course['area']}({course['subarea']})" if course['subarea'] else course['area']
-                if ge_label not in included_needed_ge_areas:
-                    included_needed_ge_areas.append(ge_label)
-
-        # 1. 부족 교양 맞춤 추천 문구 선제 주입
-        if included_needed_ge_areas:
-            reason_segments.append(
-                f"졸업을 위해 이수가 필요한 부족 교양 영역인 **{', '.join(included_needed_ge_areas)}** 과목을 탐색하여 최우선으로 반영했습니다."
-            )
-
-        # [공강 요일 반영 여부 체크]
-        actual_days = {slot["day"] for c in selected_schedule for slot in c["time_slots"]}
-        achieved_empty_days = [day for day in exclude_days if day not in actual_days]
-        if achieved_empty_days:
-            reason_segments.append(f"{', '.join(achieved_empty_days)}요일 공강을 완벽히 확보했습니다.")
-
-        if assign_pref:
-            ge_courses_in_schedule = [c for c in selected_schedule if not c.get("is_required")]
-            if ge_courses_in_schedule:
-                if assign_pref == "과제적음":
-                    reason_segments.append("과제 부담이 적은 교양 과목 위주로 구성된 시간표입니다.")
-                elif assign_pref == "과제많음":
-                    reason_segments.append("과제 비중이 있는 과목들로 구성되었습니다.")
-        
-        # 요일별 오전/오후 회피 성공 여부 체크
-        avoid_success_days = []
-        avoid_fail_details = []
-
-        for avoid in avoid_time_slots:
-            target_day = avoid["day"]
-            target_range = avoid["time_range"]
-            
-            is_violated = False
-            for course in selected_schedule:
-                for slot in course["time_slots"]:
-                    if slot["day"] == target_day:
-                        if target_range == "오전" and slot["start_period"] < 5:
-                            is_violated = True
-                        if target_range == "오후" and slot["start_period"] >= 5:
-                            is_violated = True
-            
-            if not is_violated:
-                avoid_success_days.append(f"{target_day}요일 {target_range}")
-            else:
-                avoid_fail_details.append(f"{target_day}요일 {target_range}")
-
-        if avoid_success_days:
-            reason_segments.append(f"요청하신 {', '.join(avoid_success_days)} 수업을 깔끔하게 피했습니다.")
-        if avoid_fail_details:
-            reason_segments.append(f"다만 전체 학점 맞춤을 위해 {', '.join(avoid_fail_details)} 수업이 불가피하게 일부 포함되었습니다.")
-
-        # [우선순위 추천 과목 체크]
-        if required_course_names:
-            reason_segments.append(f"우선순위가 높은 추천 전공 과목({', '.join(required_course_names)})이 포함되어 있습니다.")
-
-        # 최종 합치기
-        recommendation_reason = " ".join(reason_segments)
-
-        # 3. 개별 시간표 대안 구조화
-        alternative_item = {
-            "alternative_id": index + 1,
-            "total_credits": total_credits_sum,
-            "recommendation_reason": recommendation_reason,
-            "recommendation_reasons": reason_segments,
-            "courses": cleaned_courses
-        }
-        
-        final_json_output["alternatives"].append(alternative_item)
-
-    # 시각화 팀이 바로 복사해서 쓸 수 있도록 깔끔한 JSON 스트링으로 출력
-    print(json.dumps(final_json_output, ensure_ascii=False, indent=2))
-
-else:
-    print(json.dumps({
-        "status": "error",
-        "message": "조건을 만족하는 시간표 조합을 찾지 못했습니다. 조건을 완화해 주세요."
-    }, ensure_ascii=False, indent=2))
+print(json.dumps(final_json_output, ensure_ascii=False, indent=2))
