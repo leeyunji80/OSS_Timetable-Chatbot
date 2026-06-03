@@ -1,17 +1,25 @@
 import sys
+import os
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(CURRENT_DIR)
+STUDENTS_JSON_PATH = os.path.join(BASE_DIR, 'data', 'students.json')
+
+sys.path.insert(0, BASE_DIR)
+
 import webbrowser
+import PyQt5
+import json
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from threading import Thread
-import os
-import PyQt5
-import json
+from dotenv import load_dotenv
+from llm.llm_api import parse_schedule_text_with_history
 
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(CURRENT_DIR)
-STUDENTS_JSON_PATH = os.path.join(BASE_DIR, 'data', 'students.json')
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+API_KEY = os.environ.get("OPENAI_API_KEY")
 
 with open(STUDENTS_JSON_PATH, 'r', encoding='utf-8') as f:
     students = json.load(f)
@@ -53,14 +61,27 @@ def chat():
 
     data = request.get_json()
 
-    user_message = data['message']
+    user_message = data.get('message')
+    session_id = data.get('session_id') or data.get('id') or "default_session"
 
-    print(user_message)
+    print(f"\n[LLM INPUT] 세션: {session_id} | 유저 문장: {user_message}")
 
-    return jsonify({
-        'reply': f'"{user_message}" 조건의 시간표를 생성했습니다.',
-        'image': '/static/timetable.png'
-    })
+    try:
+        refined_json_str = parse_schedule_text_with_history(session_id, user_message, API_KEY)
+        print(f"[LLM OUTPUT 제약조건 JSON]\n{refined_json_str}")
+
+        return jsonify({
+                'reply': '요구사항을 분석하여 시간표 제약 조건을 실시간 갱신했습니다.',
+                'parsed_constraints': json.loads(refined_json_str), # 웹 확인용 파싱 데이터
+                'image': '/static/timetable.png' # 팀원 2의 알고리즘 결과가 렌더링될 이미지 경로
+            })
+
+    except Exception as e:
+        print(f"[ERROR] LLM 엔진 가동 실패: {e}")
+        return jsonify({
+                'reply': '요구사항을 분석하는 과정에서 오류가 발생했습니다. 다시 입력해 주세요.',
+                'error': str(e)
+            }), 500
 
 # 실시간 데이터 파일 저장을 위한 영구화 API 엔드포인트 구현
 @app.route('/save_chat', methods=['POST'])
