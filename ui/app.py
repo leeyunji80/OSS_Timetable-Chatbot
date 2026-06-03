@@ -105,13 +105,28 @@ def chat():
                 "error": timetable_result
             }), 400
 
-        first_alt = timetable_result["alternatives"][0]
+        results = []
+        for alt in timetable_result.get("alternatives", [])[:2]:
+            saved_filename = draw_timetable_image(alt, student_id)
+            results.append({
+                "reply": alt.get("recommendation_reason", "시간표 추천이 완료되었습니다."),
+                "timetable_title": alt.get("timetable_title", "추천 시간표"),
+                "timetable": alt,
+                "image": f"/timetable_image/{saved_filename}"
+            })
 
+        if not results:
+            return jsonify({
+                "reply": "생성된 시간표가 없습니다.",
+                "error": timetable_result
+            }), 400
+
+        first_alt = results[0]["timetable"]
+        
         timetable_title = first_alt.get("timetable_title", "추천 시간표")
         recommendation_reason = first_alt.get("recommendation_reason", "시간표 추천이 완료되었습니다.")
 
-        saved_filename = draw_timetable_image(first_alt, student_id)
-        image_url = f"/timetable_image/{saved_filename}"
+        image_url = results[0]["image"]
 
     except Exception as e:
         print(f"[CRITICAL ERROR] 처리 실패: {e}")
@@ -126,7 +141,8 @@ def chat():
         "timetable_title": timetable_title,
         "parsed_constraints": alternative_data,
         "timetable": first_alt,
-        "image": image_url
+        "image": image_url,
+        "results": results
     })
 
 # 실시간 데이터 파일 저장을 위한 영구화 API 엔드포인트 구현

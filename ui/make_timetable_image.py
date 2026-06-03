@@ -233,7 +233,7 @@ def draw_timetable_image(alternative_data, student_id="guest"):
     os.makedirs(output_dir, exist_ok=True)
 
     safe_student_id = str(student_id).replace("/", "_").replace("\\", "_")
-    filename = f"timetable_{safe_student_id}_{int(time.time())}.png"
+    filename = f"timetable_{safe_student_id}_{int(time.time() * 1000)}.png"
     output_path = os.path.join(output_dir, filename)
 
     image.save(output_path)

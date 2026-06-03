@@ -995,11 +995,23 @@
 
                 const data = await response.json();
 
-                addMessage(data.reply, 'ai');
-                saveMessage(data.reply, 'ai');
-                if (data.image) {
-                    addImageMessage(data.image);
-                    saveImageMessage(data.image);
+                if (Array.isArray(data.results) && data.results.length > 0) {
+                    data.results.forEach(result => {
+                        addMessage(result.reply, 'ai');
+                        saveMessage(result.reply, 'ai');
+
+                        if (result.image) {
+                            addImageMessage(result.image);
+                            saveImageMessage(result.image);
+                        }
+                    });
+                } else {
+                    addMessage(data.reply, 'ai');
+                    saveMessage(data.reply, 'ai');
+                    if (data.image) {
+                        addImageMessage(data.image);
+                        saveImageMessage(data.image);
+                    }
                 }
 
                 if (data.timetable_title) {
