@@ -10,10 +10,11 @@ sys.path.insert(0, BASE_DIR)
 import webbrowser
 import PyQt5
 import json
+from make_timetable_image import draw_timetable_image
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, session
 from threading import Thread
 from dotenv import load_dotenv
 from llm.llm_api import parse_schedule_text_with_history
@@ -58,7 +59,7 @@ def index():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-
+    student_id = session.get('student_id', 'guest')
     data = request.get_json()
 
     user_message = data.get('message')
@@ -70,11 +71,8 @@ def chat():
         refined_json_str = parse_schedule_text_with_history(session_id, user_message, API_KEY)
         print(f"[LLM OUTPUT 제약조건 JSON]\n{refined_json_str}")
 
-        return jsonify({
-                'reply': '요구사항을 분석하여 시간표 제약 조건을 실시간 갱신했습니다.',
-                'parsed_constraints': json.loads(refined_json_str), # 웹 확인용 파싱 데이터
-                'image': '/static/timetable.png' # 팀원 2의 알고리즘 결과가 렌더링될 이미지 경로
-            })
+        # LLM이 파싱한 제약 조건 데이터를 구조화합니다 (이것이 draw 함수의 입력값이 됩니다)
+        alternative_data = json.loads(refined_json_str)
 
     except Exception as e:
         print(f"[ERROR] LLM 엔진 가동 실패: {e}")
@@ -82,6 +80,20 @@ def chat():
                 'reply': '요구사항을 분석하는 과정에서 오류가 발생했습니다. 다시 입력해 주세요.',
                 'error': str(e)
             }), 500
+
+    # try 블록을 무사히 통과한 후 (에러가 없을 때) 이미지를 생성합니다.
+    # 1. 고유한 이름으로 이미지 생성 및 저장 후 파일명 받기
+    saved_filename = draw_timetable_image(alternative_data, student_id)
+
+    # 2. 앞서 권장해 드린 대로 브라우저 접근을 위해 static 경로 포맷으로 주소 구성
+    image_url = f"/timetable_image/{saved_filename}"
+
+    # 3. 분석된 데이터와 고유 이미지 주소를 한 번에 응답으로 반환
+    return jsonify({
+        'reply': '요구사항을 분석하여 새로운 시간표를 생성했습니다.',
+        'parsed_constraints': alternative_data, 
+        'image': image_url 
+    })
 
 # 실시간 데이터 파일 저장을 위한 영구화 API 엔드포인트 구현
 @app.route('/save_chat', methods=['POST'])
@@ -170,6 +182,8 @@ def login():
             and student['name'] == student_name
         ):
             
+            session['student_id'] = student_id
+            
             # 해당 사용자의 파일 시스템 백업 기록 확인 후 자동 로드
             file_path = get_user_data_path(student_id)
             saved_sessions = []
@@ -198,6 +212,12 @@ def student_files(filename):
 
 def run_flask():
     app.run(port=5000)
+
+@app.route('/timetable_image/<filename>')
+def serve_timetable_image(filename):
+    # 이미지가 저장되는 실제 디렉토리 경로에서 안전하게 파일을 읽어 반환합니다.
+    target_dir = os.path.join(CURRENT_DIR, 'templates', 'timetable_image')
+    return send_from_directory(target_dir, filename)
 
 # 2. 캐릭터 런처 설정 (데스크탑 아이콘 담당)
 class CharacterLauncher(QWidget):
