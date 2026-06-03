@@ -1,5 +1,10 @@
 import json
 import pandas as pd
+import os
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(CURRENT_DIR)
+GRADUATION_RULE_PATH = os.path.join(BASE_DIR, 'data', 'graduation.json')
 
 
 # ---------------------------------
