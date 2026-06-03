@@ -94,23 +94,39 @@ def chat():
 
     # 3. 🌟 [핵심 수정] 로직 통합: 스케줄러 1번 호출, 이미지 1번 생성
     try:
-        # 스케줄러 실행 (필요 시 alternative_data를 넘김)
-        timetable_result = generate_timetable_response(alternative_data, login_student_id=student_id)
-        
-        # 이미지 생성 (스케줄러 결과 혹은 원본 데이터를 적절히 사용)
-        # 만약 이미지가 그려지지 않거나 엉뚱하다면 아래의 alternative_data를 timetable_result로 바꿔보세요.
-        saved_filename = draw_timetable_image(alternative_data, student_id)
+        timetable_result = generate_timetable_response(
+            alternative_data,
+            login_student_id=student_id
+        )
+
+        if timetable_result.get("status") != "success":
+            return jsonify({
+                "reply": timetable_result.get("message", "조건을 만족하는 시간표를 찾지 못했습니다."),
+                "error": timetable_result
+            }), 400
+
+        first_alt = timetable_result["alternatives"][0]
+
+        timetable_title = first_alt.get("timetable_title", "추천 시간표")
+        recommendation_reason = first_alt.get("recommendation_reason", "시간표 추천이 완료되었습니다.")
+
+        saved_filename = draw_timetable_image(first_alt, student_id)
         image_url = f"/timetable_image/{saved_filename}"
+
     except Exception as e:
         print(f"[CRITICAL ERROR] 처리 실패: {e}")
-        return jsonify({'reply': '이미지 생성 중 오류 발생', 'error': str(e)}), 500
+        return jsonify({
+            "reply": "시간표 생성 중 오류가 발생했습니다.",
+            "error": str(e)
+        }), 500
 
     # 4. 최종 응답
     return jsonify({
-        'reply': recommendation_reason,
-        'timetable_title': timetable_title,
-        'parsed_constraints': alternative_data, 
-        'image': image_url 
+        "reply": recommendation_reason,
+        "timetable_title": timetable_title,
+        "parsed_constraints": alternative_data,
+        "timetable": first_alt,
+        "image": image_url
     })
 
 # 실시간 데이터 파일 저장을 위한 영구화 API 엔드포인트 구현

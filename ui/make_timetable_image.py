@@ -94,6 +94,43 @@ def draw_timetable_image(alternative_data, student_id="guest"):
         # "09:00" -> 9 추출
         hour = int(time_str.split(":")[0])
         return start_y + ((hour - timetable_start_hour) * hour_height)
+    
+    def text_width(text, font):
+        return draw.textbbox((0, 0), text, font=font)[2]
+
+    def wrap_text_to_width(text, font, max_width):
+        lines = []
+        current = ""
+
+        for char in str(text):
+            test = current + char
+            if text_width(test, font) <= max_width:
+                current = test
+            else:
+                if current:
+                    lines.append(current)
+                current = char
+
+        if current:
+            lines.append(current)
+
+        return lines
+
+    def draw_text_in_box(text, x, y, max_width, max_height, font, fill, line_gap=3):
+        lines = wrap_text_to_width(text, font, max_width)
+        line_height = draw.textbbox((0, 0), "가", font=font)[3] + line_gap
+
+        max_lines = max(1, max_height // line_height)
+        visible_lines = lines[:max_lines]
+
+        if len(lines) > max_lines:
+            last = visible_lines[-1]
+            while last and text_width(last + "...", font) > max_width:
+                last = last[:-1]
+            visible_lines[-1] = last + "..."
+
+        for idx, line in enumerate(visible_lines):
+            draw.text((x, y + idx * line_height), line, fill=fill, font=font)
 
     # ---------------------------------------------------------------------------
     # 6. JSON 과목 데이터를 순회하며 시간표 블록 채우기
@@ -105,4 +142,59 @@ def draw_timetable_image(alternative_data, student_id="guest"):
         # 색상 정보 가져오기
         color_info = course.get("color", {})
         bg_color = color_info.get("background", "#E3F2FD")
-        text_color = color_info.get
+        text_color = color_info.get("text", "#1F2937")
+
+        for sch in course.get("schedule", []):
+            day = sch.get("day")
+            time_range = sch.get("time")
+
+            if day not in day_map or not time_range or "-" not in time_range:
+                continue
+
+            start_time, end_time = time_range.split("-")
+            x = start_x + day_map[day] * col_width
+            y1 = time_to_y(start_time)
+            y2 = time_to_y(end_time)
+
+            draw.rounded_rectangle(
+                [(x + 4, y1 + 4), (x + col_width - 4, y2 - 4)],
+                radius=8,
+                fill=bg_color,
+                outline="#ffffff",
+                width=2
+            )
+
+            inner_x = x + 8
+            inner_y = y1 + 8
+            inner_width = col_width - 16
+            inner_height = max(12, y2 - y1 - 16)
+
+            draw_text_in_box(
+                course_name,
+                inner_x,
+                inner_y,
+                inner_width,
+                inner_height - 18,
+                font_content,
+                text_color
+            )
+
+            if classroom and inner_height >= 42:
+                draw_text_in_box(
+                    classroom,
+                    inner_x,
+                    y2 - 22,
+                    inner_width,
+                    16,
+                    font_sub,
+                    text_color
+                )
+    output_dir = os.path.join(os.path.dirname(__file__), "templates", "timetable_image")
+    os.makedirs(output_dir, exist_ok=True)
+
+    safe_student_id = str(student_id).replace("/", "_").replace("\\", "_")
+    filename = f"timetable_{safe_student_id}_{int(time.time())}.png"
+    output_path = os.path.join(output_dir, filename)
+
+    image.save(output_path)
+    return filename
