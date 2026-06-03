@@ -10,8 +10,9 @@ def draw_timetable_image(alternative_data, student_id="guest"):
     # ---------------------------------------------------------------------------
     # 1. 입력 데이터를 기반으로 시간표의 최대 종료 시간 계산 (동적 높이 설정)
     # ---------------------------------------------------------------------------
-    timetable_start_hour = 9
+    default_start_hour = 9
     default_end_hour = 18  # 기본 오후 6시
+    min_course_hour = default_start_hour
     max_course_hour = default_end_hour
 
     courses = alternative_data.get("courses", [])
@@ -20,14 +21,21 @@ def draw_timetable_image(alternative_data, student_id="guest"):
             time_range = sch.get("time")  # 예: "09:00-13:00" 또는 "17:00-21:00"
             if time_range and "-" in time_range:
                 try:
-                    end_time_str = time_range.split("-")[1]
-                    end_hour = int(end_time_str.split(":")[0])  # 종료 시간(시) 추출
+                    start_time_str, end_time_str = time_range.split("-")
+
+                    start_hour = int(start_time_str.split(":")[0])
+                    end_hour = int(end_time_str.split(":")[0])
+
+                    if start_hour < min_course_hour:
+                        min_course_hour = start_hour
+
                     if end_hour > max_course_hour:
                         max_course_hour = end_hour
                 except Exception:
                     pass
 
     # 가장 늦은 수업 종료 시간에 맞춰서 시간표 마감 시간 설정 (최소 오후 6시 보장)
+    timetable_start_hour = min_course_hour
     timetable_end_hour = max_course_hour
 
     # ---------------------------------------------------------------------------
@@ -52,17 +60,11 @@ def draw_timetable_image(alternative_data, student_id="guest"):
     # ---------------------------------------------------------------------------
     # 3. 폰트 설정 (환경에 맞게 경로 수정 필요)
     # ---------------------------------------------------------------------------
-    font_path = "C:/Windows/Fonts/malgun.ttf"  # 윈도우 기본 맑은고딕
-    if not os.path.exists(font_path):
-        font_title = ImageFont.load_default()
-        font_course = ImageFont.load_default()
-        font_room = ImageFont.load_default()
-        font_sub = ImageFont.load_default()
-    else:
-        font_title = ImageFont.truetype(font_path, 22)
-        font_course = ImageFont.truetype(font_path, 15)
-        font_room = ImageFont.truetype(font_path, 12)
-        font_sub = ImageFont.truetype(font_path, 11)
+        # 간단하게
+    font_title = ImageFont.truetype("malgun.ttf", 22)
+    font_course = ImageFont.truetype("malgun.ttf", 15)
+    font_room = ImageFont.truetype("malgun.ttf", 12)
+    font_sub = ImageFont.truetype("malgun.ttf", 11)
 
     # 상단 타이틀 표기
     title_text = alternative_data.get("timetable_title", "추천 시간표")
@@ -113,26 +115,31 @@ def draw_timetable_image(alternative_data, student_id="guest"):
         return draw.textbbox((0, 0), text, font=font)[2]
 
     def wrap_text_to_width(text, font, max_width):
+        text = str(text)
+
         lines = []
         current = ""
 
-        for char in str(text):
-            test = current + char
-            if text_width(test, font) <= max_width:
-                current = test
+        for ch in text:
+            if text_width(current + ch, font) <= max_width:
+                current += ch
             else:
-                if current:
-                    lines.append(current)
-                current = char
+                lines.append(current)
+                current = ch
 
         if current:
             lines.append(current)
+
+        # 너무 짧은 마지막 줄 보정
+        if len(lines) >= 2 and len(lines[-1]) <= 2:
+            lines[-2] += lines[-1]
+            lines.pop()
 
         return lines
 
     def draw_text_in_box(text, x, y, max_width, max_height, font, fill, line_gap=3):
         lines = wrap_text_to_width(text, font, max_width)
-        line_height = draw.textbbox((0, 0), "가", font=font)[3] + line_gap
+        line_height = font_course.size + 6
 
         max_lines = max(1, max_height // line_height)
         visible_lines = lines[:max_lines]
@@ -169,13 +176,6 @@ def draw_timetable_image(alternative_data, student_id="guest"):
             x = start_x + day_map[day] * col_width
             y1 = time_to_y(start_time)
             y2 = time_to_y(end_time)
-
-            # 그림자
-            draw.rounded_rectangle(
-                [(x + 6, y1 + 6), (x + col_width - 2, y2 - 2)],
-                radius=10,
-                fill="#d1d5db"
-            )
 
             # 본 블록
             draw.rounded_rectangle(
