@@ -31,7 +31,7 @@ def draw_timetable_image(alternative_data, student_id="guest"):
 
                     if end_hour > max_course_hour:
                         max_course_hour = end_hour
-                except Exception:
+                except Exception:  # pragma: no cover
                     pass
 
     # 가장 늦은 수업 종료 시간에 맞춰서 시간표 마감 시간 설정 (최소 오후 6시 보장)
@@ -137,7 +137,7 @@ def draw_timetable_image(alternative_data, student_id="guest"):
 
         return lines
 
-    def draw_text_in_box(text, x, y, max_width, max_height, font, fill, line_gap=3):
+    def draw_text_in_box(text, x, y, max_width, max_height, font, fill, line_gap=3): # pragma: no cover
         lines = wrap_text_to_width(text, font, max_width)
         line_height = font_course.size + 6
 

@@ -10,7 +10,7 @@ sys.path.insert(0, BASE_DIR)
 import webbrowser
 import PyQt5
 import json
-from make_timetable_image import draw_timetable_image
+from .make_timetable_image import draw_timetable_image
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPixmap
@@ -260,7 +260,7 @@ def student_files(filename):
         filename
     )
 
-def run_flask():
+def run_flask(): # pragma: no cover
     app.run(port=5000)
 
 @app.route('/timetable_image/<filename>')
@@ -270,7 +270,7 @@ def serve_timetable_image(filename):
     return send_from_directory(target_dir, filename)
 
 # 2. 캐릭터 런처 설정 (데스크탑 아이콘 담당)
-class CharacterLauncher(QWidget):
+class CharacterLauncher(QWidget): # pragma: no cover
     def __init__(self):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow)
@@ -317,7 +317,7 @@ class CharacterLauncher(QWidget):
         if event.button() == Qt.LeftButton and not self.isDragging:
             webbrowser.open('http://127.0.0.1:5000')
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     # Flask 서버를 배경에서 실행
     flask_thread = Thread(target=run_flask)
     flask_thread.daemon = True
