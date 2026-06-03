@@ -35,7 +35,8 @@ def draw_timetable_image(alternative_data, student_id="guest"):
     # ---------------------------------------------------------------------------
     start_x = 80
     start_y = 100
-    col_width = 100    # 요일 칸 가로 너비
+    col_width = 120    # 요일 칸 가로 너비
+    width = 750
     hour_height = 70   # 1시간당 세로 높이 총 픽셀
 
     # 총 표시해야 할 시간의 수 (예: 9시 ~ 18시면 9시간)
@@ -57,8 +58,8 @@ def draw_timetable_image(alternative_data, student_id="guest"):
         font_title = font_content = font_sub = ImageFont.load_default()
     else:
         font_title = ImageFont.truetype(font_path, 22)
-        font_content = ImageFont.truetype(font_path, 14)
-        font_sub = ImageFont.truetype(font_path, 11)
+        font_content = ImageFont.truetype(font_path, 15)
+        font_sub = ImageFont.truetype(font_path, 12)
 
     # 상단 타이틀 표기
     title_text = alternative_data.get("timetable_title", "추천 시간표")
@@ -74,7 +75,17 @@ def draw_timetable_image(alternative_data, student_id="guest"):
     for i, day in enumerate(days):
         x = start_x + (i * col_width)
         # 글자가 칸 중앙에 오도록 살짝 보정하여 그리기
-        draw.text((x + (col_width // 2) - 8, start_y - 30), day, fill="#34495e", font=font_content)
+        bbox = draw.textbbox((0, 0), day, font=font_course)
+
+        draw.text(
+            (
+                x + (col_width - (bbox[2] - bbox[0])) / 2,
+                start_y - 35
+            ),
+            day,
+            fill="#1f2937",
+            font=font_course
+        )
 
     # 가로 시간선 및 시간 라벨 그리기
     for hour in range(timetable_start_hour, timetable_end_hour + 1):
@@ -156,38 +167,64 @@ def draw_timetable_image(alternative_data, student_id="guest"):
             y1 = time_to_y(start_time)
             y2 = time_to_y(end_time)
 
+            # 그림자
+            draw.rounded_rectangle(
+                [(x + 6, y1 + 6), (x + col_width - 2, y2 - 2)],
+                radius=10,
+                fill="#d1d5db"
+            )
+
+            # 본 블록
             draw.rounded_rectangle(
                 [(x + 4, y1 + 4), (x + col_width - 4, y2 - 4)],
-                radius=8,
+                radius=10,
                 fill=bg_color,
-                outline="#ffffff",
-                width=2
+                outline="#cbd5e1",
+                width=1
             )
 
-            inner_x = x + 8
-            inner_y = y1 + 8
-            inner_width = col_width - 16
-            inner_height = max(12, y2 - y1 - 16)
+            padding = 16
 
-            draw_text_in_box(
+            inner_x = x + padding
+            inner_y = y1 + padding
+
+            inner_width = col_width - (padding * 2)
+            inner_height = y2 - y1 - (padding * 2)
+
+            course_lines = wrap_text_to_width(
                 course_name,
-                inner_x,
-                inner_y,
-                inner_width,
-                inner_height - 18,
-                font_content,
-                text_color
+                font_course,
+                inner_width
             )
 
-            if classroom and inner_height >= 42:
-                draw_text_in_box(
+            line_height = draw.textbbox(
+                (0, 0),
+                "가",
+                font=font_course
+            )[3] + 2
+
+            current_y = inner_y
+
+            # 과목명
+            for line in course_lines[:3]:
+                draw.text(
+                    (inner_x, current_y),
+                    line,
+                    fill=text_color,
+                    font=font_course
+                )
+                current_y += line_height
+
+            # 과목명 아래 여백
+            current_y += 4
+
+            # 강의실
+            if classroom:
+                draw.text(
+                    (inner_x, current_y),
                     classroom,
-                    inner_x,
-                    y2 - 22,
-                    inner_width,
-                    16,
-                    font_sub,
-                    text_color
+                    fill="#6b7280",
+                    font=font_room
                 )
     output_dir = os.path.join(os.path.dirname(__file__), "templates", "timetable_image")
     os.makedirs(output_dir, exist_ok=True)
