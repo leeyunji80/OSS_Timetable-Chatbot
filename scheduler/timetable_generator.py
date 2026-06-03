@@ -974,163 +974,148 @@ def build_timetable_json(
 
     return final_json_output
 
-user_sentence = "캡스톤디자인 꼭 넣고 18학점 맞춰줘"
+def generate_timetable_response(user_sentence, login_student_id):
+    json_result = parse_schedule_text(user_sentence, MY_API_KEY)
+    parsed_data = json.loads(json_result)
 
-json_result = parse_schedule_text(user_sentence, MY_API_KEY)
+    exclude_days = []
+    avoid_time_slots = []
+    preferred_time_slots = []
 
-parsed_data = json.loads(json_result)
+    for slot in parsed_data["slots"]:
+        day = slot["day"].replace("요일", "")
 
-print("LLM 분석 결과:")
-print(json.dumps(parsed_data, ensure_ascii=False, indent=2))
+        if slot["condition"] == "공강":
+            if day not in exclude_days:
+                exclude_days.append(day)
+            continue
 
-exclude_days = []
-avoid_time_slots = []
-preferred_time_slots = []
+        if slot["condition"] == "피함":
+            avoid_time_slots.append({
+                "day": day,
+                "time_range": slot["time_range"],
+                "specific_time_slot": normalize_specific_time(slot)
+            })
 
-for slot in parsed_data["slots"]:
+        if slot["condition"] == "선호":
+            preferred_time_slots.append({
+                "day": day,
+                "time_range": slot["time_range"],
+                "specific_time_slot": normalize_specific_time(slot)
+            })
 
-    day = slot["day"].replace("요일", "")
+    slots_input = {
+        "target_grade": parsed_data.get("target_grade"),
+        "exclude_days": exclude_days,
+        "target_credit": parsed_data.get("target_credit"),
+        "avoid_time_slots": avoid_time_slots,
+        "preferred_time_slots": preferred_time_slots
+    }
 
-    # 공강 처리
-    if slot["condition"] == "공강":
+    target_semester = 1
 
-       day = slot["day"].replace("요일", "")
+    graduation_analysis = get_final_recommendations(
+        student_id=login_student_id,
+        target_semester=target_semester,
+        students_json_data=students_list
+    )
 
-       if day not in exclude_days:
-           exclude_days.append(day)
+    recommended_majors = graduation_analysis.get("recommended_major_courses", [])
+    needed_general_areas = graduation_analysis.get("needed_general_areas", {})
+    missing_required_majors = graduation_analysis.get("missing_required_major_courses", [])
 
-       continue
+    all_lectures_df = pd.concat([
+        pd.read_csv(MAJOR_DATA_PATH),
+        pd.read_csv(GE_DATA_PATH)
+    ], ignore_index=True)
 
-    # 특정 시간대 피하기 처리
-    if slot["condition"] == "피함":
+    user_preferences_input = {
+        "assignment_preference": parsed_data.get("assignment_preference"),
+        "team_preference": parsed_data.get("team_project_preference"),
+        "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선"),
+        "selected_courses": parsed_data.get("selected_courses", []),
+        "excluded_courses": parsed_data.get("excluded_courses", []),
+        "course_priority": parsed_data.get("course_priority")
+    }
 
-        avoid_time_slots.append({
-            "day": day,
-            "time_range": slot["time_range"],
-            "specific_time_slot": normalize_specific_time(slot)
-        })
-        
-    if slot["condition"] == "선호":
+    import re
 
-        preferred_time_slots.append({
-            "day": day,
-            "time_range": slot["time_range"],
-            "specific_time_slot": normalize_specific_time(slot)
-        })
+    raw_credit = slots_input.get("target_credit")
 
-slots_input = {
-    "target_grade": parsed_data.get("target_grade"),
-    "exclude_days": exclude_days,
-    "target_credit": parsed_data.get("target_credit"),
-    "avoid_time_slots": avoid_time_slots,
-    "preferred_time_slots": preferred_time_slots
-}
+    if raw_credit:
+        digit_match = re.search(r"\d+", str(raw_credit))
+        target_credit_int = int(digit_match.group()) if digit_match else 18
+    else:
+        target_credit_int = 18
 
-# ... (LLM 분석 및 slots_input 정제 완료 후) ...
+    user_priority_results = generate_timetable_combinations(
+        recommended_major_courses=recommended_majors,
+        needed_general_areas=needed_general_areas,
+        missing_required_major_courses=missing_required_majors,
+        filtered_df=all_lectures_df,
+        target_credits=target_credit_int,
+        empty_days=slots_input["exclude_days"],
+        avoid_time_slots=slots_input["avoid_time_slots"],
+        preferred_time_slots=slots_input["preferred_time_slots"],
+        user_preferences=user_preferences_input,
+        mode="user_priority"
+    )
 
-login_student_id = "20250001"
-target_semester = 1 
+    graduation_priority_results = generate_timetable_combinations(
+        recommended_major_courses=recommended_majors,
+        needed_general_areas=needed_general_areas,
+        missing_required_major_courses=missing_required_majors,
+        filtered_df=all_lectures_df,
+        target_credits=target_credit_int,
+        empty_days=slots_input["exclude_days"],
+        avoid_time_slots=slots_input["avoid_time_slots"],
+        preferred_time_slots=slots_input["preferred_time_slots"],
+        user_preferences=user_preferences_input,
+        mode="graduation_priority"
+    )
 
-# 파일에서 불러온 함수를 직접 실행해서 결과를 메모리에 얹습니다.
-graduation_analysis = get_final_recommendations(
-    student_id=login_student_id,
-    target_semester=target_semester,
-    students_json_data=students_list
-)
+    selected_courses = set(parsed_data.get("selected_courses", []))
 
-# 최종 추천 과목 리스트 추출
-recommended_majors = graduation_analysis.get("recommended_major_courses", [])
-needed_general_areas = graduation_analysis.get("needed_general_areas", {})
-missing_required_majors = graduation_analysis.get("missing_required_major_courses", [])
+    if selected_courses and not user_priority_results:
+        return {
+            "status": "error",
+            "message": "조건을 만족하는 시간표 조합을 찾지 못했습니다. 조건을 완화해 주세요."
+        }
 
-# 1. 파일 경로에서 데이터를 읽어와 하나로 합쳐줍니다.
-all_lectures_df = pd.concat([pd.read_csv(MAJOR_DATA_PATH), pd.read_csv(GE_DATA_PATH)], ignore_index=True)
+    timetable_results = []
 
-user_preferences_input = {
-    "assignment_preference": parsed_data.get("assignment_preference"),
-    "team_preference": parsed_data.get("team_project_preference"),
-    "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선"),
-     "selected_courses": parsed_data.get("selected_courses", []),
-    "excluded_courses": parsed_data.get("excluded_courses", []),
-    "course_priority": parsed_data.get("course_priority")
-}
+    if user_priority_results:
+        timetable_results.append(user_priority_results[0])
 
-import re
-raw_credit = slots_input.get("target_credit") 
-if raw_credit:
-    digit_match = re.search(r'\d+', str(raw_credit))
-    target_credit_int = int(digit_match.group()) if digit_match else 18
-else:
-    target_credit_int = 18
+    if graduation_priority_results:
+        timetable_results.append(graduation_priority_results[0])
 
-# 2. 딕셔너리에 뭉쳐있던 인자들을 하나씩 풀어서 정확한 매개변수 이름으로 전달합니다.
-user_priority_results = generate_timetable_combinations(
-    recommended_major_courses=recommended_majors,
-    needed_general_areas=needed_general_areas,
-    missing_required_major_courses=missing_required_majors,
-    filtered_df=all_lectures_df,
-    target_credits=target_credit_int,
-    empty_days=slots_input["exclude_days"],
-    avoid_time_slots=slots_input["avoid_time_slots"],
-    preferred_time_slots=slots_input["preferred_time_slots"],
-    user_preferences=user_preferences_input,
-    mode="user_priority"
-)
+    unique_results = []
+    seen = set()
 
-graduation_priority_results = generate_timetable_combinations(
-    recommended_major_courses=recommended_majors,
-    needed_general_areas=needed_general_areas,
-    missing_required_major_courses=missing_required_majors,
-    filtered_df=all_lectures_df,
-    target_credits=target_credit_int,
-    empty_days=slots_input["exclude_days"],
-    avoid_time_slots=slots_input["avoid_time_slots"],
-    preferred_time_slots=slots_input["preferred_time_slots"],
-    user_preferences=user_preferences_input,
-    mode="graduation_priority"
-)
+    for schedule in timetable_results:
+        names = tuple(sorted(c["name"] for c in schedule))
 
+        if names not in seen:
+            seen.add(names)
+            unique_results.append(schedule)
 
-selected_courses = set(
-    parsed_data.get("selected_courses", [])
-)
-if selected_courses and not user_priority_results:
+    timetable_results = unique_results
 
-    print(json.dumps({
-        "status": "error",
-        "message": "조건을 만족하는 시간표 조합을 찾지 못했습니다. 조건을 완화해 주세요."
-    }, ensure_ascii=False, indent=2))
+    final_json_output = build_timetable_json(
+        timetable_results=timetable_results,
+        parsed_data=parsed_data,
+        all_lectures_df=all_lectures_df,
+        exclude_days=exclude_days,
+        avoid_time_slots=avoid_time_slots
+    )
 
-    exit()
+    return final_json_output
 
-timetable_results = []
+if __name__ == "__main__":
+    result = generate_timetable_response(
+        user_sentence="캡스톤디자인 꼭 넣고 18학점 맞춰줘",
+        login_student_id="20250001"
+    )
 
-if user_priority_results:
-    timetable_results.append(user_priority_results[0])
-
-if graduation_priority_results:
-    timetable_results.append(graduation_priority_results[0])
-
-
-unique_results = []
-seen = set()
-
-for schedule in timetable_results:
-
-    names = tuple(sorted(c["name"] for c in schedule))
-
-    if names not in seen:
-        seen.add(names)
-        unique_results.append(schedule)
-
-timetable_results = unique_results
-
-final_json_output = build_timetable_json(
-    timetable_results=timetable_results,
-    parsed_data=parsed_data,
-    all_lectures_df=all_lectures_df,
-    exclude_days=exclude_days,
-    avoid_time_slots=avoid_time_slots
-)
-
-print(json.dumps(final_json_output, ensure_ascii=False, indent=2))
+    print(json.dumps(result, ensure_ascii=False, indent=2))
