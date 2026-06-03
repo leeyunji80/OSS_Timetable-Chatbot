@@ -14,10 +14,10 @@ import random
 import os
 from dotenv import load_dotenv
 import json
-from course_recommender import get_final_recommendations, students_list
-from timetable_colors import assign_course_colors
-from timetable_parser import parse_day_and_period
-from check_overlap import is_conflict, is_valid_combination
+from scheduler.course_recommender import get_final_recommendations, students_list
+from scheduler.timetable_colors import assign_course_colors
+from scheduler.timetable_parser import parse_day_and_period
+from scheduler.check_overlap import is_conflict, is_valid_combination
 
 load_dotenv()
 
