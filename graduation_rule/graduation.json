@@ -50,13 +50,13 @@
           "subareas": {
             "human_culture": {
               "name": "인간과문화",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             },
             "society_history": {
               "name": "사회와역사",
-              "min_credits": null,
-              "required": false,
+              "min_credits": 3,
+              "required": true,
                "required_courses": [
         {
           "name": "공업법규와창업",
@@ -66,8 +66,8 @@
             },
             "nature_science": {
               "name": "자연과과학",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             }
           }
         },
@@ -183,13 +183,13 @@
           "subareas": {
             "human_culture": {
               "name": "인간과문화",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             },
             "society_history": {
               "name": "사회와역사",
-              "min_credits": null,
-              "required": false,
+              "min_credits": 3,
+              "required": true,
                "required_courses": [
         {
           "name": "공업법규와창업",
@@ -199,8 +199,8 @@
             },
             "nature_science": {
               "name": "자연과과학",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             }
           }
         },
@@ -316,13 +316,13 @@
           "subareas": {
             "human_culture": {
               "name": "인간과문화",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             },
             "society_history": {
               "name": "사회와역사",
-              "min_credits": null,
-              "required": false,
+              "min_credits": 3,
+              "required": true,
                "required_courses": [
         {
           "name": "공업법규와창업",
@@ -332,8 +332,8 @@
             },
             "nature_science": {
               "name": "자연과과학",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             }
           }
         },
@@ -449,13 +449,13 @@
           "subareas": {
             "human_culture": {
               "name": "인간과문화",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             },
             "society_history": {
               "name": "사회와역사",
-              "min_credits": null,
-              "required": false,
+              "min_credits": 3,
+              "required": true,
                "required_courses": [
         {
           "name": "공업법규와창업",
@@ -465,8 +465,8 @@
             },
             "nature_science": {
               "name": "자연과과학",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             }
           }
         },
@@ -582,18 +582,18 @@
           "subareas": {
             "human_culture": {
               "name": "인간과문화",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             },
             "society_history": {
               "name": "사회와역사",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             },
             "nature_science": {
               "name": "자연과과학",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             }
           }
         },
@@ -709,18 +709,18 @@
           "subareas": {
             "human_culture": {
               "name": "인간과문화",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             },
             "society_history": {
               "name": "사회와역사",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             },
             "nature_science": {
               "name": "자연과과학",
-              "min_credits": null,
-              "required": false
+              "min_credits": 3,
+              "required": true
             }
           }
         },
