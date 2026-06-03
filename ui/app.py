@@ -45,6 +45,8 @@ app = Flask(
     static_folder='templates/static'
 )
 
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "my_timetable_secret_key_1234")
+
 # 데이터 영구 저장을 위한 서버 로컬 디렉토리 환경 구성
 DATA_DIR = os.path.join(CURRENT_DIR, 'chat_data')
 if not os.path.exists(DATA_DIR):
@@ -68,8 +70,10 @@ def chat():
     # 1. 🌟 채팅 입력과 동시에 프론트엔드에서 넘어온 학번을 받습니다.
     student_id = data.get('student_id', 'guest') 
 
+    from scheduler.timetable_generator import generate_timetable_response
+
     # 2. 🌟 [원하셨던 처리] 다른 연산 없이 학번만 스케줄러 최종 목적지 함수로 직접 보냅니다.
-    generate_timetable_response(login_student_id=student_id)
+    generate_timetable_response(parsed_data={}, login_student_id=student_id)
 
     print(f"\n[학번 전달 완료] -> scheduler로 전달된 학번: {student_id}")
 
