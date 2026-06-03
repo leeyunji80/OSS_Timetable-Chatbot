@@ -58,8 +58,8 @@ def draw_timetable_image(alternative_data, student_id="guest"):
         font_title = font_content = font_sub = ImageFont.load_default()
     else:
         font_title = ImageFont.truetype(font_path, 22)
-        font_content = ImageFont.truetype(font_path, 15)
-        font_sub = ImageFont.truetype(font_path, 12)
+        font_course = ImageFont.truetype(font_path, 15)
+        font_room = ImageFont.truetype(font_path, 12)
 
     # 상단 타이틀 표기
     title_text = alternative_data.get("timetable_title", "추천 시간표")
