@@ -9,8 +9,16 @@ import os
 import PyQt5
 import json
 
-with open('../student/students.json', 'r', encoding='utf-8') as f:
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(CURRENT_DIR)
+STUDENTS_JSON_PATH = os.path.join(BASE_DIR, 'data', 'students.json')
+
+with open(STUDENTS_JSON_PATH, 'r', encoding='utf-8') as f:
     students = json.load(f)
+
+DATA_DIR = os.path.join(BASE_DIR, 'chat_data')
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
     os.path.dirname(PyQt5.__file__),
@@ -22,12 +30,13 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
 # Flask 서버 설정 (웹 화면 담당)
 app = Flask(
     __name__,
+    root_path=CURRENT_DIR,
     template_folder='templates',
     static_folder='templates/static'
 )
 
 # 데이터 영구 저장을 위한 서버 로컬 디렉토리 환경 구성
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'chat_data')
+DATA_DIR = os.path.join(CURRENT_DIR, 'chat_data')
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
@@ -162,7 +171,7 @@ def login():
 def student_files(filename):
 
     return send_from_directory(
-        'student',
+        os.path.join(BASE_DIR, 'data'),
         filename
     )
 
@@ -177,7 +186,7 @@ class CharacterLauncher(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
 
         self.label = QLabel(self)
-        pixmap = QPixmap('ui-icon/icon.png')
+        pixmap = QPixmap(os.path.join(CURRENT_DIR, 'ui-icon', 'icon.png'))
         #아이콘 크기 조절
         pixmap = pixmap.scaled(130, 130, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.label.setPixmap(pixmap)
