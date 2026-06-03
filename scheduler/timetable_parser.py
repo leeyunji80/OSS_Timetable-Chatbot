@@ -65,7 +65,7 @@ def parse_day_and_period(day_raw, period_raw):
             "day": day_str,
             "start_period": start_period,
             "end_period": end_period,
-            "time_range": f"{start_time} ~ {end_time}"
+            "time_range": f"{start_time}-{end_time}"
         })
 
     return time_slots
