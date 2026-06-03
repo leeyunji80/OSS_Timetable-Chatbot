@@ -1124,10 +1124,15 @@ def generate_timetable_response(parsed_data, login_student_id, target_semester=1
         pd.read_csv(GE_DATA_PATH)
     ], ignore_index=True)
 
+    has_empty_day_request = bool(exclude_days)
     user_preferences_input = {
         "assignment_preference": parsed_data.get("assignment_preference"),
         "team_preference": parsed_data.get("team_project_preference"),
-        "conflict_resolution_rule": parsed_data.get("conflict_resolution_rule", "과목우선"),
+        "conflict_resolution_rule": (
+            "공강우선"
+            if has_empty_day_request
+            else parsed_data.get("conflict_resolution_rule", "과목우선")
+            ),
         "selected_courses": parsed_data.get("selected_courses", []),
         "excluded_courses": parsed_data.get("excluded_courses", []),
         "course_priority": parsed_data.get("course_priority")
