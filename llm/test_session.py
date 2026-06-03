@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
-from llm_api import parse_schedule_text_with_history
+from llm.llm_api import parse_schedule_text_with_history
 
-load_dotenv()
+load_dotenv("../.env")
 
 API_KEY = os.environ.get("OPENAI_API_KEY")
 SESSION_ID = "test_user_1234"
