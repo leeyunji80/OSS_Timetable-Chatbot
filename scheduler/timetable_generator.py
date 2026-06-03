@@ -79,6 +79,62 @@ def evaluate_team_project(row):
     return "없음"
 
 
+def make_user_request_title(parsed_data):
+    title_parts = []
+
+    for slot in parsed_data.get("slots", []):
+        day = str(slot.get("day", "")).replace("요일", "")
+        condition = slot.get("condition")
+        time_range = slot.get("time_range")
+        specific_time_slot = normalize_specific_time(slot)
+
+        if condition == "공강" and day:
+            title_parts.append(f"{day}요일 공강")
+            continue
+
+        if condition == "피함":
+            if day and specific_time_slot:
+                title_parts.append(f"{day}요일 {','.join(map(str, specific_time_slot))}교시 피함")
+            elif day and time_range:
+                title_parts.append(f"{day}요일 {time_range} 피함")
+            elif time_range:
+                title_parts.append(f"{time_range} 피함")
+            continue
+
+        if condition == "선호":
+            if day and specific_time_slot:
+                title_parts.append(f"{day}요일 {','.join(map(str, specific_time_slot))}교시 선호")
+            elif day and time_range:
+                title_parts.append(f"{day}요일 {time_range} 선호")
+            elif time_range:
+                title_parts.append(f"{time_range} 선호")
+
+    if parsed_data.get("assignment_preference"):
+        title_parts.append(parsed_data["assignment_preference"])
+
+    if parsed_data.get("team_project_preference"):
+        title_parts.append(parsed_data["team_project_preference"])
+
+    if parsed_data.get("target_credit"):
+        title_parts.append(str(parsed_data["target_credit"]))
+
+    if parsed_data.get("course_priority"):
+        title_parts.append(parsed_data["course_priority"])
+
+    for course_name in parsed_data.get("selected_courses", []):
+        title_parts.append(course_name)
+
+    unique_parts = []
+    for part in title_parts:
+        if part and part not in unique_parts:
+            unique_parts.append(part)
+
+    if unique_parts:
+        return " · ".join(unique_parts[:3]) + " 시간표"
+
+    return "추천 시간표"
+
+
 
 def normalize_specific_time(slot):
     raw = slot.get("specific_time_slot")
@@ -95,6 +151,47 @@ def normalize_specific_time(slot):
     nums = re.findall(r"\d+", str(raw))
 
     return [int(n) for n in nums] if nums else None
+
+def exceeds_needed_general_credits(ge_courses, needed_general_areas):
+    achieved_tracker = {}
+
+    for course in ge_courses:
+        if not course.get("is_needed_ge", False):
+            continue
+
+        area_name = course.get("area")
+        subarea_name = course.get("subarea")
+
+        if not area_name:
+            continue
+
+        if area_name not in achieved_tracker:
+            achieved_tracker[area_name] = {"total": 0, "subareas": {}}
+
+        credit = course.get("credit", 0)
+        achieved_tracker[area_name]["total"] += credit
+
+        if subarea_name:
+            subareas = achieved_tracker[area_name]["subareas"]
+            subareas[subarea_name] = subareas.get(subarea_name, 0) + credit
+
+    for area_name, achieved in achieved_tracker.items():
+        req_info = needed_general_areas.get(area_name)
+
+        if not isinstance(req_info, dict):
+            continue
+
+        if "총필요학점" in req_info:
+            if achieved["total"] > req_info["총필요학점"]:
+                return True
+            continue
+
+        for subarea_name, needed_credit in req_info.items():
+            achieved_credit = achieved["subareas"].get(subarea_name, 0)
+            if achieved_credit > needed_credit:
+                return True
+
+    return False
 
 def generate_timetable_combinations(
     recommended_major_courses,  # 1순위: 전공 추천 리스트
@@ -314,11 +411,15 @@ def generate_timetable_combinations(
         room_info = ""
         room_info = str(row['강의실']).split('(')[0]
 
+        assignment_load = evaluate_load(row)
+        team_project = evaluate_team_project(row)
+
         course_item = {
             "name": course_name, "room": room_info, "credit": int(row['학점']) if pd.notna(row['학점']) else 0,
             "time_slots": time_slots, "is_required": is_recommended_major,"is_current_grade_major": is_current_grade_major,
             "is_missing_required_major": is_missing_required_major,
-            "area": area_name, "subarea": subarea_name, "base_score": base_score
+            "area": area_name, "subarea": subarea_name, "base_score": base_score,
+            "assignment_load": assignment_load, "team_project": team_project
         }
 
         if has_avoid_time_conflict:
@@ -556,6 +657,9 @@ def generate_timetable_combinations(
                         
                     full_combo = major_combo_list + ge_combo_list
                     if not is_valid_combination(full_combo):
+                        continue
+
+                    if exceeds_needed_general_credits(ge_combo_list, needed_general_areas):
                         continue
 
                     # 사용자가 직접 선택한 과목은 반드시 포함
@@ -854,11 +958,25 @@ def build_timetable_json(
 
     final_json_output = {
         "status": "success",
-        "total_alternatives": len(timetable_results),
+        "total_alternatives": 0,
         "alternatives": []
     }
 
     for index, selected_schedule in enumerate(timetable_results):
+        actual_days = {
+            slot["day"]
+            for course in selected_schedule
+            for slot in course["time_slots"]
+        }
+
+        failed_empty_days = [
+            day for day in exclude_days
+            if day in actual_days
+        ]
+
+        if failed_empty_days:
+            continue
+
         course_color_map = assign_course_colors(selected_schedule)
 
         cleaned_courses = []
@@ -923,6 +1041,8 @@ def build_timetable_json(
                 "classroom": course["room"],
                 "schedule": cleaned_slots,
                 "selection_reason": course_reason,
+                "assignment_load": course.get("assignment_load"),
+                "team_project": course.get("team_project"),
                 "color": {
                     "background": course_color["background"],
                     "text": course_color["text"]
@@ -964,12 +1084,6 @@ def build_timetable_json(
             reason_segments.append(
                 f"부족 교양 영역인 {', '.join(included_needed_ge_areas)} 과목을 포함했습니다."
             )
-
-        actual_days = {
-            slot["day"]
-            for course in selected_schedule
-            for slot in course["time_slots"]
-        }
 
         achieved_empty_days = [
             day for day in exclude_days
@@ -1042,17 +1156,26 @@ def build_timetable_json(
                 f"우선순위가 높은 과목인 {', '.join(required_course_names)}을 포함했습니다."
             )
 
-        recommendation_reason = " ".join(reason_segments)
+        assignment_preference = parsed_data.get("assignment_preference")
+        if assignment_preference == "과제적음":
+            reason_segments.append("과제가 적은 과목 위주로 편성되었습니다.")
+        elif assignment_preference == "과제많음":
+            reason_segments.append("과제가 많은 과목 위주로 편성되었습니다.")
+
+        team_project_preference = parsed_data.get("team_project_preference")
+        if team_project_preference == "팀플없음":
+            reason_segments.append("팀플이 없는 과목 위주로 편성되었습니다.")
+        elif team_project_preference == "팀플있음":
+            reason_segments.append("팀플이 있는 과목 위주로 편성되었습니다.")
+
+        recommendation_reason = "시간표 조합 이유:\n" + "\n".join(
+            f"  - {reason}" for reason in reason_segments
+        )
 
         # -------------------------------------------------
         # [3] 복합 이유 기반 시간표 제목 생성
         # -------------------------------------------------
-        timetable_title = make_timetable_title(
-            selected_schedule=selected_schedule,
-            selected_course_set=selected_course_set,
-            exclude_days=exclude_days,
-            avoid_time_slots=avoid_time_slots
-        )
+        timetable_title = make_user_request_title(parsed_data)
 
         alternative_item = {
             "alternative_id": index + 1,
@@ -1062,6 +1185,14 @@ def build_timetable_json(
         }
 
         final_json_output["alternatives"].append(alternative_item)
+
+    final_json_output["total_alternatives"] = len(final_json_output["alternatives"])
+
+    if not final_json_output["alternatives"]:
+        return {
+            "status": "error",
+            "message": "요청하신 공강 조건을 만족하는 시간표를 찾지 못했습니다. 공강 요일이나 목표 학점 조건을 완화해 주세요."
+        }
 
     return final_json_output
 
