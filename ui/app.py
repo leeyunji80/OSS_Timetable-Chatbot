@@ -9,7 +9,7 @@ import os
 import PyQt5
 import json
 
-with open('./student/students.json', 'r', encoding='utf-8') as f:
+with open('../student/students.json', 'r', encoding='utf-8') as f:
     students = json.load(f)
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
@@ -20,7 +20,11 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
 )
 
 # Flask 서버 설정 (웹 화면 담당)
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder='templates',
+    static_folder='templates/static'
+)
 
 # 데이터 영구 저장을 위한 서버 로컬 디렉토리 환경 구성
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'chat_data')
