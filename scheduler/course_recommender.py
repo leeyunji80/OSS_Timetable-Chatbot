@@ -7,20 +7,20 @@ import pandas as pd
 # ---------------------------------
 
 GRADUATION_RULE_PATH = (
-    "graduation_rule/graduation.json"
+    "data/graduation.json"
 )
 
 CURRICULUM_MODEL_PATH = (
-    "graduation_rule/standard_curriculum.csv"
+    "data/standard_curriculum.csv"
 )
 
 COURSE_HISTORY_PATH = (
-    "student/course_history.csv"
+    "data/course_history.csv"
 )
 
-STUDENT_DATA_PATH = "student/students.json"
+STUDENT_DATA_PATH = "data/students.json"
 
-MAJOR_COURSE_PATH = "data_processor/lectures_database.csv"
+MAJOR_COURSE_PATH = "data/lectures_database.csv"
 
 def load_students_data(json_path):
     with open(json_path, "r", encoding="utf-8") as f:
