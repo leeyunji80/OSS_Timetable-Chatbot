@@ -2,70 +2,24 @@ import pandas as pd
 from itertools import combinations
 import random
 
-import importlib.util
 
-from llm_api import parse_schedule_text
+from llm.llm_api import parse_schedule_text
 import os
 from dotenv import load_dotenv
 import json
-# 테스트를 위한 임시 파일에서 함수를 불러옴
-from condition import get_final_recommendations, students_list
+from course_recommender import get_final_recommendations, students_list
 from timetable_colors import assign_course_colors
 from timetable_parser import parse_day_and_period
+from check_overlap import is_conflict, is_valid_combination
 
 load_dotenv()
 
 MY_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-spec = importlib.util.spec_from_file_location(
-    "check_overlap",
-    "timetable-logic/check-overlap.py"
-)
 
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+MAJOR_DATA_PATH = "data/lectures_database.csv"
+GE_DATA_PATH = "data/liberal_arts.csv"
 
-MAJOR_DATA_PATH = "data_processor/lectures_database.csv"
-GE_DATA_PATH = "data_processor/liberal_arts.csv"
-
-# -----------------------------
-# 시간 충돌 검사
-# -----------------------------
-
-def is_conflict(course1, course2):
-
-    for slot1 in course1["time_slots"]:
-        for slot2 in course2["time_slots"]:
-
-            same_day = slot1["day"] == slot2["day"]
-
-            overlap = not (
-                slot1["end_period"] < slot2["start_period"]
-                or slot2["end_period"] < slot1["start_period"]
-            )
-
-            if same_day and overlap:
-                return True
-
-    return False
-
-
-# -----------------------------
-# 시간표 전체 충돌 검사
-# -----------------------------
-
-def is_valid_combination(schedule):
-
-    for i in range(len(schedule)):
-        for j in range(i + 1, len(schedule)):
-            
-            if schedule[i]["name"] == schedule[j]["name"]:
-                return False
-
-            if is_conflict(schedule[i], schedule[j]):
-                return False
-
-    return True
 
 def matches_specific_period(course_slot, condition_slot):
     """
