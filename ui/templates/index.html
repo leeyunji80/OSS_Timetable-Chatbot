@@ -986,7 +986,11 @@
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({ 
+                        message: message,
+                        session_id: currentSessionId, // 현재 활성화된 채팅 세션 ID 추가
+                        student_id: currentStudent ? currentStudent.student_id : 'guest'
+                    })
                 });
 
                 const data = await response.json();
@@ -997,6 +1001,18 @@
                     addImageMessage(data.image);
                     saveImageMessage(data.image);
                 }
+
+                if (data.timetable_title) {
+                    const session = chatSessions.find(s => s.id === currentSessionId);
+                    if (session) {
+                        session.title = data.timetable_title; // 제목 변경
+                        
+                        // 사이드바 UI 새로고침 및 세션 스토리지/서버 백업 동기화
+                        renderHistory();
+                        saveSessionStorage();
+                    }
+                }
+                
             } catch (error) {
                 console.error(error);
                 addMessage('서버 오류가 발생했습니다.', 'ai');

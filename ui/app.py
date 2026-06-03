@@ -18,6 +18,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 from threading import Thread
 from dotenv import load_dotenv
 from llm.llm_api import parse_schedule_text_with_history
+from scheduler.timetable_generator import generate_timetable_response
 
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -59,38 +60,45 @@ def index():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    student_id = session.get('student_id', 'guest')
     data = request.get_json()
 
     user_message = data.get('message')
     session_id = data.get('session_id') or data.get('id') or "default_session"
+    
+    # 1. 🌟 채팅 입력과 동시에 프론트엔드에서 넘어온 학번을 받습니다.
+    student_id = data.get('student_id', 'guest') 
 
-    print(f"\n[LLM INPUT] 세션: {session_id} | 유저 문장: {user_message}")
+    # 2. 🌟 [원하셨던 처리] 다른 연산 없이 학번만 스케줄러 최종 목적지 함수로 직접 보냅니다.
+    generate_timetable_response(login_student_id=student_id)
 
+    print(f"\n[학번 전달 완료] -> scheduler로 전달된 학번: {student_id}")
+
+    # 3. 그 이후 기존에 돌던 LLM 및 이미지 생성 로직이 차례대로 작동합니다.
     try:
         refined_json_str = parse_schedule_text_with_history(session_id, user_message, API_KEY)
-        print(f"[LLM OUTPUT 제약조건 JSON]\n{refined_json_str}")
-
-        # LLM이 파싱한 제약 조건 데이터를 구조화합니다 (이것이 draw 함수의 입력값이 됩니다)
         alternative_data = json.loads(refined_json_str)
-
     except Exception as e:
         print(f"[ERROR] LLM 엔진 가동 실패: {e}")
-        return jsonify({
-                'reply': '요구사항을 분석하는 과정에서 오류가 발생했습니다. 다시 입력해 주세요.',
-                'error': str(e)
-            }), 500
+        return jsonify({'reply': '오류가 발생했습니다.', 'error': str(e)}), 500
+    
+    # 🌟 [수정 및 추가] JSON 데이터에서 첫 번째 대안의 타이틀과 추천 사유 추출
+    try:
+        first_alt = alternative_data.get('alternatives', [{}])[0]
+        timetable_title = first_alt.get('timetable_title', '새로운 시간표')
+        recommendation_reason = first_alt.get('recommendation_reason', '요청하신 조건을 반영했습니다.')
+    except Exception:
+        timetable_title = '새로운 시간표'
+        recommendation_reason = '요청하신 조건을 반영했습니다.'
 
-    # try 블록을 무사히 통과한 후 (에러가 없을 때) 이미지를 생성합니다.
-    # 1. 고유한 이름으로 이미지 생성 및 저장 후 파일명 받기
-    saved_filename = draw_timetable_image(alternative_data, student_id)
-
-    # 2. 앞서 권장해 드린 대로 브라우저 접근을 위해 static 경로 포맷으로 주소 구성
+    # 스케줄러 실행 및 이미지 생성
+    timetable_result = generate_timetable_response(alternative_data, login_student_id=student_id)
+    saved_filename = draw_timetable_image(timetable_result, student_id)
     image_url = f"/timetable_image/{saved_filename}"
 
-    # 3. 분석된 데이터와 고유 이미지 주소를 한 번에 응답으로 반환
+    # 🌟 [수정] 프론트엔드가 필요한 정보들을 명확하게 응답에 담아 보냅니다.
     return jsonify({
-        'reply': '요구사항을 분석하여 새로운 시간표를 생성했습니다.',
+        'reply': recommendation_reason,  # 1. 말풍선에는 추천 사유를 출력
+        'timetable_title': timetable_title,  # 2. 시간표 제목 전달
         'parsed_constraints': alternative_data, 
         'image': image_url 
     })
