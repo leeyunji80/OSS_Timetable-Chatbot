@@ -42,7 +42,6 @@ def draw_timetable_image(alternative_data, student_id="guest"):
     # 총 표시해야 할 시간의 수 (예: 9시 ~ 18시면 9시간)
     total_hours = timetable_end_hour - timetable_start_hour
 
-    width = 650
     # 위쪽 여백(start_y) + 시간표 총 높이 + 아래쪽 여백(80)을 더해 높이를 자동 계산합니다.
     height = start_y + (total_hours * hour_height) + 80
 
@@ -55,11 +54,15 @@ def draw_timetable_image(alternative_data, student_id="guest"):
     # ---------------------------------------------------------------------------
     font_path = "C:/Windows/Fonts/malgun.ttf"  # 윈도우 기본 맑은고딕
     if not os.path.exists(font_path):
-        font_title = font_content = font_sub = ImageFont.load_default()
+        font_title = ImageFont.load_default()
+        font_course = ImageFont.load_default()
+        font_room = ImageFont.load_default()
+        font_sub = ImageFont.load_default()
     else:
         font_title = ImageFont.truetype(font_path, 22)
         font_course = ImageFont.truetype(font_path, 15)
         font_room = ImageFont.truetype(font_path, 12)
+        font_sub = ImageFont.truetype(font_path, 11)
 
     # 상단 타이틀 표기
     title_text = alternative_data.get("timetable_title", "추천 시간표")
