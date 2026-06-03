@@ -1,0 +1,3 @@
+[run]
+omit =
+    llm/test_session.py
