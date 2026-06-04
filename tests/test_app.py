@@ -394,5 +394,49 @@ class TestFlaskApp(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(data["success"])
 
+    @patch("os.path.exists")
+    def test_get_chats_file_not_found_returns_empty_list(
+        self,
+        mock_exists
+    ):
+
+        mock_exists.return_value = False
+
+        response = self.client.get(
+            "/get_chats?student_id=20210001"
+        )
+
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["chat_sessions"], [])
+
+    @patch("ui.app.send_from_directory")
+    def test_student_files_route(
+        self,
+        mock_send
+    ):
+
+        mock_send.return_value = "student-file"
+
+        response = self.client.get("/student/students.json")
+
+        self.assertEqual(response.status_code, 200)
+        mock_send.assert_called_once()
+
+    @patch("ui.app.send_from_directory")
+    def test_serve_timetable_image_route(
+        self,
+        mock_send
+    ):
+
+        mock_send.return_value = "image-file"
+
+        response = self.client.get("/timetable_image/test.png")
+
+        self.assertEqual(response.status_code, 200)
+        mock_send.assert_called_once()
+
 if __name__ == "__main__":
     unittest.main()

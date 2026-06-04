@@ -353,6 +353,111 @@ class TestCourseRecommender(unittest.TestCase):
 
         self.assertEqual(result["areas"]["GeneralA"]["SubA"], 2)
 
+    def test_calculate_remaining_requirements_with_total_area_credit(self):
+
+        graduation_rule = {
+            "requirements": {
+                "major": {
+                    "types": {
+                        "major_required": {
+                            "min_credits": 15
+                        },
+                        "major_elective": {
+                            "min_credits": 20
+                        }
+                    }
+                },
+                "general_education": {
+                    "areas": {
+                        "area1": {
+                            "name": "GeneralTotal",
+                            "min_credits": 6,
+                            "subareas": {
+                                "sub1": {
+                                    "name": "SubA"
+                                },
+                                "sub2": {
+                                    "name": "SubB"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        graduation_status = {
+            "major_required": 15,
+            "major_elective": 20,
+            "areas": {},
+            "subareas": {
+                "SubA": 3
+            }
+        }
+
+        result = calculate_remaining_requirements(
+            graduation_rule,
+            graduation_status
+        )
+
+        self.assertEqual(
+            result["areas"]["GeneralTotal"]["총필요학점"],
+            3
+        )
+        self.assertEqual(
+            result["areas"]["GeneralTotal"]["선택가능영역"],
+            ["SubB"]
+        )
+
+    def test_calculate_remaining_requirements_with_expanded_general_area(self):
+
+        graduation_rule = {
+            "requirements": {
+                "major": {
+                    "types": {
+                        "major_required": {
+                            "min_credits": 15
+                        },
+                        "major_elective": {
+                            "min_credits": 20
+                        }
+                    }
+                },
+                "general_education": {
+                    "areas": {
+                        "area1": {
+                            "name": "확대교양",
+                            "min_credits": 6,
+                            "subareas": {
+                                "sub1": {
+                                    "name": "SubA"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        graduation_status = {
+            "major_required": 15,
+            "major_elective": 20,
+            "areas": {
+                "확대교양": 2
+            },
+            "subareas": {}
+        }
+
+        result = calculate_remaining_requirements(
+            graduation_rule,
+            graduation_status
+        )
+
+        self.assertEqual(
+            result["areas"]["확대교양"]["총필요학점"],
+            4
+        )
+
     # -------------------------------------------------
     # get_final_recommendations 테스트
     # -------------------------------------------------
@@ -508,6 +613,75 @@ class TestCourseRecommender(unittest.TestCase):
      )
 
      self.assertIsInstance(result, dict)
+
+    @patch("scheduler.course_recommender.load_completed_courses")
+    @patch("scheduler.course_recommender.get_missing_previous_required_courses")
+    @patch("scheduler.course_recommender.get_recommended_courses")
+    @patch("scheduler.course_recommender.calculate_remaining_requirements")
+    @patch("scheduler.course_recommender.analyze_graduation_status")
+    @patch("scheduler.course_recommender.get_graduation_rule")
+    def test_get_final_recommendations_filters_needed_general_areas(
+    self,
+    mock_rule,
+    mock_status,
+    mock_remaining,
+    mock_recommended,
+    mock_missing,
+    mock_completed
+    ):
+
+     mock_rule.return_value = {
+         "requirements": {}
+     }
+
+     mock_completed.return_value = []
+
+     mock_status.return_value = {
+         "completed_course_names": set()
+     }
+
+     mock_remaining.return_value = {
+         "areas": {
+             "AreaTotal": {
+                 "총필요학점": 3,
+                 "선택가능영역": ["SubA"]
+             },
+             "AreaSub": {
+                 "SubB": 2,
+                 "SubC": 0
+             }
+         }
+     }
+
+     mock_recommended.return_value = {
+         "major": ["MajorA"],
+         "general": ["GeneralA"]
+     }
+
+     mock_missing.return_value = []
+
+     students = [
+         {
+             "student_id": "20210001",
+             "curriculum_year": 2021,
+             "grade": 2
+         }
+     ]
+
+     result = get_final_recommendations(
+         student_id="20210001",
+         target_semester=1,
+         students_json_data=students
+     )
+
+     self.assertEqual(
+         result["needed_general_areas"]["AreaTotal"]["총필요학점"],
+         3
+     )
+     self.assertEqual(
+         result["needed_general_areas"]["AreaSub"],
+         {"SubB": 2}
+     )
 
 if __name__ == "__main__":
     unittest.main()

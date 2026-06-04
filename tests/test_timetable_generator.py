@@ -497,6 +497,231 @@ class TestTimetableGenerator(unittest.TestCase):
 
         self.assertFalse(result)
 
+    def test_generate_timetable_user_priority_balanced_rule_with_selected_ge(self):
+
+        df = pd.DataFrame([
+            {
+                "교과목명": "MajorA",
+                "교수명": "ProfA",
+                "학점": 3,
+                "이수구분": "전공선택",
+                "수업시간": "월 1~2",
+                "강의실": "R1(101)",
+                "요일": "월",
+                "교시": "1~2",
+                "평가_과제(%)": 10,
+                "방법_토의토론(%)": 0,
+                "교양대분류": "",
+                "교양소분류": "",
+                "수강 대상": ""
+            },
+            {
+                "교과목명": "OldRequired",
+                "교수명": "ProfB",
+                "학점": 3,
+                "이수구분": "전공필수",
+                "수업시간": "화 3~4",
+                "강의실": "R2",
+                "요일": "화",
+                "교시": "3~4",
+                "평가_과제(%)": 15,
+                "방법_토의토론(%)": 0,
+                "교양대분류": "",
+                "교양소분류": "",
+                "수강 대상": ""
+            },
+            {
+                "교과목명": "SelectedGE",
+                "교수명": "ProfC",
+                "학점": 3,
+                "이수구분": "교양",
+                "수업시간": "목 7~8",
+                "강의실": "R3",
+                "요일": "목",
+                "교시": "7~8",
+                "평가_과제(%)": 5,
+                "방법_토의토론(%)": 0,
+                "교양대분류": "FreeArea",
+                "교양소분류": "FreeSub",
+                "수강 대상": ""
+            }
+        ])
+
+        result = generate_timetable_combinations(
+            recommended_major_courses=["MajorA"],
+            needed_general_areas={},
+            missing_required_major_courses=["OldRequired"],
+            filtered_df=df,
+            target_credits=9,
+            empty_days=["화"],
+            avoid_time_slots=[
+                {
+                    "day": "화",
+                    "time_range": "오전",
+                    "specific_time_slot": None
+                }
+            ],
+            preferred_time_slots=[
+                {
+                    "day": "월",
+                    "specific_time_slot": [1]
+                },
+                {
+                    "day": "화",
+                    "specific_time_slot": [1]
+                },
+                {
+                    "day": "월",
+                    "time_range": "오전"
+                },
+                {
+                    "day": "목",
+                    "time_range": "오후"
+                }
+            ],
+            user_preferences={
+                "selected_courses": ["MajorA", "SelectedGE"],
+                "conflict_resolution_rule": "균형추천"
+            },
+            mode="user_priority"
+        )
+
+        self.assertTrue(result)
+        names = {course["name"] for course in result[0]}
+        self.assertIn("MajorA", names)
+        self.assertIn("SelectedGE", names)
+
+    def test_generate_timetable_graduation_priority_with_total_needed_ge(self):
+
+        df = pd.DataFrame([
+            {
+                "교과목명": "MajorA",
+                "교수명": "ProfA",
+                "학점": 3,
+                "이수구분": "전공선택",
+                "수업시간": "월 1~2",
+                "강의실": "R1",
+                "요일": "월",
+                "교시": "1~2",
+                "평가_과제(%)": 10,
+                "방법_토의토론(%)": 0,
+                "교양대분류": "",
+                "교양소분류": "",
+                "수강 대상": ""
+            },
+            {
+                "교과목명": "NeededGE",
+                "교수명": "ProfB",
+                "학점": 3,
+                "이수구분": "교양",
+                "수업시간": "수 5~6",
+                "강의실": "R2",
+                "요일": "수",
+                "교시": "5~6",
+                "평가_과제(%)": 10,
+                "방법_토의토론(%)": 0,
+                "교양대분류": "AreaA",
+                "교양소분류": "SubA",
+                "수강 대상": ""
+            }
+        ])
+
+        result = generate_timetable_combinations(
+            recommended_major_courses=["MajorA"],
+            needed_general_areas={
+                "AreaA": {
+                    "총필요학점": 3,
+                    "선택가능영역": ["SubA"]
+                }
+            },
+            missing_required_major_courses=[],
+            filtered_df=df,
+            target_credits=6,
+            empty_days=[],
+            avoid_time_slots=[],
+            preferred_time_slots=[],
+            user_preferences={},
+            mode="graduation_priority"
+        )
+
+        self.assertTrue(result)
+        self.assertTrue(
+            any(course["name"] == "NeededGE" for course in result[0])
+        )
+
+    def test_generate_timetable_skips_filtered_and_excluded_courses(self):
+
+        df = pd.DataFrame([
+            {
+                "교과목명": "NightCourse",
+                "교수명": "ProfA",
+                "학점": 3,
+                "이수구분": "전공선택",
+                "수업시간": "월 1~2",
+                "강의실": "R1",
+                "요일": "월",
+                "교시": "1~2",
+                "평가_과제(%)": 10,
+                "방법_토의토론(%)": 0,
+                "교양대분류": "",
+                "교양소분류": "",
+                "수강 대상": "야간학생강좌"
+            },
+            {
+                "교과목명": "ExcludedMajor",
+                "교수명": "ProfB",
+                "학점": 3,
+                "이수구분": "전공선택",
+                "수업시간": "화 1~2",
+                "강의실": "R2",
+                "요일": "화",
+                "교시": "1~2",
+                "평가_과제(%)": 10,
+                "방법_토의토론(%)": 0,
+                "교양대분류": "",
+                "교양소분류": "",
+                "수강 대상": ""
+            },
+            {
+                "교과목명": "KeptMajor",
+                "교수명": "ProfC",
+                "학점": 3,
+                "이수구분": "전공선택",
+                "수업시간": "수 1~2",
+                "강의실": "R3",
+                "요일": "수",
+                "교시": "1~2",
+                "평가_과제(%)": 10,
+                "방법_토의토론(%)": 0,
+                "교양대분류": "",
+                "교양소분류": "",
+                "수강 대상": ""
+            }
+        ])
+
+        result = generate_timetable_combinations(
+            recommended_major_courses=[
+                "NightCourse",
+                "ExcludedMajor",
+                "KeptMajor"
+            ],
+            needed_general_areas={},
+            missing_required_major_courses=[],
+            filtered_df=df,
+            target_credits=3,
+            empty_days=[],
+            avoid_time_slots=[],
+            preferred_time_slots=[],
+            user_preferences={
+                "excluded_courses": ["ExcludedMajor"]
+            },
+            mode="user_priority"
+        )
+
+        self.assertTrue(result)
+        names = {course["name"] for course in result[0]}
+        self.assertEqual(names, {"KeptMajor"})
+
     # -------------------------------------------------
     # make_timetable_title 테스트
     # -------------------------------------------------
