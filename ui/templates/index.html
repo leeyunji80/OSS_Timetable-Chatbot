@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시간표 생성 AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        body {
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: #fff5f5;
+            border-right: 1px solid #f0dede;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: fixed;
+            top: 0;
+            left: -260px;
+            transition: left 0.3s ease;
+            z-index: 1000;
+
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* 1. 상단 헤더 영역 */
+        header {
+            width: 100%;
+            padding: 15px 25px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .header-title h1 {
+            font-size: 16px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-title p {
+            font-size: 11px;
+            color: #e46c6c;
+            margin-top: 2px;
+        }
+
+        .close-btn {
+            font-size: 18px;
+            color: #aaa;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        /* 내 사진을 넣을 원형 아이콘 구역 */
+        .welcome-icon-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #fff0f0; /* 이미지가 없을 때 보일 임시 배경색 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            overflow: hidden; /* 원형 밖으로 이미지가 나가지 않도록 설정 */
+            
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .welcome-icon-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 이미지가 비율에 맞게 원 안에 꽉 차도록 함 */
+        }
+
+        .welcome-text h2 {
+            font-size: 20px;
+            color: #222;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .welcome-text p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .welcome-text span {
+            display: block;
+            margin-top: 8px;
+            color: #999;
+            font-size: 12px;
+        }
+
+        #welcome-screen {
+            text-align: center;
+        }
+
+        /* 3. 하단 입력창 영역 (더 크고 웅장하게 변경) */
+        footer {
+            width: 100%;
+            padding-top: 20px;    /* 입력창 위쪽 여백을 넓혀서 본문과 거리를 둠 */
+            padding-bottom: 40px; /* 바닥과의 여백 */
+            background-color: #ffffff;
+            border-top: 1px solid #f3f3f3;
+        }
+
+        .input-container {
+            max-width: 650px; /* 메인 영역과 가로폭을 맞춰 정렬 */
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 요청하신 크고 널찍한 입력창 스타일 */
+        .chat-input {
+            width: 100%;
+            padding: 15px 75px 15px 25px; 
+            font-size: 17px;
+            border: 1px solid #ffe3e3;
+            border-radius: 20px; 
+            background-color: #fff5f5; 
+            outline: none;
+            transition: border-color 0.2s, background-color 0.2s;
+            line-height: 1.5;
+            resize: none;
+            height: 75px; /* 기본 한 줄 높이로 시작 */
+            min-height: 75px;
+            max-height: 150px;  /* 최대 높이 제한 */
+            overflow-y: hidden; /* 일단 스크롤바 숨김 */
+
+            /* 📌 파이어폭스용 얇은 스크롤바 설정 */
+            scrollbar-width: thin;
+            scrollbar-color: #ff6b6b transparent;
+        }
+
+        /* 📌 [새로 추가] 크롬, 사파리, 엣지용 스크롤바 다이어트 스타일 코드 */
+        .chat-input::-webkit-scrollbar {
+            width: 6px; /* 스크롤바를 아주 실 가닥처럼 얇게 */
+        }
+        .chat-input::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 107, 107, 0.3); /* 연한 핑크빛 둥근 막대 */
+            border-radius: 10px;
+        }
+        .chat-input::-webkit-scrollbar-track {
+            background: transparent; /* 스크롤바 바탕은 투명하게 처리해서 버튼 안 가리게 */
+        }
+
+        /* 입력창 클릭 시 테두리 강조 */
+        .chat-input:focus {
+            border-color: #ff6b6b;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.1);
+        }
+
+        /* 우측 하단 전송 버튼 */
+        .send-btn {
+            position: absolute;
+            right: 15px;
+            bottom: 15px; 
+            width: 44px;
+            height: 44px;
+            background-color: #ff6b6b;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .send-btn:hover {
+            background-color: #fa5252;
+        }
+
+        /* 전송 아이콘 화살표 */
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            transform: rotate(-45deg);
+        }
+
+        #chat-area {
+            flex: 1;
+            width: 100%;
+            max-width: 650px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-bottom: 140px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            font-size: 15px;
+            word-break: break-word;
+        }
+
+        .user-message {
+            background-color: #ff6b6b;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .ai-message {
+            background-color: #f5f5f5;
+            color: #333;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+            white-space: pre-wrap;
+        }
+
+        .timetable-image {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 15px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            background-color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 25px;
+            transition: 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            background-color: #ffe3e3;
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .sidebar.active {
+            left: 0;
+        }
+
+        .timetable-history {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .history-card {
+            background-color: white;
+            border-radius: 18px;
+            padding: 12px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .history-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .history-card img {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+
+        .history-info p {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .history-info span {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .profile-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-top: 15px;
+            border-top: 1px solid #f0dede;
+        }
+
+        .profile-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: #ffe3e3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #d65a5a;
+            overflow: hidden;
+        }
+
+        .profile-info p {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .profile-info span {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .menu-btn {
+            border: none;
+            background: none;
+            font-size: 24px;
+            cursor: pointer;
+            margin-right: 15px;
+            color: #d67f7f;
+        }
+
+        .main-container.shift {
+            margin-left: 260px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .login-box {
+            width: 350px;
+            background-color: white;
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .login-box input {
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 15px;
+        }
+
+        .login-box button {
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background-color: #ff6b6b;
+            color: white;
+            cursor: pointer;
+        }
+
+        #login-close-btn {
+            border: none;
+            background: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .student-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .student-box {
+            width: 700px;
+            height: 85vh;
+            background-color: white;
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .student-fixed-section {
+            flex-shrink: 0;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .student-scroll-section {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 20px;
+        }
+
+        .student-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .student-basic-info {
+            margin-bottom: 20px;
+        }
+
+        .student-row {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 14px;
+        }
+
+        .student-item {
+            flex: 1;
+        }
+
+        .student-item label {
+            display: block;
+            font-size: 12px;
+            color: #d67f7f;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .student-item p {
+            font-size: 16px;
+            font-weight: 700;
+            color: #222;
+            line-height: 1.3;
+        }
+
+        .student-scroll-section::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .student-scroll-section::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 107, 107, 0.3);
+            border-radius: 10px;
+        }
+
+        .student-scroll-section::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .student-scroll-section {
+            scrollbar-width: thin;
+            scrollbar-color: #ff6b6b transparent;
+        }
+
+        .credit-section,
+        .graduation-section,
+        .history-section {
+            margin-top: 40px;
+        }
+
+        .credit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #f5dede;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #ff4d4d;
+        }
+
+        .history-table-wrapper {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .history-table th {
+            padding: 12px;
+            background-color: #fff3f3;
+        }
+
+        .history-table thead {
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 10;
+        }
+
+        .requirement-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .requirement-item p {
+            font-weight: 600;
+        }
+
+        .requirement-item span {
+            color: #ff6b6b;
+            font-weight: 700;
+        }
+
+        .student-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #logout-btn {
+            border: none;
+            background-color: #ff6b6b;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        #logout-btn:hover {
+            background-color: #fa5252;
+        }
+
+        #student-close-btn {
+            border: none;
+            background: none;
+            font-size: 18px;
+            color: #999;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        #student-close-btn:hover {
+            color: #ff6b6b;
+        }
+
+        /* 아코디언 그룹 스타일 */
+        .accordion-group {
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 10px;
+        }
+
+        /* 상위 항목 헤더 스타일 */
+        .accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 5px;
+            cursor: pointer;
+            background-color: #fff;
+            user-select: none;
+        }
+
+        .category-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+
+        /* 토글 화살표 애니메이션 */
+        .toggle-icon {
+            font-size: 14px;
+            color: #999;
+            transition: transform 0.2s ease;
+        }
+
+        .toggle-icon.rotated {
+            transform: rotate(180deg);
+            color: #ff4d4d; /* 활성화 시 포인트 컬러 */
+        }
+
+        /* 하위 항목 컨테이너 */
+        .accordion-content {
+            padding: 7px 10px 15px 10px;
+            background-color: #fafafa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* 세부 항목 내부 레이아웃 (스크린샷 참고 스타일) */
+        .sub-requirement-item {
+            margin-bottom: 15px;
+        }
+
+        .sub-requirement-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .sub-item-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .sub-item-info p {
+            margin: 0;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .credit-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* ★ 필요 학점 이상 이수 완료 시: 채도 낮은 초록색 스타일 적용 */
+        .credit-text.completed-active {
+            color: #4a8a5f !important; /* 눈이 편안한 채도 낮은 초록색 */
+            font-weight: 700;
+        }
+
+        /* 하위 항목 전용 게이지 막대기 바 */
+        .sub-progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: #ffe3e3;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .sub-progress-bar {
+            height: 100%;
+            background-color: #ff4d4d; /* 스크린샷과 유사한 레드/진분홍 계열 */
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        /* 히스토리 카드 내부 레이아웃 정렬 */
+        .history-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* 삭제 버튼 기본 스타일 */
+        .delete-btn {
+            background: none;       /* 배경 제거 */
+            border: none;           /* 테두리 제거 */
+            padding: 0;             /* 여백 제거 */
+            color: #d6b0b0;         /* 흐릿한 회색 글자 색상 */
+            font-size: 12px;
+            cursor: pointer;
+            transition: color 0.2s ease; /* 부드러운 색상 전환 */
+            user-select: none;
+        }
+
+        /* 마우스 오버 시 효과 */
+        .delete-btn:hover {
+            color: #ff4d4d;         /* 선명한 진분홍/레드 계열로 변경 */
+            text-decoration: underline; /* 시각적으로 버튼임을 알 수 있도록 밑줄 추가 */
+        }
+
+        /* 클릭 누르고 있을 때 효과 */
+        .delete-btn:active {
+            color: #cc0000;
+        }
+
+    </style>
+    </head>
+        <body>
+
+            <div class="sidebar">
+                <button class="new-chat-btn">
+                    + 새 시간표 생성
+                </button>
+
+                <div class="sidebar-title">
+                    이전 시간표
+                </div>
+
+                <div class="timetable-history" id="timetable-history">
+                    </div>
+
+                <div class="profile-section" id="profile-btn">
+                    <div class="profile-avatar" id="profile-avatar">
+                        👤
+                    </div>
+                    <div class="profile-info" id="profile-info">
+                        <p>로그인 필요</p>
+                        <span>프로필 보기</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-container">
+                <header>
+                    <button class="menu-btn" id="menu-btn">
+                        ☰
+                    </button>
+                    <div class="header-title">
+                        <h1>📅 시간표 생성 AI</h1>
+                        <p>원하는 시간표가 있으신가요? 입력하세요!</p>
+                    </div>
+                </header>
+
+                <main id="chat-area">
+                    <div id="welcome-screen">
+                        <div class="welcome-icon-box">
+                            <img src="{{ url_for('static', filename='icon.png') }}" alt="로봇 아이콘" onerror="this.style.display='none';">
+                        </div>
+                    
+                        <div class="welcome-text">
+                            <h2>시간표 생성 AI에 오신 것을 환영합니다</h2>
+                            <p>원하시는 시간표 조건을 자연어로 입력해주세요.</p>
+                            <span>예: "다음 학기 전공 필수 위주로 시간표 짜주세요"</span>
+                        </div>
+                    </div>
+                </main>
+
+                <footer>
+                    <div class="input-container">
+                        <textarea name="message" class="chat-input" placeholder="다음 학기 전공 필수 위주로 시간표 짜주세요" autocomplete="off" id="user-input" required></textarea>
+                        <button type="button" class="send-btn">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </footer>
+
+                <div class="login-modal" id="login-modal">
+                    <div class="login-box">
+                        <div class="student-header">
+                            <h2>로그인</h2>
+                            <button id="login-close-btn">✕</button>
+                        </div> <input type="text" id="student-name" placeholder="이름 입력">
+                        <input type="text" id="student-id" placeholder="학번 입력">
+                        <button id="login-submit-btn">로그인</button>
+                    </div> </div>
+
+                <div class="login-modal" id="auth-alert-modal" style="display: none;">
+                    <div class="login-box" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 25px;">
+                        <div class="student-header" style="width: 100%; display: flex; justify-content: center; position: relative; margin-bottom: 10px;">
+                            <h2 style="color: #e55a5a; margin: 0; font-size: 22px;">로그인이 필요합니다</h2>
+                            <button id="auth-alert-close-btn" style="position: absolute; right: -10px; top: -5px; transform: translateY(-50%); background: none; border: none; font-size: 20px; cursor: pointer; color: #8f8b8b; padding: 5px;">✕</button>
+                        </div>
+                        <p style="margin: 20px 0 30px 0; color: #666; line-height: 1.6; font-size: 16px; text-align: center;">
+                            개인화된 시간표 생성 및 대화 서비스는<br>
+                            로그인 후 이용하실 수 있습니다.
+                        </p>
+                        <button id="auth-alert-redirect-btn" style="background-color: #ffb8b8; color: #333; font-weight: bold; width: 200px; padding: 14px 0px; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; letter-spacing: -0.5px; transition: background 0.2s;">
+                            로그인하러 가기
+                        </button>
+                    </div>
+                </div>
+
+                <div class="student-modal" id="student-modal">
+                    <div class="student-box">
+                        <div class="student-fixed-section">
+                            <div class="student-header">
+                                <div class="student-header-left">
+                                    <h2>학생정보</h2>
+                                    <button id="logout-btn">로그아웃</button>
+                                </div>
+                                <button id="student-close-btn">✕</button>
+                            </div>
+
+                            <div class="student-basic-info">
+                                <div class="student-row">
+                                    <div class="student-item">
+                                        <label>이름</label>
+                                        <p id="student-name-text">-</p>
+                                    </div>
+                                    <div class="student-item">
+                                        <label>학번</label>
+                                        <p id="student-id-text">-</p>
+                                    </div>
+                                </div>
+                                <div class="student-row">
+                                    <div class="student-item">
+                                        <label>전공</label>
+                                        <p id="student-department-text">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="student-scroll-section">
+                            <div class="student-section">
+                                <div class="credit-section">
+                                    <div class="credit-header">
+                                        <h3>전체 학점 이수 현황</h3>
+                                        <span id="total-credit-text">0 / 0 학점</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="total-progress-bar"></div>
+                                    </div>
+                                </div>
+
+                                <div class="graduation-section">
+                                    <h3>졸업 요건</h3>
+                                    <div id="graduation-requirement-list">
+                                        </div>
+                                </div>
+
+                                <div class="history-section">
+                                    <h3>수강 이력</h3>
+                                    <div class="history-table-wrapper">
+                                        <table class="history-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>학기</th>
+                                                    <th>과목코드</th>
+                                                    <th>과목명</th>
+                                                    <th>학점</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="history-table-body">
+                                                </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> </div> </div> </div> <script src="{{ url_for('static', filename='script.js') }}"></script>
+        </body>
+    <script>
+        const textarea = document.getElementById('user-input');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const chatArea = document.getElementById('chat-area');
+        const sendBtn = document.querySelector('.send-btn');
+        const sidebar = document.querySelector('.sidebar');
+        const menuBtn = document.getElementById('menu-btn');
+        const mainContainer = document.querySelector('.main-container');
+        const historyContainer = document.getElementById('timetable-history');
+        const newChatBtn = document.querySelector('.new-chat-btn');
+        const profileBtn = document.getElementById('profile-btn');
+        const profileInfo = document.getElementById('profile-info');
+        const profileAvatar = document.getElementById('profile-avatar');
+        const loginModal = document.getElementById('login-modal');
+        const loginSubmitBtn = document.getElementById('login-submit-btn');
+        const studentModal = document.getElementById('student-modal');
+        const studentCloseBtn = document.getElementById('student-close-btn');
+        const loginCloseBtn = document.getElementById('login-close-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const authAlertModal = document.getElementById('auth-alert-modal');
+        const authAlertCloseBtn = document.getElementById('auth-alert-close-btn');
+        const authAlertRedirectBtn = document.getElementById('auth-alert-redirect-btn');
+
+        let currentStudent = null;
+        let chatSessions = [];
+        let currentSessionId = null;
+        let courseHistoryData = [];
+        let studentCreditData = [];
+
+        // [세션 스토리지 및 서버 백업 저장]
+        async function saveSessionStorage() {
+            sessionStorage.setItem('currentStudent', JSON.stringify(currentStudent));
+            sessionStorage.setItem('currentSessionId', currentSessionId);
+
+            if (currentStudent && currentStudent.student_id) {
+                const userKey = `chatSessions_${currentStudent.student_id}`;
+                sessionStorage.setItem(userKey, JSON.stringify(chatSessions));
+                try {
+                    await fetch('/save_chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            student_id: currentStudent.student_id,
+                            chat_sessions: chatSessions
+                        })
+                    });
+                } catch (error) {
+                    console.error("서버 데이터 백업 실패:", error);
+                }
+            } else {
+                sessionStorage.setItem('chatSessions_guest', JSON.stringify(chatSessions));
+            }
+        }
+
+        // [1. 텍스트 영역 높이 자동 조절 - 버그 수정]
+        textarea.addEventListener('input', function() {
+            this.style.height = '75px'; 
+            const calculatedHeight = this.scrollHeight + 5;
+            
+            if (calculatedHeight > 75) {
+                this.style.height = calculatedHeight + 'px';
+            }
+
+            if (calculatedHeight >= 150) {
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+        });
+
+        // [메시지 전송 이벤트]
+        sendBtn.addEventListener('click', async function () {
+            if (!currentStudent) {
+                authAlertModal.style.display = 'flex';
+                textarea.value = '';
+                textarea.style.height = '75px';
+                return;
+            }
+
+            const message = textarea.value.trim();
+            if (!message) return;
+            welcomeScreen.style.display = 'none';
+
+            addMessage(message, 'user');
+            saveMessage(message, 'user');
+
+            textarea.value = '';
+            textarea.style.height = '75px';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: message,
+                        session_id: currentSessionId, // 현재 활성화된 채팅 세션 ID 추가
+                        student_id: currentStudent ? currentStudent.student_id : 'guest'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (Array.isArray(data.results) && data.results.length > 0) {
+                    data.results.forEach(result => {
+                        addMessage(result.reply, 'ai');
+                        saveMessage(result.reply, 'ai');
+
+                        if (result.image) {
+                            addImageMessage(result.image);
+                            saveImageMessage(result.image);
+                        }
+                    });
+                } else {
+                    addMessage(data.reply, 'ai');
+                    saveMessage(data.reply, 'ai');
+                    if (data.image) {
+                        addImageMessage(data.image);
+                        saveImageMessage(data.image);
+                    }
+                }
+
+                if (data.timetable_title) {
+                    const session = chatSessions.find(s => s.id === currentSessionId);
+                    if (session) {
+                        session.title = data.timetable_title; // 제목 변경
+                        
+                        // 사이드바 UI 새로고침 및 세션 스토리지/서버 백업 동기화
+                        renderHistory();
+                        saveSessionStorage();
+                    }
+                }
+                
+            } catch (error) {
+                console.error(error);
+                addMessage('서버 오류가 발생했습니다.', 'ai');
+            }
+        });
+
+        function addMessage(message, type) {
+            const div = document.createElement('div');
+            div.classList.add('message');
+            div.classList.add(type === 'user' ? 'user-message' : 'ai-message');
+            div.innerText = message;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function addImageMessage(imageUrl) {
+            if (!imageUrl) return;
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.classList.add('timetable-image');
+            chatArea.appendChild(img);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        menuBtn.addEventListener('click', function () {
+            sidebar.classList.toggle('active');
+            mainContainer.classList.toggle('shift');
+        });
+
+        // ==========================================
+        // [초기 데이터 로드 및 로그인 세션 판별 - 버그 수정]
+        // ==========================================
+        const savedStudent = sessionStorage.getItem('currentStudent');
+        const savedSessionId = sessionStorage.getItem('currentSessionId');
+
+        if (savedStudent && savedStudent !== "null") {
+            currentStudent = JSON.parse(savedStudent);
+        }
+
+        if (currentStudent) {
+            // 1. 로그인 사용자 상태일 때
+            const userKey = `chatSessions_${currentStudent.student_id}`;
+            const savedSessions = sessionStorage.getItem(userKey);
+
+            if (savedSessions) {
+                chatSessions = JSON.parse(savedSessions);
+                currentSessionId = Number(savedSessionId);
+                renderHistory();
+                loadSession(currentSessionId);
+            } else {
+                createNewSession();
+            }
+        } else {
+            // 2. 비로그인 게스트 상태일 때 기존 세션 복구 및 웰컴 처리 (수정)
+            const savedGuestSessions = sessionStorage.getItem('chatSessions_guest');
+            if (savedGuestSessions) {
+                chatSessions = JSON.parse(savedGuestSessions);
+                currentSessionId = Number(savedSessionId);
+                renderHistory();
+                loadSession(currentSessionId);
+            } else {
+                createNewSession();
+            }
+        }
+
+        updateProfileUI();
+        loadCourseHistoryData();
+        loadStudentCreditData();
+
+        function createNewSession() {
+            currentSessionId = Date.now();
+            chatSessions.push({
+                id: currentSessionId,
+                title: '새로운 대화',
+                preview: '',
+                messages: []
+            });
+
+            chatArea.innerHTML = '';
+            welcomeScreen.style.display = 'block';
+            chatArea.appendChild(welcomeScreen);
+            
+            saveSessionStorage();
+        }
+
+        newChatBtn.addEventListener('click', function () {
+            if (!currentStudent) {
+                authAlertModal.style.display = 'flex';
+                return;
+            }
+            createNewSession();
+        });
+        
+        authAlertCloseBtn.addEventListener('click', function () { authAlertModal.style.display = 'none'; });
+        authAlertModal.addEventListener('click', function (e) { if (e.target === authAlertModal) authAlertModal.style.display = 'none'; });
+        authAlertRedirectBtn.addEventListener('click', function () {
+            authAlertModal.style.display = 'none';
+            loginModal.style.display = 'flex';
+        });
+
+        function saveMessage(message, type) {
+            const session = chatSessions.find(s => s.id === currentSessionId);
+            if (!session) return;
+
+            session.messages.push({ type: type, content: message });
+
+            if (session.messages.length === 1) {
+                session.title = message.trim().substring(0, 10);
+                session.preview = '(예비)';
+            }
+
+            renderHistory();
+            saveSessionStorage();
+        }
+
+        function saveImageMessage(imageUrl) {
+            const session = chatSessions.find(s => s.id === currentSessionId);
+            if (!session) return;
+
+            session.messages.push({ type: 'image', content: imageUrl });
+
+            renderHistory();
+            saveSessionStorage();
+        }
+
+        function renderHistory() {
+            historyContainer.innerHTML = '';
+
+            chatSessions.forEach(session => {
+                if (session.messages.length === 0) return;
+                
+                const card = document.createElement('div');
+                card.classList.add('history-card');
+                
+                card.innerHTML = `
+                    <div class="history-info">
+                        <p>${session.title}</p>
+                        <button class="delete-btn" data-id="${session.id}">삭제</button>
+                    </div>
+                `;
+
+                card.addEventListener('click', function (event) {
+                    if (event.target.classList.contains('delete-btn')) return;
+                    loadSession(session.id);
+                });
+                
+                const deleteBtn = card.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    const sessionIdToDelete = Number(this.getAttribute('data-id'));
+                    deleteSession(sessionIdToDelete);
+                });
+                
+                historyContainer.appendChild(card);
+            });
+        }
+
+        function loadSession(sessionId) {
+            currentSessionId = sessionId;
+            chatArea.innerHTML = '';
+            const session = chatSessions.find(s => s.id === sessionId);
+            if (!session || session.messages.length === 0) {
+                welcomeScreen.style.display = 'block';
+                chatArea.appendChild(welcomeScreen);
+                return;
+            }
+
+            welcomeScreen.style.display = 'none';
+            session.messages.forEach(message => {
+                if (message.type === 'image') 
+                    addImageMessage(message.content);
+                else 
+                    addMessage(message.content, message.type);
+            });
+        }
+
+        profileBtn.addEventListener('click', function () {
+            if (currentStudent) {
+                openStudentModal();
+            } else {
+                loginModal.style.display = 'flex';
+            }
+        });
+
+        // [로그인 서브밋]
+        loginSubmitBtn.addEventListener('click', async function () {
+            const name = document.getElementById('student-name').value;
+            const studentId = document.getElementById('student-id').value;
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, student_id: studentId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    sessionStorage.removeItem('chatSessions_guest');
+                    chatSessions = [];
+                    
+                    currentStudent = data.student;
+                    document.getElementById('student-name').value = '';
+                    document.getElementById('student-id').value = '';
+                    loginModal.style.display = 'none';
+                    
+                    if (data.chat_sessions && data.chat_sessions.length > 0) {
+                        chatSessions = data.chat_sessions;
+                        currentSessionId = chatSessions[chatSessions.length - 1].id;
+                        loadSession(currentSessionId);
+                    } else {
+                        createNewSession();
+                    }
+
+                    updateProfileUI();
+                    renderHistory();
+                    
+                    const userKey = `chatSessions_${currentStudent.student_id}`;
+                    sessionStorage.setItem(userKey, JSON.stringify(chatSessions));
+                    sessionStorage.setItem('currentSessionId', currentSessionId);
+                    sessionStorage.setItem('currentStudent', JSON.stringify(currentStudent));
+                } else {
+                    alert('로그인 실패: 정보를 확인해주세요.');
+                }
+            } catch (error) {
+                console.error("로그인 요청 실패:", error);
+            }
+        });     
+        
+        // [로그아웃]
+        logoutBtn.addEventListener('click', function () {
+            sessionStorage.removeItem('currentStudent');
+            sessionStorage.removeItem('currentSessionId');
+            if (currentStudent) {
+                sessionStorage.removeItem(`chatSessions_${currentStudent.student_id}`);
+            }
+
+            currentStudent = null;
+            chatSessions = [];
+            currentSessionId = null;
+            studentModal.style.display = 'none';
+            
+            createNewSession();
+            updateProfileUI();
+            renderHistory();
+        });
+
+        studentCloseBtn.addEventListener('click', function () { studentModal.style.display = 'none'; });
+        loginCloseBtn.addEventListener('click', function () { loginModal.style.display = 'none'; });
+        loginModal.addEventListener('click', function (e) { if (e.target === loginModal) loginModal.style.display = 'none'; });
+        studentModal.addEventListener('click', function (e) { if (e.target === studentModal) studentModal.style.display = 'none'; });
+
+        function updateProfileUI() {
+            if (currentStudent) {
+                const initial = currentStudent.name.charAt(0);
+                profileInfo.innerHTML = `
+                    <p>${currentStudent.name}</p>
+                    <span>${currentStudent.student_id}</span>
+                `;
+                profileAvatar.innerHTML = initial;
+                profileAvatar.style.backgroundColor = '#ffb3b3';
+            } else {
+                profileInfo.innerHTML = `
+                    <p>로그인 필요</p>
+                    <span>프로필 보기</span>
+                `;
+                profileAvatar.innerHTML = '👤';
+                profileAvatar.style.backgroundColor = '#ffe3e3';
+            }
+        }
+
+        // [학사 데이터 로드]
+        async function loadCourseHistoryData() {
+            try {
+                const response = await fetch('/student/course_history.csv');
+                const csvText = await response.text();
+                const rows = csvText.trim().split('\n');
+                if (rows.length <= 1) return;
+
+                courseHistoryData = rows.slice(1).map(row => {
+                    const values = row.split(',');
+                    return {
+                        student_id: values[0],
+                        year: values[1],
+                        semester: values[2],
+                        course_code: values[3],
+                        course_name: values[4],
+                        category: values[5],
+                        area: values[6],
+                        detail_area: values[7],
+                        credit: values[8]
+                    };
+                });
+            } catch (error) {
+                console.error('CSV 로드 실패:', error);
+            }
+        }
+
+        async function loadStudentCreditData() {
+            try {
+                const response = await fetch('/student/students.json');
+                studentCreditData = await response.json();
+            } catch (error) {
+                console.error('학생 학점 데이터 로드 실패:', error);
+            }
+        }
+
+        function renderCourseHistory() {
+            if (!currentStudent) return;
+            const tableBody = document.getElementById('history-table-body');
+            tableBody.innerHTML = '';
+
+            const studentCourses = courseHistoryData.filter(course => course.student_id === currentStudent.student_id);
+
+            studentCourses.forEach(course => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${course.year}-${course.semester}</td>
+                    <td>${course.course_code}</td>
+                    <td>${course.course_name}</td>
+                    <td>${course.credit}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function renderStudentBasicInfo() {
+            if (!currentStudent) return;
+            const studentData = getCurrentStudentData();
+            if (!studentData) return;
+
+            document.getElementById('student-name-text').innerText = studentData.name;
+            document.getElementById('student-id-text').innerText = studentData.student_id;
+            document.getElementById('student-department-text').innerText = `${studentData.department} ${studentData.grade}학년`;
+        }
+
+        function renderStudentModal() {
+            if (studentCreditData.length === 0 || courseHistoryData.length === 0) {
+                alert('학생 데이터를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
+                return;
+            }
+            renderStudentBasicInfo();
+            renderCreditProgress();
+            renderGraduationRequirements();
+            renderCourseHistory();
+        }
+
+        function renderCreditProgress() {
+            if (!currentStudent) return;
+            const studentData = getCurrentStudentData();
+            if (!studentData) return;
+
+            const graduationCredit = studentData.credits['졸업학점'];
+            const completed = graduationCredit.completed;
+            const required = graduationCredit.required;
+            const percent = required > 0 ? Math.floor((completed / required) * 100) : 0;
+
+            document.getElementById('total-credit-text').innerText = `${completed} / ${required} 학점`;
+            document.getElementById('total-progress-bar').style.width = `${Math.min(percent, 100)}%`;
+        }
+
+        function renderGraduationRequirements() {
+            if (!currentStudent) return;
+            const studentData = getCurrentStudentData();
+            if (!studentData) return;
+
+            const container = document.getElementById('graduation-requirement-list');
+            container.innerHTML = '';
+
+            const categories = [
+                { key: '교양', title: '교양' },
+                { key: '전공', title: '전공' },
+                { key: '일반선택', title: '일반선택' }
+            ];
+
+            categories.forEach(category => {
+                const catData = studentData.credits[category.key];
+                if (!catData) return;
+
+                const groupDiv = document.createElement('div');
+                groupDiv.classList.add('accordion-group');
+
+                const headerDiv = document.createElement('div');
+                headerDiv.classList.add('accordion-header');
+                headerDiv.innerHTML = `
+                    <p class="category-title">${category.title}</p>
+                    <span class="toggle-icon">∨</span>
+                `;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.classList.add('accordion-content');
+                contentDiv.style.display = 'none';
+
+                let subItems = [];
+                if ('required' in catData) {
+                    subItems.push({ subTitle: category.title, data: catData });
+                } else {
+                    Object.keys(catData).forEach(subKey => {
+                        subItems.push({ subTitle: subKey, data: catData[subKey] });
+                    });
+                }
+
+                subItems.forEach(item => {
+                    const completed = Number(item.data.completed);
+                    const required = Number(item.data.required);
+                    
+                    let percent = required > 0 ? (completed / required) * 100 : (completed > 0 ? 100 : 0);
+                    percent = Math.min(percent, 100);
+
+                    const isCompleted = completed >= required && required > 0;
+                    const statusClass = isCompleted ? 'completed-active' : '';
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.classList.add('sub-requirement-item');
+                    itemDiv.innerHTML = `
+                        <div class="sub-item-info">
+                            <p>${item.subTitle}</p>
+                            <span class="credit-text ${statusClass}">${completed} / ${required} 학점</span>
+                        </div>
+                        <div class="sub-progress-container">
+                            <div class="sub-progress-bar" style="width: ${percent}%;"></div>
+                        </div>
+                    `;
+                    contentDiv.appendChild(itemDiv);
+                });
+
+                headerDiv.addEventListener('click', function () {
+                    const isHidden = contentDiv.style.display === 'none';
+                    contentDiv.style.display = isHidden ? 'block' : 'none';
+                    
+                    const icon = headerDiv.querySelector('.toggle-icon');
+                    if (isHidden) {
+                        icon.classList.add('rotated');
+                    } else {
+                        icon.classList.remove('rotated');
+                    }
+                });
+
+                groupDiv.appendChild(headerDiv);
+                groupDiv.appendChild(contentDiv);
+                container.appendChild(groupDiv);
+            });
+        }
+
+        function getCurrentStudentData() {
+            if (!currentStudent) return null;
+            return studentCreditData.find(student => student.student_id === currentStudent.student_id);
+        }
+
+        function openStudentModal() {
+            renderStudentModal();
+            studentModal.style.display = 'flex';
+        }
+
+        // [세션 삭제 처리 - 버그 및 주석 수정 완료]
+        async function deleteSession(sessionId) {
+            if (!confirm('해당 시간표 기록과 대화 내용을 삭제하시겠습니까?')) return;
+
+            // 1. 메모리(배열)에서 해당 세션 제거
+            chatSessions = chatSessions.filter(session => session.id !== sessionId);
+
+            // 2. 로그인 상태라면 Flask 백엔드 서버에 삭제 요청
+            if (currentStudent && currentStudent.student_id) {
+                try {
+                    await fetch('/delete_chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            student_id: currentStudent.student_id,
+                            session_id: sessionId
+                        })
+                    });
+                } catch (error) {
+                    console.error("서버 데이터 삭제 연동 실패:", error);
+                }
+            }
+
+            // 3. 삭제한 세션이 현재 보고 있던 세션인 경우 활성화 세션 재설정
+            if (currentSessionId === sessionId) {
+                if (chatSessions.length > 0) {
+                    currentSessionId = chatSessions[chatSessions.length - 1].id;
+                    loadSession(currentSessionId);
+                } else {
+                    createNewSession();
+                }
+            }
+
+            // 4. 로컬 스토리지에 최종 반영 및 사이드바 목록 새로고침 (추가)
+            saveSessionStorage();
+            renderHistory();
+        }
+    </script>
+    </div>
+</html>

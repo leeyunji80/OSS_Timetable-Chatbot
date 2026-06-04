@@ -457,5 +457,56 @@
         "completed": 113
       }
     }
+  },
+   {
+    "student_id": "2025046026",
+    "name": "김서현",
+    "grade": 2,
+    "college": "전자정보대학",
+    "department": "컴퓨터공학과",
+    "completed_semesters": 2,
+    "curriculum_year": 2025,
+    "credits": {
+      "교양": {
+        "개신기초": {
+          "required": 15,
+          "completed": 15
+        },
+        "자연이공계기초": {
+          "required": 6,
+          "completed": 6
+        },
+        "일반": {
+          "required": 9,
+          "completed": 6
+        },
+        "확대": {
+          "required": 3,
+          "completed": 5
+        },
+        "OCU_기타": {
+          "required": 0,
+          "completed": 0
+        }
+      },
+      "일반선택": {
+        "required": 0,
+        "completed": 0
+      },
+      "전공": {
+        "필수": {
+          "required": 31,
+          "completed": 4
+        },
+        "선택": {
+          "required": 47,
+          "completed": 3
+        }
+      },
+      "졸업학점": {
+        "required": 140,
+        "completed": 39
+      }
+    }
   }
 ]
