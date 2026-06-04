@@ -3,7 +3,7 @@
 OSS_Timetable-Chatbot은 학생의 자연어 요청을 분석해 수강 이력, 졸업 요건, 전공/교양 추천, 공강 및 시간대 선호를 반영한 시간표를 생성하는 챗봇 프로젝트입니다. 
 Flask 기반 웹 UI와 PyQt5 런처를 사용하며, OpenAI API를 통해 사용자의 시간표 요구사항을 구조화합니다.
 
-# 주요 기능
+## 주요 기능
 - 자연어 기반 시간표 조건 분석
 - 전공/교양/졸업요건 기반 과목 추천
 - 공강 요일, 회피 시간대, 선호 시간대 반영
@@ -11,7 +11,7 @@ Flask 기반 웹 UI와 PyQt5 런처를 사용하며, OpenAI API를 통해 사용
 - 추천 시간표 이미지 생성
 - 학생별 채팅 세션 저장 및 불러오기
 
-## 설치 방법
+# 설치 방법
 
 Repository Clone
 
@@ -20,7 +20,7 @@ git clone https://github.com/leeyunji80/OSS_Timetable-Chatbot.git
 cd OSS_Timetable-Chatbot
 ```
 
-## 의존성
+# 의존성
 
 ```bash
 pip install Flask==3.1.3
@@ -39,7 +39,7 @@ pip install pypdf==6.11.0 (권장사항)
 - Framework : Flask
 - Database : CSV / JSON
 
-# 주요 라이브러리
+## 주요 라이브러리
 | Library  | 	Version  |	용도 |
 | Flask	|   3.1.3  |	웹 서버 및 API |
 | openai	|  2.38.0  |	자연어 요청 분석 |
@@ -49,14 +49,14 @@ pip install pypdf==6.11.0 (권장사항)
 | PyQt5	| 5.15.11  |	데스크톱 런처 UI |
 | python-dotenv  | 1.2.2  |	환경변수 로드 |
 
-# 환경변수 설정
+## 환경변수 설정
 프로젝트 루트에 .env 파일을 생성하고 OpenAI API Key를 설정합니다.
 
 ```bash
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-## 사용(실행) 방법
+# 사용(실행) 방법
 프로젝트 루트에서 다음 명령어를 실행합니다.
 ```bash
 python -m ui/app.py
@@ -92,7 +92,7 @@ http://127.0.0.1:5000
 ```
 종료방법 : 아이콘 우클릭
 
-## Unit Test 실행 방법
+# Unit Test 실행 방법
 ```bash
 pip install coverage
 
@@ -103,7 +103,7 @@ python -m coverage run --source=. -m unittest discover -s tests -p "test_*.py"
 python -m coverage report -m 
 ```
 
-## 라이선스
+# 라이선스
 ```bash
 MIT License
 
@@ -127,7 +127,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
-## Contributor name
+# Contributor name
 - 김서현 @cbnu-ksh
 - 이현지 @leeyunji80
 - 정채린 @bluemoon5555
