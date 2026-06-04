@@ -10,7 +10,8 @@ from scheduler.timetable_generator import (
     make_timetable_title,
     build_timetable_json,
     generate_timetable_response,
-    generate_timetable_combinations
+    generate_timetable_combinations,
+    exceeds_needed_general_credits
 )
 
 
@@ -425,6 +426,76 @@ class TestTimetableGenerator(unittest.TestCase):
         result = normalize_specific_time(slot)
 
         self.assertIsNone(result)
+
+    def test_normalize_specific_time_no_digits(self):
+
+        slot = {
+            "specific_time_slot": "abc"
+        }
+
+        result = normalize_specific_time(slot)
+
+        self.assertIsNone(result)
+
+    def test_exceeds_needed_general_credits_subarea_overflow(self):
+
+        ge_courses = [
+            {
+                "is_needed_ge": True,
+                "area": "A",
+                "subarea": "B",
+                "credit": 4
+            }
+        ]
+
+        needed_general_areas = {
+            "A": {
+                "B": 3
+            }
+        }
+
+        result = exceeds_needed_general_credits(
+            ge_courses,
+            needed_general_areas
+        )
+
+        self.assertTrue(result)
+
+    def test_exceeds_needed_general_credits_false_cases(self):
+
+        ge_courses = [
+            {
+                "is_needed_ge": False,
+                "area": "A",
+                "subarea": "B",
+                "credit": 10
+            },
+            {
+                "is_needed_ge": True,
+                "area": "",
+                "subarea": "B",
+                "credit": 10
+            },
+            {
+                "is_needed_ge": True,
+                "area": "A",
+                "subarea": "B",
+                "credit": 2
+            }
+        ]
+
+        needed_general_areas = {
+            "A": {
+                "B": 3
+            }
+        }
+
+        result = exceeds_needed_general_credits(
+            ge_courses,
+            needed_general_areas
+        )
+
+        self.assertFalse(result)
 
     # -------------------------------------------------
     # make_timetable_title 테스트

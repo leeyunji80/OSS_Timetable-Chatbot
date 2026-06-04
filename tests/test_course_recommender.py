@@ -7,6 +7,7 @@ from scheduler.course_recommender import (
     load_graduation_rules,
     load_curriculum_model,
     load_major_courses,
+    load_completed_courses,
     get_graduation_rule,
     normalize_subarea,
     analyze_graduation_status,
@@ -273,6 +274,84 @@ class TestCourseRecommender(unittest.TestCase):
         result = load_major_courses("dummy.csv")
 
         self.assertIsInstance(result, pd.DataFrame)
+
+    @patch("scheduler.course_recommender.pd.read_csv")
+    def test_load_completed_courses_filters_student(self, mock_read_csv):
+
+        mock_read_csv.return_value = pd.DataFrame([
+            {
+                "student_id": "20210001",
+                "교과목명": "A",
+                "학점": 3,
+                "이수구분": "major",
+                "영역": "area1",
+                "세부영역": "sub1"
+            },
+            {
+                "student_id": "20210002",
+                "교과목명": "B",
+                "학점": 2,
+                "이수구분": "general",
+                "영역": "area2",
+                "세부영역": "sub2"
+            }
+        ])
+
+        result = load_completed_courses(
+            csv_path="dummy.csv",
+            student_id="20210001"
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["name"], "A")
+        self.assertEqual(result[0]["credit"], 3)
+
+    def test_calculate_remaining_requirements_with_subarea_min(self):
+
+        graduation_rule = {
+            "requirements": {
+                "major": {
+                    "types": {
+                        "major_required": {
+                            "min_credits": 15
+                        },
+                        "major_elective": {
+                            "min_credits": 20
+                        }
+                    }
+                },
+                "general_education": {
+                    "areas": {
+                        "area1": {
+                            "name": "GeneralA",
+                            "min_credits": None,
+                            "subareas": {
+                                "sub1": {
+                                    "name": "SubA",
+                                    "min_credits": 3
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        graduation_status = {
+            "major_required": 15,
+            "major_elective": 20,
+            "areas": {},
+            "subareas": {
+                "SubA": 1
+            }
+        }
+
+        result = calculate_remaining_requirements(
+            graduation_rule,
+            graduation_status
+        )
+
+        self.assertEqual(result["areas"]["GeneralA"]["SubA"], 2)
 
     # -------------------------------------------------
     # get_final_recommendations 테스트
