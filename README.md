@@ -60,7 +60,7 @@ OPENAI_API_KEY=your_openai_api_key
 # 사용(실행) 방법
 프로젝트 루트에서 다음 명령어를 실행합니다.
 ```bash
-python -m ui/app.py
+python -m ui.app
 ```
 실행 후 PyQt5 런처 아이콘이 표시됩니다. 아이콘을 클릭하면 브라우저에서 다음 주소가 열립니다.
 ```bash
